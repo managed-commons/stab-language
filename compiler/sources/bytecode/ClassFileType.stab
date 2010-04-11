@@ -1,0 +1,1038 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.lang.reflect;
+using java.io;
+using java.util;
+using java.util.jar;
+using org.objectweb.asm;
+using stab.bytecode.signature;
+using stab.helpers;
+using stab.query;
+
+using AsmType = org.objectweb.asm.Type;
+
+package stab.bytecode {
+
+	class ClassFileType : ClassType {
+		private static HashMap<String, NumericTypeKind> TypeKinds;
+		static ClassFileType() {
+			TypeKinds = new HashMap<String, NumericTypeKind>();
+			TypeKinds["java/lang/Byte"] = NumericTypeKind.Byte;
+			TypeKinds["java/lang/Short"] = NumericTypeKind.Short;
+			TypeKinds["java/lang/Character"] = NumericTypeKind.Char;
+			TypeKinds["java/lang/Integer"] = NumericTypeKind.Int;
+			TypeKinds["java/lang/Long"] = NumericTypeKind.Long;
+			TypeKinds["java/lang/Float"] = NumericTypeKind.Float;
+			TypeKinds["java/lang/Double"] = NumericTypeKind.Double;
+		}
+	
+		private JvmTypeSystem typeSystem;
+		private int modifiers;
+		private int nestedModifiers;
+		private String descriptor;
+		private NumericTypeKind numericTypeKind;
+		private List<JvmAnnotationValue> annotations;
+		private ClassInfo classInfo;
+		private Scope<String, JvmTypeInfo> genericsScope;
+		
+		JvmMethodInfo boxingMethod;
+		JvmMethodInfo unboxingMethod;
+
+		ClassFileType(JvmTypeSystem typeSystem, String name, File origin)
+			: super(name) {
+			this.typeSystem = typeSystem;
+			this.descriptor = "L" + name + ";";
+			numericTypeKind = TypeKinds[name];
+			if (numericTypeKind == null) {
+				numericTypeKind = NumericTypeKind.None;
+			}
+			loadClassFile(origin);
+			this.genericsScope = new Scope<String, JvmTypeInfo>();
+			this.genericsScope.enterScope();
+		}
+		
+		public override String Descriptor {
+			get {
+				return descriptor;
+			}
+		}
+		
+		public override NumericTypeKind NumericTypeKind {
+			get {
+				return numericTypeKind;
+			}
+		}
+		
+		public override Iterable<JvmAnnotationValue> Annotations {
+			get {
+				initializeBaseTypes();
+				return annotations;
+			}
+		}
+
+		protected override int Modifiers {
+			get {
+				return modifiers;
+			}
+		}
+		
+		protected override int NestedModifiers {
+			get {
+				return nestedModifiers;
+			}
+		}
+		
+		protected override void initializeBaseTypes() {
+			if (classInfo == null || classInfo.name == null) {
+				return;
+			}
+			classInfo.name = null;
+
+			BytecodeHelper.declareEnclosingGenericParameters(genericsScope, this);
+			if (classInfo.signature == null) {
+				if (classInfo.superName != null) {
+					baseType = typeSystem.getType(classInfo.superName);
+					if (baseType.GenericArguments.any()) {
+						baseType = baseType.RawGenericType;
+					}
+					if (classInfo.interfaces != null) {
+						var ints = new ArrayList<JvmTypeInfo>();
+						foreach (var s in classInfo.interfaces) {
+							var t = typeSystem.getType(s);
+							if (t.GenericArguments.any()) {
+								t = t.RawGenericType;
+							}
+							ints.add(t);
+						}
+						interfaces = ints;
+					} else {
+						interfaces = Query.empty();
+					}
+				} else {
+					interfaces = Query.empty();
+				}
+				genericArguments = Query.empty();
+			} else {
+				if (classInfo.signature.FormalTypeParameters.any()) {
+					var genArgs = new ArrayList<JvmTypeInfo>();
+					foreach (var t in classInfo.signature.FormalTypeParameters) {
+						var tp = new GenericParameterType(t.Name, null);
+						genArgs.add(tp);
+						genericsScope.declareBinding(t.Name, tp);
+					}
+					genericArguments = genArgs;
+					int i = 0;
+					foreach (var t in classInfo.signature.FormalTypeParameters) {
+						if (t.FormalTypeParameterBounds.any()) {
+							foreach (var ts in t.FormalTypeParameterBounds) {
+								((GenericParameterType)genArgs[i]).genericParameterBounds.add(getTypeInfo(ts));
+							}
+						}
+						i++;
+					}
+				} else {
+					genericArguments = Query.empty();
+				}
+				if (classInfo.signature.Superclass != null) {
+					baseType = getTypeInfo(classInfo.signature.Superclass);
+				}
+				if (classInfo.signature.Superinterfaces.any()) {
+					var ints = new ArrayList<JvmTypeInfo>();
+					foreach (var t in classInfo.signature.Superinterfaces) {
+						ints.add(getTypeInfo(t));
+					}
+					interfaces = ints;
+				} else {
+					interfaces = Query.empty();
+				}
+				classInfo.signature = null;
+			}
+			
+			if (classInfo.annotations.isEmpty()) {
+				this.annotations = Collections.emptyList();
+			} else {
+				this.annotations = buildAnnotationValues(classInfo.annotations);
+			}
+		}
+		
+		protected override void initializeFields() {
+			if (classInfo == null || classInfo.fields == null) {
+				return;
+			}
+			initializeBaseTypes();
+
+			foreach (var f in classInfo.fields) {
+				var field = new JvmFieldInfo(this, f.modifiers, f.name, f.value);
+				fields.add(field);
+				if (f.signature == null) {
+					field.type = getTypeInfo(f.type);
+				} else {
+					field.type = getTypeInfo(f.signature);
+				}
+				if (f.annotations.isEmpty()) {
+					field.annotations = Collections.emptyList();
+				} else {
+					field.annotations = buildAnnotationValues(f.annotations);
+				}
+			}
+			
+			classInfo.fields = null;
+			if (classInfo.methods == null) {
+				classInfo = null;
+				genericsScope = null;
+			}
+		}
+		
+		protected override void initializeMethods() {
+			if (classInfo == null || classInfo.methods == null) {
+				return;
+			}
+			initializeBaseTypes();
+			
+			foreach (var m in classInfo.methods) {
+				var method = new ClassFileMethod(this, m.name, m.descriptor);
+				method.modifiers = m.modifiers;
+				methods.add(method);
+				if (m.signature == null) {
+					method.returnType = getTypeInfo(m.returnType);
+					int i = 0;
+					foreach (var p in m.parameters) {
+						var pi = new JvmParameterInfo(i++, getTypeInfo(p.type));
+						method.parameters.add(pi);
+						if (p.annotations.isEmpty()) {
+							pi.annotations = Collections.emptyList();
+						} else {
+							pi.annotations = buildAnnotationValues(p.annotations);
+						}
+					}
+					if (m.exceptions == null) {
+						method.exceptions = Collections.emptyList();
+					} else {
+						var ex = new ArrayList<JvmTypeInfo>();
+						foreach (var s in  m.exceptions) {
+							var t = typeSystem.getType(s);
+							if (t.GenericArguments.any()) {
+								t = t.RawGenericType;
+							}
+							ex.add(t);
+						}
+						method.exceptions = ex;
+					}
+					method.genericArguments = Collections.emptyList();
+				} else {
+					genericsScope.enterScope();
+					var genArgs = new ArrayList<JvmTypeInfo>();
+					foreach (var t in m.signature.FormalTypeParameters) {
+						var tp = new GenericParameterType(t.Name, null);
+						genArgs.add(tp);
+						genericsScope.declareBinding(t.Name, tp);
+					}
+					method.genericArguments = genArgs;
+					int i = 0;
+					foreach (var t in m.signature.getFormalTypeParameters()) {
+						if (t.FormalTypeParameterBounds.any()) {
+							foreach (var ts in t.FormalTypeParameterBounds) {
+								((GenericParameterType)genArgs[i]).genericParameterBounds.add(getTypeInfo(ts));
+							}
+						}
+						i++;
+					}
+					method.returnType = getTypeInfo(m.signature.ReturnType);
+					i = 0;
+					foreach (var param in m.signature.Parameters) {
+						var annotations = m.parameters[i].annotations;
+						var pi = new JvmParameterInfo(i++, getTypeInfo(param));
+						method.parameters.add(pi);
+						if (annotations.isEmpty()) {
+							pi.annotations = Collections.emptyList();
+						} else {
+							pi.annotations = buildAnnotationValues(annotations);
+						}
+					}
+					var excepts = new ArrayList<JvmTypeInfo>();
+					foreach (var t in m.signature.Exceptions) {
+						excepts.add(getTypeInfo(t));
+					}
+					method.exceptions = excepts;
+					genericsScope.leaveScope();
+				}
+				if (m.defaultValue != null) {
+					method.defaultValue = buildAnnotationArrayElement(m.defaultValue);
+				}
+				if (m.annotations.isEmpty()) {
+					method.annotations = Collections.emptyList();
+				} else {
+					method.annotations = buildAnnotationValues(m.annotations);
+				}
+			}
+			
+			classInfo.methods = null;
+			if (classInfo.fields == null) {
+				classInfo = null;
+				genericsScope = null;
+			}
+		}
+		
+		protected override void initializeNestedTypes() {
+		}
+		
+		private void loadClassFile(File origin) {
+			InputStream stream = null;
+			try {
+				byte[] bytes;
+				if (origin.getPath().endsWith(".class")) {
+					bytes = new byte[(int)origin.length()];
+					stream = new FileInputStream(origin);
+				} else {
+					var jarFile = new JarFile(origin);
+					var entry = jarFile.getJarEntry(this.FullName + ".class");
+					bytes = new byte[(int)entry.getSize()];
+					stream = jarFile.getInputStream(entry);
+				}
+				int read;
+				int offset = 0;
+				int len = sizeof(bytes);
+				while (len > 0 && (read = stream.read(bytes, offset, len)) != -1) {
+					offset += read;
+					len -= read;
+				}
+				new ClassReader(bytes).accept(new OutlineVisitor(this), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+			} finally {
+				if (stream != null) {
+					try {
+						stream.close();
+					} catch (IOException) {
+					}
+				}
+			}
+		}
+
+		private ArrayList<JvmAnnotationValue> buildAnnotationValues(ArrayList<AnnotationValue> annotations) {
+			var result = new ArrayList<JvmAnnotationValue>();
+			foreach (var av in annotations) {
+				var b = new JvmAnnotationValueBuilder(getTypeInfo(av.Type), av.IsRuntimeVisible);
+				buildAnnotationArgument(b, av);
+				result.add(b);
+			}
+			return result;
+		}
+		
+		private void buildAnnotationArgument(JvmAnnotationValueBuilder b, AnnotationArgument annotation) {
+			foreach (var s in annotation.ArgumentNames) {
+				var arg = annotation.getArgument(s);
+				switch (arg.AnnotationArgumentKind) {
+				case Boolean:
+					b.setBooleanArgument(s, (Boolean)arg.Value);
+					break;
+				case Byte:
+					b.setByteArgument(s, (Byte)arg.Value);
+					break;
+				case Char:
+					b.setCharArgument(s, (Character)arg.Value);
+					break;
+				case Short:
+					b.setShortArgument(s, (Short)arg.Value);
+					break;
+				case Int:
+					b.setIntArgument(s, (Integer)arg.Value);
+					break;
+				case Long:
+					b.setLongArgument(s, (Long)arg.Value);
+					break;
+				case Float:
+					b.setFloatArgument(s, (Float)arg.Value);
+					break;
+				case Double:
+					b.setDoubleArgument(s, (Double)arg.Value);
+					break;
+				case String:
+					b.setStringArgument(s, (String)arg.Value);
+					break;
+				case Enum:
+					b.setEnumArgument(s, getTypeInfo(arg.Type), arg.Name);
+					break;
+				case Type:
+					b.setTypeArgument(s, getTypeInfo(arg.Type));
+					break;
+				case Array:
+					var ab = b.setArrayArgument(s);
+					foreach (var e in arg.Elements) {
+						buildAnnotationArrayElement(ab, e);
+					}
+					break;
+				default:
+					var vb = b.setAnnotationArgument(s, getTypeInfo(arg.Type), arg.IsRuntimeVisible);
+					buildAnnotationArgument(vb, arg);
+					break;
+				}
+			}
+		}
+
+		private JvmAnnotationArgument buildAnnotationArrayElement(AnnotationArgument arg) {
+			switch (arg.AnnotationArgumentKind) {
+			case Boolean:
+			case Byte:
+			case Char:
+			case Short:
+			case Int:
+			case Long:
+			case Float:
+			case Double:
+			case String:
+				return new JvmAnnotationArgument.SimpleValue(arg.AnnotationArgumentKind, arg.Value);
+			case Enum:
+				return new JvmAnnotationArgument.EnumValue(getTypeInfo(arg.Type), arg.Name);
+			case Type:
+				return new JvmAnnotationArgument.TypeValue(getTypeInfo(arg.Type));
+			case Array:
+				var ab = new JvmAnnotationArrayValueBuilder();
+				foreach (var e in arg.Elements) {
+					buildAnnotationArrayElement(ab, e);
+				}
+				return ab;
+			default:
+				var vb = new JvmAnnotationValueBuilder(getTypeInfo(arg.Type), arg.IsRuntimeVisible);
+				buildAnnotationArgument(vb, arg);
+				return vb;
+			}
+		}
+
+		private void buildAnnotationArrayElement(JvmAnnotationArrayValueBuilder b, AnnotationArgument arg) {
+			switch (arg.AnnotationArgumentKind) {
+			case Boolean:
+				b.addBooleanArgument((Boolean)arg.Value);
+				break;
+			case Byte:
+				b.addByteArgument((Byte)arg.Value);
+				break;
+			case Char:
+				b.addCharArgument((Character)arg.Value);
+				break;
+			case Short:
+				b.addShortArgument((Short)arg.Value);
+				break;
+			case Int:
+				b.addIntArgument((Integer)arg.Value);
+				break;
+			case Long:
+				b.addLongArgument((Long)arg.Value);
+				break;
+			case Float:
+				b.addFloatArgument((Float)arg.Value);
+				break;
+			case Double:
+				b.addDoubleArgument((Double)arg.Value);
+				break;
+			case String:
+				b.addStringArgument((String)arg.Value);
+				break;
+			case Enum:
+				b.addEnumArgument(getTypeInfo(arg.Type), arg.Name);
+				break;
+			case Type:
+				b.addTypeArgument(getTypeInfo(arg.Type));
+				break;
+			case Array:
+				var ab = b.addArrayArgument();
+				foreach (var e in arg.Elements) {
+					buildAnnotationArrayElement(ab, e);
+				}
+				break;
+			default:
+				var vb = b.addAnnotationArgument(getTypeInfo(arg.Type), arg.IsRuntimeVisible);
+				buildAnnotationArgument(vb, arg);
+				break;
+			}
+		}
+
+		private JvmTypeInfo getTypeInfo(AsmType type) {
+			switch (type.getSort()) {
+			case AsmType.ARRAY:
+				return getTypeInfo(type.getElementType()).ArrayType;
+				
+			case AsmType.BOOLEAN:
+				return JvmTypeInfo.BOOLEAN;
+				
+			case AsmType.BYTE:
+				return JvmTypeInfo.BYTE;
+
+			case AsmType.CHAR:
+				return JvmTypeInfo.CHAR;
+				
+			case AsmType.DOUBLE:
+				return JvmTypeInfo.DOUBLE;
+				
+			case AsmType.FLOAT:
+				return JvmTypeInfo.FLOAT;
+				
+			case AsmType.INT:
+				return JvmTypeInfo.INT;
+				
+			case AsmType.LONG:
+				return JvmTypeInfo.LONG;
+				
+			case AsmType.SHORT:
+				return JvmTypeInfo.SHORT;
+				
+			case AsmType.VOID:
+				return JvmTypeInfo.VOID;
+
+			default:
+				var result = typeSystem.getType(type.getInternalName());
+				if (result.GenericArguments.any()) {
+					result = result.RawGenericType;
+				}
+				return result;
+			}
+		}
+		
+		static AnnotationArgument buildAnnotationArgument(Object value) {
+			if (value instanceof Integer) {
+				return new SimpleValue(AnnotationArgumentKind.Int, value);
+			} else if (value instanceof String) {
+				return new SimpleValue(AnnotationArgumentKind.String, value);
+			} else if (value instanceof Boolean) {
+				return new SimpleValue(AnnotationArgumentKind.Boolean, value);
+			} else if (value instanceof AsmType) {
+				return new TypeValue((AsmType)value);
+			} else if (value instanceof Character) {
+				return new SimpleValue(AnnotationArgumentKind.Char, value);
+			} else if (value instanceof Short) {
+				return new SimpleValue(AnnotationArgumentKind.Short, value);
+			} else if (value instanceof Long) {
+				return new SimpleValue(AnnotationArgumentKind.Long, value);
+			} else if (value instanceof Float) {
+				return new SimpleValue(AnnotationArgumentKind.Float, value);
+			} else if (value instanceof Double) {
+				return new SimpleValue(AnnotationArgumentKind.Double, value);
+			} else {
+				var array = new ArrayValue();
+				int len = Array.getLength(value);
+				for (int i = 0; i < len; i++) {
+					array.elements.add(buildAnnotationArgument(Array.get(value, i)));
+				}
+				return array;
+			}
+		}
+		
+		private JvmTypeInfo getTypeInfo(TypeSignature signature) {
+			JvmTypeInfo result;
+			switch (signature.TypeSignatureKind) {
+			case ClassType:
+				var name = signature.Name.substring(1, signature.Name.Length - 1);
+				result = typeSystem.getType(name);
+				if (signature.TypeArguments.any()) {
+					var typeArgs = new ArrayList<JvmTypeInfo>();
+					foreach (var sig in signature.TypeArguments) {
+						typeArgs.add(getTypeInfo(sig));
+					}
+					result = result.getGenericType(typeArgs);
+				}
+				break;
+
+			case ArrayType:
+				result = getTypeInfo(signature.ElementType).ArrayType;
+				break;
+
+			case Boolean:
+				result = JvmTypeInfo.BOOLEAN;
+				break;
+				
+			case Byte:
+				result = JvmTypeInfo.BYTE;
+				break;
+				
+			case Char:
+				result = JvmTypeInfo.CHAR;
+				break;
+				
+			case Double:
+				result = JvmTypeInfo.DOUBLE;
+				break;
+				
+			case Float:
+				result = JvmTypeInfo.FLOAT;
+				break;
+				
+			case Int:
+				result = JvmTypeInfo.INT;
+				break;
+				
+			case Long:
+				result = JvmTypeInfo.LONG;
+				break;
+				
+			case Short:
+				result = JvmTypeInfo.SHORT;
+				break;
+				
+			case Void:
+				result = JvmTypeInfo.VOID;
+				break;
+				
+			case UnboundedWildcardType:
+				result = JvmTypeInfo.UNBOUNDED_WILDCARD;
+				break;
+				
+			case UpperBoundedWildcardType:
+				result = getTypeInfo(signature.WildcardBound).UpperBoundedWildcard;
+				break;
+				
+			case LowerBoundedWildcardType:
+				result = getTypeInfo(signature.WildcardBound).LowerBoundedWildcard;
+				break;
+
+			case TypeVariable:
+				result = genericsScope.getBindingValue(signature.Name);
+				break;
+				
+			default:
+				throw new RuntimeException("Unexpected type signature: " + signature.Name);
+			}
+			return result;
+		}
+		
+		private class OutlineVisitor : ClassVisitor {
+			private ClassFileType classFileType;
+			private FieldInfoBuilder fieldInfoBuilder;
+			private MethodInfoBuilder methodInfoBuilder;
+
+			OutlineVisitor(ClassFileType classFileType) {
+				this.classFileType = classFileType;
+				this.fieldInfoBuilder = new FieldInfoBuilder();
+				this.methodInfoBuilder = new MethodInfoBuilder();
+			}
+		
+			public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
+				classFileType.modifiers = access;
+				var classInfo = new ClassInfo();
+				classFileType.classInfo = classInfo;
+				classInfo.name = name;
+				if (signature == null) {
+					classInfo.superName = superName;
+					classInfo.interfaces = interfaces;
+				} else {
+					var parser = new SignatureParser(signature);
+					classInfo.signature = parser.parseClassSignature();
+				}
+			}
+			
+			public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+				classFileType.classInfo.annotations.add(annotation);
+				return new AnnotationValueBuilder(annotation);
+			}
+			
+			public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
+				var field = new FieldInfo();
+				field.modifiers = access;
+				field.name = name;
+				field.value = value;
+				classFileType.classInfo.fields.add(field);
+				if (signature == null) {
+					field.type = AsmType.getType(desc);
+				} else {
+					var parser = new SignatureParser(signature);
+					field.signature = parser.parseFieldTypeSignature();
+				}
+				fieldInfoBuilder.field = field;
+				return fieldInfoBuilder;
+			}
+			
+			public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+				var method = new MethodInfo();
+				method.modifiers = access;
+				method.name = name;
+				method.descriptor = desc;
+				classFileType.classInfo.methods.add(method);
+				
+				if (signature == null) {
+					method.returnType = AsmType.getReturnType(desc);
+					foreach (var t in AsmType.getArgumentTypes(desc)) {
+						var p = new ParameterInfo();
+						p.type = t;
+						method.parameters.add(p);
+					}
+					method.exceptions = exceptions;
+				} else {
+					var parser = new SignatureParser(signature);
+					method.signature = parser.parseMethodTypeSignature();
+					foreach (var s in method.signature.Parameters) {
+						method.parameters.add(new ParameterInfo());
+					}
+				}
+				
+				methodInfoBuilder.method = method;
+				return methodInfoBuilder;
+			}
+			
+			public void visitInnerClass(String name, String outerName, String innerName, int access) {
+				if (!name.equals(classFileType.FullName)) {
+					// Inner classes with outerName == null are method classes: ignore them.
+					if (outerName != null && outerName.equals(classFileType.FullName)) {
+						var nestedType = (ClassFileType)classFileType.typeSystem.getType(name);
+						nestedType.nestedModifiers = access;
+						nestedType.declaringType = classFileType;
+						classFileType.nestedTypes.add(nestedType);
+					}
+				}
+			}
+			
+			public void visitEnd() {}
+			public void visitAttribute(Attribute attr) {}
+			public void visitOuterClass(String owner, String name, String desc) {}
+			public void visitSource(String source, String debug) {}
+		}
+		
+		private class ClassInfo {
+			String name;
+			String superName;
+			String[] interfaces;
+			ClassSignature signature;
+			ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+			ArrayList<FieldInfo> fields = new ArrayList<FieldInfo>();
+			ArrayList<MethodInfo> methods = new ArrayList<MethodInfo>();
+		}
+
+		private class FieldInfo {
+			ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+			int modifiers;
+			String name;
+			Object value;
+			AsmType type;
+			TypeSignature signature;
+		}
+
+		private class MethodInfo {
+			ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+			ArrayList<ParameterInfo> parameters = new ArrayList<ParameterInfo>();
+			AnnotationArgument defaultValue;
+			int modifiers;
+			String name;
+			String descriptor;
+			AsmType returnType;
+			String[] exceptions;
+			MethodTypeSignature signature;
+		}
+
+		private class ParameterInfo {
+			ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+			AsmType type;
+		}
+
+		private class FieldInfoBuilder : FieldVisitor {
+			FieldInfo field;
+
+			public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+				field.annotations.add(annotation);
+				return new AnnotationValueBuilder(annotation);
+			}
+
+			public void visitAttribute(Attribute attr) {}
+			public void visitEnd() {}
+		}
+		
+		private class MethodInfoBuilder : MethodVisitor {
+			MethodInfo method;
+			
+			public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+				method.annotations.add(annotation);
+				return new AnnotationValueBuilder(annotation);
+			}
+
+			public AnnotationVisitor visitAnnotationDefault() {
+				return new AnnotationDefaultValueBuilder(method);
+			}
+
+			public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+				method.parameters.get(parameter).annotations.add(annotation);
+				return new AnnotationValueBuilder(annotation);
+			}
+			
+			public void visitAttribute(Attribute attr) {}
+			public void visitCode() {}
+			public void visitEnd() {}
+			public void visitFieldInsn(int opcode, String owner, String name, String desc) {}
+			public void visitFrame(int type, int nLocal, Object[] local, int nStack, Object[] stack) {}
+			public void visitIincInsn(int var, int increment) {}
+			public void visitInsn(int opcode) {}
+			public void visitIntInsn(int opcode, int operand) {}
+			public void visitJumpInsn(int opcode, Label label) {}
+			public void visitLabel(Label label) {}
+			public void visitLdcInsn(Object cst) {}
+			public void visitLineNumber(int line, Label start) {}
+			public void visitLocalVariable(String name, String desc, String signature, Label start, Label end, int index) {}
+			public void visitLookupSwitchInsn(Label dflt, int[] keys, Label[] labels) {}
+			public void visitMaxs(int maxStack, int maxLocals) {}
+			public void visitMethodInsn(int opcode, String owner, String name, String desc) {}
+			public void visitMultiANewArrayInsn(String desc, int dims) {}
+			public void visitTableSwitchInsn(int min, int max, Label dflt, Label[] labels) {}
+			public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {}
+			public void visitTypeInsn(int opcode, String type) {}
+			public void visitVarInsn(int opcode, int var) {}
+		}
+		
+		private class ArrayVisitor : AnnotationVisitor {
+			private ArrayValue array;
+			
+			ArrayVisitor(ArrayValue array) {
+				this.array = array;
+			}
+
+			public void visit(String name, Object value) {
+				array.elements.add(buildAnnotationArgument(value));
+			}
+
+			public AnnotationVisitor visitAnnotation(String name, String desc) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), false);
+				array.elements.add(annotation);
+				return new AnnotationValueBuilder(annotation);
+			}
+
+			public AnnotationVisitor visitArray(String name) {
+				var array = new ArrayValue();
+				this.array.elements.add(array);
+				return new ArrayVisitor(array);
+			}
+
+			public void visitEnum(String name, String desc, String value) {
+				array.elements.add(new EnumValue(AsmType.getType(desc), value));
+			}
+
+			public void visitEnd() {}
+		}
+
+		private class AnnotationValueBuilder : AnnotationVisitor {
+			private AnnotationValue annotation;
+			
+			AnnotationValueBuilder(AnnotationValue annotation) {
+				this.annotation = annotation;
+			}
+			
+			public void visit(String name, Object value) {
+				annotation.arguments.put(name, buildAnnotationArgument(value));
+			}
+
+			public AnnotationVisitor visitAnnotation(String name, String desc) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), false);
+				annotation.arguments.put(name, annotation);
+				return new AnnotationValueBuilder(annotation);
+			}
+
+			public AnnotationVisitor visitArray(String name) {
+				var array = new ArrayValue();
+				annotation.arguments.put(name, array);
+				return new ArrayVisitor(array);
+			}
+
+			public void visitEnum(String name, String desc, String value) {
+				annotation.arguments.put(name, new EnumValue(AsmType.getType(desc), value));
+			}
+
+			public void visitEnd() {}
+		}
+
+		private class AnnotationDefaultValueBuilder : AnnotationVisitor {
+			private MethodInfo method;
+			
+			public AnnotationDefaultValueBuilder(MethodInfo method) {
+				this.method = method;
+			}
+
+			public void visit(String name, Object value) {
+				this.method.defaultValue = buildAnnotationArgument(value);
+			}
+
+			public AnnotationVisitor visitAnnotation(String name, String desc) {
+				var annotation = new AnnotationValue(AsmType.getType(desc), false);
+				this.method.defaultValue = annotation;
+				return new AnnotationValueBuilder(annotation);
+			}
+
+			public AnnotationVisitor visitArray(String name) {
+				var array = new ArrayValue();
+				this.method.defaultValue = array;
+				return new ArrayVisitor(array);
+			}
+
+			public void visitEnum(String name, String desc, String value) {
+				this.method.defaultValue = new EnumValue(AsmType.getType(desc), value);
+			}
+
+			public void visitEnd() {}
+		}
+
+		private abstract class AnnotationArgument {
+			protected AnnotationArgument(AnnotationArgumentKind annotationArgumentKind) {
+				this.AnnotationArgumentKind = annotationArgumentKind;
+			}
+			
+			public AnnotationArgumentKind AnnotationArgumentKind {
+				get;
+				private set;
+			}
+			
+			public virtual Iterable<String> ArgumentNames {
+				get {
+					throw new UnsupportedOperationException();
+				}
+			}
+			
+			public virtual AnnotationArgument getArgument(String name) {
+				throw new UnsupportedOperationException();
+			}
+			
+			public virtual Object Value {
+				get {
+					throw new UnsupportedOperationException();
+				}
+			}
+			
+			public virtual Iterable<AnnotationArgument> Elements {
+				get {
+					throw new UnsupportedOperationException();
+				}
+			}
+			
+			public virtual boolean IsRuntimeVisible {
+				get {
+					throw new UnsupportedOperationException();
+				}
+			}
+
+			public virtual AsmType Type {
+				get {
+					throw new UnsupportedOperationException();
+				}
+			}
+			
+			public virtual String Name {
+				get {
+					throw new UnsupportedOperationException();
+				}
+			}
+		}
+
+		private class SimpleValue : AnnotationArgument {
+			private Object value;
+			
+			SimpleValue(AnnotationArgumentKind annotationArgumentKind, Object value)
+				: super(annotationArgumentKind) {
+				this.value = value;
+			}
+
+			public override Object Value {
+				get {
+					return value;
+				}
+			}
+		}
+		
+		private class ArrayValue : AnnotationArgument {
+			ArrayList<AnnotationArgument> elements;
+			
+			ArrayValue()
+				: super(AnnotationArgumentKind.Array) {
+				elements = new ArrayList<AnnotationArgument>();
+			}
+			
+			public override Iterable<AnnotationArgument> Elements {
+				get {
+					return elements;
+				}
+			}
+		}
+		
+		private class EnumValue : AnnotationArgument {
+			private AsmType type;
+			private String name;
+			
+			EnumValue(AsmType type, String name)
+				: super(AnnotationArgumentKind.Enum) {
+				this.type = type;
+				this.name = name;
+			}
+			
+			public override AsmType Type {
+				get {
+					return type;
+				}
+			}
+			
+			public override String Name {
+				get {
+					return name;
+				}
+			}
+		}
+		
+		private class TypeValue : AnnotationArgument {
+			private AsmType type;
+			
+			TypeValue(AsmType type)
+				: super(AnnotationArgumentKind.Type) {
+				this.type = type;
+			}
+			
+			public override AsmType Type {
+				get {
+					return type;
+				}
+			}
+		}
+
+		private class AnnotationValue : AnnotationArgument {
+			private AsmType type;
+			private boolean runtimeVisible;
+			HashMap<String, AnnotationArgument> arguments;
+			
+			AnnotationValue(AsmType type, boolean runtimeVisible)
+				: super(AnnotationArgumentKind.Annotation) {
+				this.type = type;
+				this.runtimeVisible = runtimeVisible;
+				this.arguments = new HashMap<String, AnnotationArgument>();
+			}
+
+			public override AsmType Type {
+				get {
+					return type;
+				}
+			}
+
+			public override boolean IsRuntimeVisible {
+				get {
+					return runtimeVisible;
+				}
+			}
+			
+			public override AnnotationArgument getArgument(String name) {
+				return arguments.get(name);
+			}
+			
+			public override Iterable<String> ArgumentNames {
+				get {
+					return arguments.keySet();
+				}
+			}
+		}
+
+	}
+}

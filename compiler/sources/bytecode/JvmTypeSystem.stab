@@ -1,0 +1,364 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.io;
+using java.lang;
+using java.util;
+using java.util.jar;
+using stab.helpers;
+using stab.query;
+
+package stab.bytecode {
+
+	public class JvmTypeSystem {
+		private static HashMap<String, File> computedBootClasses;
+		
+		private JvmTypeSystem parent;
+		private HashMap<String, File> classFiles;
+		private ArrayList<String> allClassNames;
+		private HashMap<String, JvmTypeInfo> typeInfos;
+		
+		private JvmTypeInfo objectType;
+		private JvmTypeInfo stringType;
+
+		public JvmTypeSystem(String[] classPath)
+			: this(classPath, (String[])null) {
+		}
+		
+		public JvmTypeSystem(String[] classPath, String[] bootClasses) {
+			this.classFiles = new HashMap<String, File>(0x5000);
+			this.allClassNames = new ArrayList<String>();
+			this.typeInfos = new HashMap<String, JvmTypeInfo>();
+			
+			initializeBootClasses(bootClasses);
+			
+			foreach (var path in classPath) {
+				explorePath(path);
+			}
+		}
+		
+		public JvmTypeSystem(String[] classPath, JvmTypeSystem parent) {
+			this.classFiles = new HashMap<String, File>(128);
+			this.allClassNames = new ArrayList<String>();
+			this.typeInfos = new HashMap<String, JvmTypeInfo>();
+			this.parent = parent;
+			
+			foreach (var path in classPath) {
+				explorePath(path);
+			}
+		}
+		
+		public Iterable<String> AllClassNames {
+			get {
+				if (parent == null) {
+					return allClassNames;
+				} else {
+					return allClassNames.concat(parent.allClassNames);
+				}
+			}
+		}
+		
+		public JvmTypeBuilder defineType(String name) {
+			if (typeExists(name)) {
+				throw new IllegalStateException("Type '" + name + "' already defined");
+			}
+			var result = new JvmTypeBuilder(null, name);
+			typeInfos[name] = result;
+			allClassNames.add(name);
+			return result;
+		}
+		
+		public boolean typeExists(String name) {
+			return (parent != null && parent.typeExists(name)) || typeInfos.containsKey(name) || classFiles.containsKey(name);
+		}
+		
+		public JvmTypeInfo getType(String name) {
+			var typeInfo = typeInfos[name];
+			if (typeInfo != null) {
+				return typeInfo;
+			}
+			File f = classFiles[name];
+			if (f == null) {
+				if (parent == null) {
+					throw new IllegalStateException("Class not found: " + name);
+				} else {
+					return parent.getType(name);
+				}
+			}
+			typeInfo = new ClassFileType(this, name, f);
+				return typeInfos[name] = typeInfo;
+		}
+			
+		public JvmTypeInfo ObjectType {
+			get {
+				if (parent == null) {
+					if (objectType == null) {
+						objectType = getType("java/lang/Object");
+					}
+					return objectType;
+				} else {
+					return parent.ObjectType;
+				}
+			}
+		}
+
+		public JvmTypeInfo StringType {
+			get {
+				if (parent == null) {
+					if (stringType == null) {
+						stringType = getType("java/lang/String");
+					}
+					return stringType;
+				} else {
+					return parent.StringType;
+				}
+			}
+		}
+
+		public JvmMethodInfo getBoxingMethod(JvmTypeInfo type) {
+			ClassFileType ctype = null;
+			boolean isBoolean;
+			if (type.IsPrimitive) {
+				isBoolean = false;
+				switch (type.TypeKind) {
+				case Boolean:
+					ctype = (ClassFileType)getType("java/lang/Boolean");
+					isBoolean = true;
+					break;
+				case Byte:
+					ctype = (ClassFileType)getType("java/lang/Byte");
+					break;
+				case Char:
+					ctype = (ClassFileType)getType("java/lang/Character");
+					break;
+				case Short:
+					ctype = (ClassFileType)getType("java/lang/Short");
+					break;
+				case Int:
+					ctype = (ClassFileType)getType("java/lang/Integer");
+					break;
+				case Long:
+					ctype = (ClassFileType)getType("java/lang/Long");
+					break;
+				case Float:
+					ctype = (ClassFileType)getType("java/lang/Float");
+					break;
+				case Double:
+					ctype = (ClassFileType)getType("java/lang/Double");
+					break;
+				}
+			} else if (type instanceof ClassFileType) {
+				isBoolean = type.FullName.equals("java/lang/Boolean");
+				if (type.NumericTypeKind == NumericTypeKind.None && !isBoolean) {
+					return null;
+				}
+				ctype = (ClassFileType)type;
+			} else {
+				return null;
+			}
+			if (ctype.boxingMethod == null) {
+				if (isBoolean) {
+					ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.BOOLEAN));
+				} else {
+					switch (ctype.NumericTypeKind) {
+					case Byte:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.BYTE));
+						break;
+					case Char:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.CHAR));
+						break;
+					case Short:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.SHORT));
+						break;
+					case Int:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.INT));
+						break;
+					case Long:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.LONG));
+						break;
+					case Float:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.FLOAT));
+						break;
+					case Double:
+						ctype.boxingMethod = ctype.getMethod("valueOf", Collections.singletonList(JvmTypeInfo.DOUBLE));
+						break;
+					}
+				}
+			}
+			return ctype.boxingMethod;
+		}
+
+		public JvmMethodInfo getUnboxingMethod(JvmTypeInfo type) {
+			ClassFileType ctype = null;
+			boolean isBoolean;
+			if (type.IsPrimitive) {
+				isBoolean = false;
+				switch (type.TypeKind) {
+				case Boolean:
+					ctype = (ClassFileType)getType("java/lang/Boolean");
+					isBoolean = true;
+					break;
+				case Byte:
+					ctype = (ClassFileType)getType("java/lang/Byte");
+					break;
+				case Char:
+					ctype = (ClassFileType)getType("java/lang/Character");
+					break;
+				case Short:
+					ctype = (ClassFileType)getType("java/lang/Short");
+					break;
+				case Int:
+					ctype = (ClassFileType)getType("java/lang/Integer");
+					break;
+				case Long:
+					ctype = (ClassFileType)getType("java/lang/Long");
+					break;
+				case Float:
+					ctype = (ClassFileType)getType("java/lang/Float");
+					break;
+				case Double:
+					ctype = (ClassFileType)getType("java/lang/Double");
+					break;
+				}
+			} else if (type instanceof ClassFileType) {
+				isBoolean = type.FullName.equals("java/lang/Boolean");
+				if (type.NumericTypeKind == NumericTypeKind.None && !isBoolean) {
+					return null;
+				}
+				ctype = (ClassFileType)type;
+			} else {
+				return null;
+			}
+			if (ctype.unboxingMethod == null) {
+				if (isBoolean) {
+					ctype.unboxingMethod = ctype.getMethod("booleanValue", Query.empty<JvmTypeInfo>());
+				} else {
+					switch (ctype.NumericTypeKind) {
+					case Byte:
+						ctype.unboxingMethod = ctype.getMethod("byteValue", Query.empty<JvmTypeInfo>());
+						break;
+					case Char:
+						ctype.unboxingMethod = ctype.getMethod("charValue", Query.empty<JvmTypeInfo>());
+						break;
+					case Short:
+						ctype.unboxingMethod = ctype.getMethod("shortValue", Query.empty<JvmTypeInfo>());
+						break;
+					case Int:
+						ctype.unboxingMethod = ctype.getMethod("intValue", Query.empty<JvmTypeInfo>());
+						break;
+					case Long:
+						ctype.unboxingMethod = ctype.getMethod("longValue", Query.empty<JvmTypeInfo>());
+						break;
+					case Float:
+						ctype.unboxingMethod = ctype.getMethod("floatValue", Query.empty<JvmTypeInfo>());
+						break;
+					case Double:
+						ctype.unboxingMethod = ctype.getMethod("doubleValue", Query.empty<JvmTypeInfo>());
+						break;
+					}
+				}
+			}
+			return ctype.unboxingMethod;
+		}
+		
+		private void initializeBootClasses(String[] bootClasses) {
+			var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
+			var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
+			
+			if (bootClasses != null) {
+				foreach (var s in bootClasses) {
+					classFiles.put(s, rtJarFile);
+					allClassNames.add(s);
+				}
+			} else {
+				if (computedBootClasses == null) {
+					computedBootClasses = new HashMap<String, File>();
+					exploreJarFile(rtJarFile, computedBootClasses, null);
+				}
+				foreach (var e in computedBootClasses.entrySet()) {
+					classFiles[e.Key] = e.Value;
+					allClassNames.add(e.Key);
+				}
+			}
+		}
+		
+		private void explorePath(String path) {
+			var file = new File(path);
+			if (file.exists()) {
+				if (file.isDirectory()) {
+					foreach (var root in file.list()) {
+						var subFile = new File(file, root);
+						if (subFile.isDirectory()) {
+							exploreDirectory("", subFile);
+						} else {
+							var name = subFile.getName();
+							if (name.endsWith(".class")) {
+								var className = name.substring(0, name.length() - 6);
+								classFiles[className] = subFile;
+								allClassNames.add(className);
+							}
+						}
+					}
+				} else {
+					exploreJarFile(file, classFiles, allClassNames);
+				}
+			} else {
+				throw new IllegalStateException(path + " not found");
+			}
+		}
+
+		private void exploreDirectory(String root, File directory) {
+			foreach (var content in directory.list()) {
+				var file = new File(directory, content);
+				if (file.isDirectory()) {
+					exploreDirectory(root + directory.getName() + '/', file);
+				} else {
+					var name = file.getName();
+					if (name.endsWith(".class")) {
+						var className = root + directory.getName() + '/' + name.substring(0, name.length() - 6);
+						classFiles[className] = file;
+						allClassNames.add(className);
+					}
+				}
+			}
+		}
+		
+		private static void exploreJarFile(File jarFile, HashMap<String, File> classFiles, ArrayList<String> allClassNames) {
+			JarInputStream jarStream = null;
+			try {
+				jarStream = new JarInputStream(new FileInputStream(jarFile));
+				JarEntry entry;
+				while ((entry = jarStream.getNextJarEntry()) != null) {
+					var name = entry.getName();
+					if (name.endsWith(".class")) {
+						String className = name.substring(0, name.length() - 6);
+						classFiles[className] = jarFile;
+						if (allClassNames != null) {
+							allClassNames.add(className);
+						}
+					}
+				}
+			} finally {
+				try {
+					if (jarStream != null) {
+						jarStream.close();
+					}
+				} catch (IOException e) {
+				}
+			}
+		}
+	}
+}

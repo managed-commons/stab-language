@@ -1,0 +1,164 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.util;
+using stab.query;
+
+package stab.bytecode {
+
+	class GenericParameterBindings {
+		private HashMap<JvmTypeInfo, JvmTypeInfo> bindings;
+		private GenericParameterBindings next;
+		
+		GenericParameterBindings(GenericParameterBindings next) {
+			this.next = next;
+			this.bindings = new HashMap<JvmTypeInfo, JvmTypeInfo>();
+		}
+		
+		void declareBinding(JvmTypeInfo key, JvmTypeInfo value) {
+			this.bindings[key] = value;
+		}
+		
+		boolean hasBinding(JvmTypeInfo key) {
+			var b = this;
+			do {
+				if (b.bindings[key] != null) {
+					return true;
+				}
+			} while ((b = b.next) != null);
+			return false;
+		}
+		
+		JvmTypeInfo getBindingValue(JvmTypeInfo key) {
+			var b = this;
+			do {
+				var result = b.bindings[key];
+				if (result != null) {
+					return result;
+				}
+			} while ((b = b.next) != null);
+			throw new IllegalStateException();
+		}
+	}
+
+	class ConstructedGenericType : ClassType {
+		private JvmTypeInfo genericTypeDefinition;
+		private GenericParameterBindings genericsScope;
+	
+		ConstructedGenericType(JvmTypeInfo declaringType, JvmTypeInfo genericTypeDefinition, Iterable<JvmTypeInfo> genericArguments,
+			GenericParameterBindings genericsScope)
+				: super(genericTypeDefinition.FullName) {
+			this.declaringType = declaringType;
+			this.genericTypeDefinition = genericTypeDefinition;
+			this.genericArguments = genericArguments;
+			this.genericsScope = new GenericParameterBindings(genericsScope);
+		}
+		
+		public override JvmTypeInfo GenericTypeDefinition {
+			get {
+				return genericTypeDefinition;
+			}
+		}
+
+		public override String Descriptor {
+			get {
+				return genericTypeDefinition.Descriptor;
+			}
+		}
+
+		public override Iterable<JvmAnnotationValue> Annotations {
+			get {
+				return genericTypeDefinition.Annotations;
+			}
+		}
+
+		protected override int Modifiers {
+			get {
+				return genericTypeDefinition.Modifiers;
+			}
+		}
+		
+		protected override int NestedModifiers {
+			get {
+				return genericTypeDefinition.NestedModifiers;
+			}
+		}
+		
+		protected override void initializeBaseTypes() {
+			if (baseType != null) {
+				return;
+			}
+			
+			if (genericArguments == null) {
+				genericArguments = BytecodeHelper.bindGenericParameters(genericsScope, genericTypeDefinition.GenericArguments);
+			} else {
+				BytecodeHelper.declareGenericTypeBindings(genericsScope, genericTypeDefinition.GenericArguments, genericArguments);
+			}
+			baseType = BytecodeHelper.bindGenericParameters(genericsScope, genericTypeDefinition.BaseType);
+			interfaces = BytecodeHelper.bindGenericParameters(genericsScope, genericTypeDefinition.Interfaces);
+		}
+		
+		protected override void initializeFields() {
+			if (genericTypeDefinition.Fields.count() == fields.size()) {
+				return;
+			}
+			initializeBaseTypes();
+			
+			var it = genericTypeDefinition.Fields.iterator();
+			for (int i = fields.size(); i > 0; --i) {
+				it.next();
+			}
+			while (it.hasNext()) {
+				var f = it.next();
+				var t = BytecodeHelper.bindGenericParameters(genericsScope, f.Type);
+				var newf = new JvmFieldInfo(this, f.modifiers, f.Name, f.Value);
+				newf.type = t;
+				fields.add(newf);
+			}
+		}
+		
+		protected override void initializeMethods() {
+			if (genericTypeDefinition.Methods.count() == methods.size()) {
+				return;
+			}
+			initializeBaseTypes();
+
+			var it = genericTypeDefinition.Methods.iterator();
+			for (int i = methods.size(); i > 0; --i) {
+				it.next();
+			}
+			while (it.hasNext()) {
+				methods.add(new ConstructedGenericMethod(this, it.next(), null, genericsScope));
+			}
+		}
+		
+		protected override void initializeNestedTypes() {
+			if (genericTypeDefinition.NestedTypes.count() != nestedTypes.size()) {
+				return;
+			}
+			initializeBaseTypes();
+			
+			var it = genericTypeDefinition.NestedTypes.iterator();
+			for (int i = nestedTypes.size(); i > 0; --i) {
+				it.next();
+			}
+			while (it.hasNext()) {
+				nestedTypes.add(new ConstructedGenericType(this, it.next(), null, genericsScope));
+			}
+		}
+	}
+}

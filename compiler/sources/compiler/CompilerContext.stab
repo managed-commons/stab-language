@@ -1,0 +1,432 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.util;
+using stab.bytecode;
+using stab.helpers;
+using stab.parser;
+using stab.query;
+using stab.syntaxtree;
+
+package stab.compiler {
+
+	class CompilerContext {
+		CompilerContext(CompilerParameters parameters, CompilerResults results) {
+			this.Parameters = parameters;
+			this.Results = results;
+			this.CompilationUnits = new ArrayList<CompilationUnitNode>();
+			this.TypeBuilders = new ArrayList<JvmTypeBuilder>();
+			this.Iterables = new HashMap<JvmMethodBuilder, JvmTypeBuilder>();
+			this.ConstructorBuilders = new ArrayList<JvmMethodBuilder>();
+			this.CodeValidationContext = new CodeValidationContext(this);
+			this.MethodGenerationContext = new MethodGenerationContext();
+			this.LambdaScopes = new HashMap<JvmMethodBuilder, JvmTypeBuilder>();
+			this.ConstantBuilder = new ConstantBuilder(this);
+			this.PrivateAccessors = new HashMap<Object, JvmMethodInfo>();
+			this.PrivateMutators = new HashMap<Object, JvmMethodInfo>();
+		}
+		
+		CompilerParameters Parameters {
+			get;
+			private set;
+		}
+		
+		CompilerResults Results {
+			get;
+			private set;
+		}
+		
+		List<CompilationUnitNode> CompilationUnits {
+			get;
+			private set;
+		}
+		
+		boolean HasErrors {
+			get {
+				return this.Results.codeErrorManager.HasErrors;
+			}
+		}
+		
+		JvmTypeSystem TypeSystem {
+			get;
+			set;
+		}
+		
+		JvmTypeSystem AnnotatedTypeSystem {
+			get;
+			set;
+		}
+		
+		MemberResolver MemberResolver {
+			get;
+			set;
+		}
+		
+		char[] Text {
+			get;
+			set;
+		}
+
+		Set<String> Symbols {
+			get;
+			set;
+		}
+		
+		List<JvmTypeBuilder> TypeBuilders {
+			get;
+			private set;
+		}
+		
+		List<JvmMethodBuilder> ConstructorBuilders {
+			get;
+			private set;
+		}
+		
+		HashMap<JvmMethodBuilder, JvmTypeBuilder> Iterables {
+			get;
+			private set;
+		}
+		
+		JvmTypeInfo CurrentType {
+			get;
+			set;
+		}
+		
+		CodeValidationContext CodeValidationContext {
+			get;
+			private set;
+		}
+
+		MethodGenerationContext MethodGenerationContext {
+			get;
+			private set;
+		}
+		
+		HashMap<JvmMethodBuilder, JvmTypeBuilder> LambdaScopes {
+			get;
+			private set;
+		}
+		
+		HashMap<Object, JvmMethodInfo> PrivateAccessors {
+			get;
+			private set;
+		}
+		
+		HashMap<Object, JvmMethodInfo> PrivateMutators {
+			get;
+			private set;
+		}
+		
+		ConstantBuilder ConstantBuilder {
+			get;
+			private set;
+		}
+		
+		String getText(int offset, int length) {
+			return new String(this.Text, offset, length);
+		}
+		
+		void appendText(StringBuilder sb, int offset, int length) {
+			sb.append(this.Text, offset, length);
+		}
+		
+		String getIdentifier(int offset, int length) {
+			var sb = new StringBuilder();
+			ParserHelper.unescapeIdentifier(sb, this.Text, offset, length);
+			return sb.toString();
+		}
+		
+		void appendIdentifier(StringBuilder sb, int offset, int length) {
+			ParserHelper.unescapeIdentifier(sb, this.Text, offset, length);
+		}
+		
+		void disableErrors() {
+			this.Results.codeErrorManager.disable();
+		}
+
+		void restoreErrors() {
+			this.Results.codeErrorManager.restore();
+		}
+		
+		boolean IsErrorHandlingDisabled {
+			get {
+				return this.Results.codeErrorManager.IsDisabled;
+			}
+		}
+		
+		CodeErrorException error(CompileErrorId id, SyntaxNode node, params Object[] arguments) {
+			addError(id, node, arguments);
+			return new CodeErrorException();
+		}
+		
+		void addError(CompileErrorId id, SyntaxNode node, params Object[] arguments) {
+			addError(0, id, node, arguments);
+		}
+		
+		void addWarning(CompileErrorId id, SyntaxNode node, params Object[] arguments) {
+			addError(1, id, node, arguments);
+		}
+		
+		private void addError(int level, CompileErrorId id, SyntaxNode node, params Object[] arguments) {
+			this.Results.codeErrorManager.DisabledWarnings = node.DisabledWarnings;
+			this.Results.codeErrorManager.addError(node.Filename, id.ordinal() + ParseErrorId.LastId.ordinal(), level,
+				Resources.getMessage(id, arguments), node.Line + 1, node.Column + 1);
+		}
+	}
+	
+	class CodeValidationContext {
+		private CompilerContext context;
+		private ArrayList<JvmMethodBuilder> methods;
+		private ArrayList<ArrayList<JvmTypeInfo>> returnTypes;
+		private ArrayList<List<JvmTypeInfo>> lambdaParameters;
+		
+		CodeValidationContext(CompilerContext context) {
+			this.context = context;
+			this.methods = new ArrayList<JvmMethodBuilder>();
+			this.returnTypes = new ArrayList<ArrayList<JvmTypeInfo>>();
+			this.lambdaParameters = new ArrayList<List<JvmTypeInfo>>();
+		}
+		
+		void enterMethod(JvmMethodBuilder methodBuilder) {
+			context.MemberResolver.enterMethod(methodBuilder);
+			this.IsStatic = methodBuilder.IsStatic;
+			methods.add(methodBuilder);
+			this.YieldCount = 0;
+		}
+		
+		void enterLambdaMethod(JvmMethodBuilder methodBuilder) {
+			context.MemberResolver.enterMethod(methodBuilder, true);
+			methods.add(methodBuilder);
+			returnTypes.add(new ArrayList<JvmTypeInfo>());
+		}
+
+		void leaveLambdaMethod() {
+			methods.remove(methods.size() - 1);
+			context.MemberResolver.leaveMethod();
+			returnTypes.remove(returnTypes.size() - 1);
+		}
+		
+		void leaveMethod() {
+			methods.remove(methods.size() - 1);
+			context.MemberResolver.leaveMethod();
+		}
+
+		boolean IsStatic {
+			get;
+			set;
+		}
+		
+		boolean IsInMethod {
+			get {
+				return methods.size() > 0;
+			}
+		}
+		
+		JvmMethodBuilder RootMethod {
+			get {
+				return methods[0];
+			}
+		}
+		
+		JvmMethodBuilder CurrentMethod {
+			get {
+				return methods[methods.size() - 1];
+			}
+		}
+
+		int YieldCount {
+			get;
+			set;
+		}
+		
+		void pushLambdaParameters(List<JvmTypeInfo> parameters) {
+			lambdaParameters.add(parameters);
+		}
+		
+		void popLambdaParameters() {
+			lambdaParameters.remove(lambdaParameters.size() - 1);
+		}
+		
+		List<JvmTypeInfo> LambdaParameters {
+			get {
+				return lambdaParameters[lambdaParameters.size() - 1];
+			}
+		}
+		
+		List<JvmTypeInfo> LambdaReturnTypes {
+			get {
+				return returnTypes[returnTypes.size() - 1];
+			}
+		}
+		
+		JvmTypeInfo LambdaReturnType {
+			get;
+			set;
+		}
+	}
+	
+	class MethodGenerationContext {
+		private ArrayList<JvmMethodBuilder> methods;
+		private HashMap<LocalInfo, JvmFieldInfo> localFields;
+		private boolean destructor;
+		private int foreachStatement;
+		private int stringSwitch;
+	
+		MethodGenerationContext() {
+			this.methods = new ArrayList<JvmMethodBuilder>();
+			this.localFields = new HashMap<LocalInfo, JvmFieldInfo>();
+			this.YieldLabels = new ArrayList<JvmLabelMarker>();
+			this.ParametersUsedInLambdas = new HashSet<LocalInfo>();
+			this.ParametersUsedInLambda = new ArrayList<LocalInfo>();
+			this.CatchVariables = new ArrayList<JvmLocalInfo>();
+		}
+		
+		void initialize(JvmMethodBuilder methodBuilder, JvmTypeBuilder lambdaScope) {
+			this.methods.clear();
+			this.localFields.clear();
+			this.ParametersUsedInLambdas.clear();
+			this.ParametersUsedInLambda.clear();
+			this.CatchVariables.clear();
+			
+			this.methods.add(methodBuilder);
+			this.LambdaScope = lambdaScope;
+			this.Generator = methodBuilder.CodeGenerator;
+			this.destructor = methodBuilder.Name.equals("finalize") && !methodBuilder.Parameters.any();
+			this.IsLambdaScopeUsed = false;
+			this.IsLambdaScopeInitialized = false;
+			this.IsLambdaScopeThisInitialized = false;
+			this.IsBuildingString = false;
+			this.foreachStatement = 0;
+			this.YieldCount = 0;
+			this.stringSwitch = 0;
+		}
+		
+		void enterLambda(JvmMethodBuilder method) {
+			this.methods.add(method);
+			this.Generator = method.CodeGenerator;
+		}
+		
+		void leaveLambda() {
+			this.methods.remove(this.methods.size() - 1);
+			this.Generator = this.CurrentMethod.CodeGenerator;
+		}
+		
+		boolean IsInDestructor {
+			get {
+				return destructor && !IsInLambda;
+			}
+		}
+
+		boolean IsInLambda {
+			get {
+				return methods.size() > 1;
+			}
+		}
+		
+		boolean IsInIterable {
+			get {
+				return this.Iterable != null;
+			}
+		}
+		
+		JvmMethodBuilder CurrentMethod {
+			get {
+				return methods[methods.size() - 1];
+			}
+		}
+		
+		boolean IsLambdaScopeUsed {
+			get;
+			set;
+		}
+		
+		boolean IsLambdaScopeInitialized {
+			get;
+			set;
+		}
+		
+		boolean IsLambdaScopeThisInitialized {
+			get;
+			set;
+		}
+		
+		JvmTypeBuilder LambdaScope {
+			get;
+			private set;
+		}
+		
+		HashSet<LocalInfo> ParametersUsedInLambdas {
+			get;
+			private set;
+		}
+		
+		ArrayList<LocalInfo> ParametersUsedInLambda {
+			get;
+			private set;
+		}
+		
+		JvmCodeGenerator Generator {
+			get;
+			set;
+		}
+
+		JvmTypeBuilder Iterable {
+			get;
+			set;
+		}
+		
+		List<JvmLabelMarker> YieldLabels {
+			get;
+			private set;
+		}
+		
+		int YieldCount {
+			get;
+			set;
+		}
+		
+		List<JvmLocalInfo> CatchVariables {
+			get;
+			private set;
+		}
+		
+		JvmFieldInfo getLocalField(JvmTypeBuilder lambdaScope, LocalInfo local) {
+			var result = localFields[local];
+			if (result == null) {
+				if (local.IsParameter) {
+					ParametersUsedInLambda.add(local);
+				}
+				result = lambdaScope.defineField("local" + localFields.size() + '$' + local.Name, local.Type);
+				localFields[local] = result;
+			}
+			return result;
+		}
+		
+		boolean IsBuildingString {
+			get;
+			set;
+		}
+		
+		int nextForeachStatement() {
+			return foreachStatement++;
+		}
+		
+		int nextStringSwitch() {
+			return stringSwitch++;
+		}
+	}
+}

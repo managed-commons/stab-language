@@ -1,0 +1,497 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.util;
+using stab.bytecode;
+using stab.query;
+using stab.syntaxtree;
+
+package stab.compiler {
+	class CompilerHelper {
+		static String getDisplayName(AssignOperator operator) {
+			switch (operator) {
+			case Add:
+				return "+=";
+			case And:
+				return "&=";
+			case Divide:
+				return "/=";
+			case LeftShift:
+				return "<<=";
+			case Modulo:
+				return "%=";
+			case Multiply:
+				return "*=";
+			case Or:
+				return "|=";
+			case RightShift:
+				return ">>=";
+			case Subtract:
+				return "-=";
+			case UnsignedRightShift:
+				return ">>>=";
+			case Xor:
+				return "^=";
+			default:
+				throw new IllegalStateException();
+			}
+		}
+	
+		static String getDisplayName(BinaryOperator operator) {
+			switch (operator) {
+			case Add:
+				return "+";
+			case And:
+				return "&";
+			case As:
+				return "as";
+			case Divide:
+				return "/";
+			case Equal:
+				return "==";
+			case GreaterThan:
+				return ">";
+			case GreaterThanOrEqual:
+				return ">=";
+			case Instanceof:
+				return "instanceof";
+			case LeftShift:
+				return "<<";
+			case LessThan:
+				return "<";
+			case LessThanOrEqual:
+				return "<=";
+			case LogicalAnd:
+				return "&&";
+			case LogicalOr:
+				return "||";
+			case Modulo:
+				return "%";
+			case Multiply:
+				return "*";
+			case NotEqual:
+				return "!=";
+			case NullCoalescing:
+				return "??";
+			case Or:
+				return "|";
+			case RightShift:
+				return ">>";
+			case Subtract:
+				return "-";
+			case UnsignedRightShift:
+				return ">>>";
+			case Xor:
+				return "^";
+			default:
+				throw new IllegalStateException();
+			}
+		}
+
+		static String getDisplayName(UnaryOperator operator) {
+			switch (operator) {
+			case Complement:
+				return "~";
+			case Minus:
+				return "-";
+			case Not:
+				return "!";
+			case Plus:
+				return "+";
+			case PostDecrement:
+			case PreDecrement:
+				return "--";
+			case PreIncrement:
+			case PostIncrement:
+				return "++";
+			default:
+				throw new IllegalStateException();
+			}
+		}
+
+		static boolean isZero(ExpressionInfo info) {
+			if (info.IsConstant) {
+				Object value = info.Value;
+				if (value instanceof Double) {
+					return ((Double)value).doubleValue() == 0d;
+				} else if (value instanceof Float) {
+					return ((Float)value).floatValue() == 0f;
+				} else if (value instanceof Long) {
+					return ((Long)value).longValue() == 0l;
+				} else if (value instanceof Integer) {
+					return ((Integer)value).intValue() == 0;
+				} else if (value instanceof Character) {
+					return ((Character)value).charValue() == 0;
+				} else if (value instanceof Byte) {
+					return ((Byte)value).byteValue() == 0;
+				} else if (value instanceof Short) {
+					return ((Short)value).shortValue() == 0;
+				}
+			}
+			return false;
+		}
+
+		static List<String> getName(CompilerContext context, TypeReferenceNode typeReference) {
+			switch (typeReference.TypeReferenceKind) {
+			case SimpleName: {
+				var simpleName = (SimpleNameTypeReferenceNode)typeReference;
+				return new ArrayList<String> { context.getIdentifier(simpleName.NameOffset, simpleName.NameLength) };
+			}
+			case Qualified: {
+				var qualified = (QualifiedTypeReferenceNode)typeReference;
+				var simpleName = qualified.SimpleName;
+				var result = getName(context, qualified.EnclosingType);
+				result.add(context.getIdentifier(simpleName.NameOffset, simpleName.NameLength));
+				return result;
+			}
+			default:
+				throw new RuntimeException("Internal error: unhandled type kind: " + typeReference.TypeReferenceKind);
+			}
+		}
+
+		static String getFullName(CompilerContext context, TypeReferenceNode typeReference) {
+			switch (typeReference.TypeReferenceKind) {
+			case SimpleName: {
+				var simpleName = (SimpleNameTypeReferenceNode)typeReference;
+				return context.getIdentifier(simpleName.NameOffset, simpleName.NameLength);
+			}
+			case Qualified: {
+				var qualified = (QualifiedTypeReferenceNode)typeReference;
+				var simpleName = qualified.SimpleName;
+				return getFullName(context, qualified.EnclosingType) + '/' +
+					context.getIdentifier(simpleName.NameOffset, simpleName.NameLength);
+			}
+			default:
+				throw new RuntimeException("Internal error: unhandled type kind: " + typeReference.TypeReferenceKind);
+			}
+		}
+
+		static JvmTypeInfo resolveTypeReference(CompilerContext context, String packageName, TypeReferenceNode typeReference) {
+			return resolveTypeReference(context, packageName, typeReference, true);
+		}
+	
+		static JvmTypeInfo resolveTypeReference(CompilerContext context, String packageName, TypeReferenceNode typeReference, boolean fail) {
+			switch (typeReference.TypeReferenceKind) {
+			case Boolean:
+				return JvmTypeInfo.BOOLEAN;
+			case Byte:
+				return JvmTypeInfo.BYTE;
+			case Char:
+				return JvmTypeInfo.CHAR;
+			case Double:
+				return JvmTypeInfo.DOUBLE;
+			case Float:
+				return JvmTypeInfo.FLOAT;
+			case Int:
+				return JvmTypeInfo.INT;
+			case Long:
+				return JvmTypeInfo.LONG;
+			case Short:
+				return JvmTypeInfo.SHORT;
+			case Void:
+				return JvmTypeInfo.VOID;
+			case Wildcard:
+				return JvmTypeInfo.UNBOUNDED_WILDCARD;
+			case LowerBoundedWildcard:
+				return resolveTypeReference(context, packageName, ((WildcardTypeReferenceNode)typeReference).Bound).LowerBoundedWildcard;
+			case UpperBoundedWildcard:
+				return resolveTypeReference(context, packageName, ((WildcardTypeReferenceNode)typeReference).Bound).UpperBoundedWildcard;
+			case Array:
+				return resolveTypeReference(context, packageName, ((ArrayTypeReferenceNode)typeReference).ElementType).ArrayType;
+			case SimpleName: {
+				var simpleName = (SimpleNameTypeReferenceNode)typeReference;
+				var name = context.getIdentifier(simpleName.NameOffset, simpleName.NameLength);
+				var typeInfo = context.MemberResolver.resolveTypeName(packageName, name);
+				if (typeInfo == null) {
+					if (fail) {
+						if (context.MemberResolver.isAmbiguousTypeName(name)) {
+							throw context.error(CompileErrorId.AmbiguousTypeName, simpleName, name);
+						} else {
+							throw context.error(CompileErrorId.UnresolvedTypeName, simpleName, name);
+						}
+					} else {
+						return null;
+					}
+				}
+				return getGenericType(context, packageName, typeInfo.Type, simpleName.TypeArguments, simpleName, fail);
+			}
+			case Qualified: {
+				var qualified = (QualifiedTypeReferenceNode)typeReference;
+				var simpleName = qualified.SimpleName;
+				var name = context.getIdentifier(simpleName.NameOffset, simpleName.NameLength);
+				var enclosingType = resolveTypeReference(context, packageName, qualified.EnclosingType, false);
+				if (enclosingType == null) {
+					var pkg = getFullName(context, qualified.EnclosingType);
+					if (pkg.indexOf('/') == -1) {
+						var s = context.MemberResolver.getPackageFromAlias(pkg);
+						if (s != null) {
+							pkg = s;
+						}
+					}
+					var fullName = pkg + '/' + name;
+					if (context.TypeSystem.typeExists(fullName)) {
+						return getGenericType(context, packageName, context.TypeSystem.getType(fullName), simpleName.TypeArguments,
+							simpleName, fail);
+					} else {
+						if (fail) {
+							throw context.error(CompileErrorId.UnresolvedTypeName, qualified, fullName.replace('/', '.').replace('$', '.'));
+						} else {
+							return null;
+						}
+					}
+				} else {
+					var fullName = enclosingType.FullName + '$' + name;
+					foreach (var t in enclosingType.NestedTypes) {
+						if (t.FullName.equals(fullName)) {
+							return getGenericType(context, packageName, t, simpleName.TypeArguments, simpleName, fail);
+						}
+					}
+					if (fail) {
+						throw context.error(CompileErrorId.UnresolvedNestedTypeName, simpleName,
+							BytecodeHelper.getDisplayName(enclosingType) , name);
+					} else {
+						return null;
+					}
+				}
+			}
+			default:
+				throw new Exception("Internal error: unhandled type kind: " + typeReference.TypeReferenceKind);
+			}
+		}
+		
+		private static JvmTypeInfo getGenericType(CompilerContext context, String packageName, JvmTypeInfo type,
+			List<TypeReferenceNode> typeArguments, SyntaxNode node, boolean fail) {
+			int nTypeArgs = typeArguments.size();
+			if (!type.IsGenericTypeDefinition) {
+				if (nTypeArgs > 0) {
+					if (fail) {
+						throw context.error(CompileErrorId.TypeArgumentsNonGeneric, node, BytecodeHelper.getDisplayName(type));
+					} else {
+						return null;
+					}
+				}
+				return type;
+			}
+			int args = type.GenericArguments.count();
+			if (args > 0 && nTypeArgs == 0) {
+				var result = type.RawGenericType;
+				context.addWarning(CompileErrorId.RawTypeUsage, node,
+					BytecodeHelper.getDisplayName(result), BytecodeHelper.getDisplayName(type));
+				return result;
+			} else if (nTypeArgs != args) {
+				if (fail) {
+					throw context.error(CompileErrorId.WrongTypeArgumentNumber, node, BytecodeHelper.getDisplayName(type), args);
+				} else {
+					return null;
+				}
+			}
+			if (nTypeArgs == 0) {
+				return type;
+			} else {
+				var typeArgs = new ArrayList<JvmTypeInfo>();
+				foreach (var t in typeArguments) {
+					var ti = resolveTypeReference(context, packageName, t, fail);
+					if (!fail && ti == null) {
+						return null;
+					}
+					if (ti.IsPrimitive) {
+						throw context.error(CompileErrorId.PrimitiveGenericArgument, node);
+					}
+					typeArgs.add(ti);
+				}
+				return type.getGenericType(typeArgs);
+			}
+		}
+		
+		static void convertConstant(CompilerContext context, ExpressionNode expression, ExpressionInfo info, JvmTypeInfo targetType) {
+			switch (targetType.NumericTypeKind) {
+			case Byte: {
+				long value;
+				switch (info.Type.TypeKind) {
+				case Byte:
+					break;
+				case Char:
+				case Int:
+				case Long:
+				case Short:
+					value = ((Number)info.Value).longValue();
+					if (Byte.MIN_VALUE <= value && value <= Byte.MAX_VALUE) {
+						info.Type = JvmTypeInfo.BYTE;
+						info.Value = Byte.valueOf((byte)value);
+						break;
+					}
+					goto default;
+				default:
+					context.addError(CompileErrorId.NoImplicitConversion, expression,
+							BytecodeHelper.getDisplayName(info.Type),
+							BytecodeHelper.getDisplayName(targetType));
+					break;
+				}
+				break;
+			}
+			case Char: {
+				long value;
+				switch (info.Type.TypeKind) {
+				case Char:
+					break;
+				case Byte:
+				case Int:
+				case Long:
+				case Short:
+					value = ((Number)info.getValue()).longValue();
+					if (Character.MIN_VALUE <= value && value <= Character.MAX_VALUE) {
+						info.Type = JvmTypeInfo.CHAR;
+						info.Value = Character.valueOf((char)value);
+						break;
+					}
+					goto default;
+				default:
+					context.addError(CompileErrorId.NoImplicitConversion, expression,
+							BytecodeHelper.getDisplayName(info.Type),
+							BytecodeHelper.getDisplayName(targetType));
+					break;
+				}
+				break;
+			}
+			case Short: {
+				long value;
+				switch (info.Type.TypeKind) {
+				case Short:
+					break;
+				case Byte:
+				case Char:
+				case Int:
+				case Long:
+					value = ((Number)info.Value).longValue();
+					if (Short.MIN_VALUE <= value && value <= Short.MAX_VALUE) {
+						info.Type = JvmTypeInfo.SHORT;
+						info.Value = Short.valueOf((short)value);
+						break;
+					}
+					goto default;
+				default:
+					context.addError(CompileErrorId.NoImplicitConversion, expression,
+							BytecodeHelper.getDisplayName(info.Type),
+							BytecodeHelper.getDisplayName(targetType));
+					break;
+				}
+				break;
+			}
+			case Int: {
+				long value;
+				switch (info.Type.TypeKind) {
+				case Int:
+					break;
+				case Byte:
+				case Char:
+				case Short:
+				case Long:
+					value = ((Number)info.getValue()).longValue();
+					if (Integer.MIN_VALUE <= value && value <= Integer.MAX_VALUE) {
+						info.Type = JvmTypeInfo.INT;
+						info.Value = Integer.valueOf((int)value);
+						break;
+					}
+					goto default;
+				default:
+					context.addError(CompileErrorId.NoImplicitConversion, expression,
+							BytecodeHelper.getDisplayName(info.Type),
+							BytecodeHelper.getDisplayName(targetType));
+					break;
+				}
+				break;
+			}
+			case Long: {
+				long value;
+				switch (info.Type.TypeKind) {
+				case Long:
+					break;
+				case Byte:
+				case Char:
+				case Short:
+				case Int:
+					value = ((Number)info.getValue()).longValue();
+					info.Type = JvmTypeInfo.LONG;
+					info.Value = Long.valueOf(value);
+					break;
+				default:
+					context.addError(CompileErrorId.NoImplicitConversion, expression,
+							BytecodeHelper.getDisplayName(info.Type),
+							BytecodeHelper.getDisplayName(targetType));
+					break;
+				}
+				break;
+			}
+			case Float: {
+				float value;
+				switch (info.Type.TypeKind) {
+				case Float:
+					break;
+				case Byte:
+				case Char:
+				case Short:
+				case Int:
+				case Long:
+					value = ((Number)info.getValue()).floatValue();
+					info.Type = JvmTypeInfo.FLOAT;
+					info.Value = Float.valueOf(value);
+					break;
+				default:
+					context.addError(CompileErrorId.NoImplicitConversion, expression,
+							BytecodeHelper.getDisplayName(info.Type),
+							BytecodeHelper.getDisplayName(targetType));
+					break;
+				}
+				break;
+			}
+			case Double: {
+				double value;
+				switch (info.Type.TypeKind) {
+				case Double:
+					break;
+				case Byte:
+				case Char:
+				case Short:
+				case Int:
+				case Long:
+				case Float:
+					value = ((Number)info.Value).doubleValue();
+					info.Type = JvmTypeInfo.DOUBLE;
+					info.Value = Double.valueOf(value);
+					break;
+				}
+				break;
+			}
+			}
+		}
+		
+		public static boolean shouldIgnoreCalls(CompilerContext context, JvmMethodInfo method) {
+			foreach (var ann in BytecodeHelper.getAnnotations(context.AnnotatedTypeSystem, method)) {
+				if (BytecodeHelper.isConditional(ann)) {
+					foreach (var elt in ann.getArgument("symbols").Elements) {
+						if (context.Symbols.contains(elt.Value)) {
+							return false;
+						}
+					}
+					return true;
+				}
+			}
+			return false;
+		}
+
+	}
+}

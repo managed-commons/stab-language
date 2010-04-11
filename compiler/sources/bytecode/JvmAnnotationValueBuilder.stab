@@ -1,0 +1,140 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+
+package stab.bytecode {
+
+	public class JvmAnnotationValueBuilder : JvmAnnotationValue {
+		public JvmAnnotationValueBuilder(JvmTypeInfo type, boolean runtimeVisible)
+			: super(type, runtimeVisible) {
+		}
+		
+		public void setBooleanArgument(String name, boolean value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Boolean, value);
+		}
+		
+		public void setByteArgument(String name, byte value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Byte, value);
+		}
+		
+		public void setCharArgument(String name, char value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Char, value);
+		}
+		
+		public void setShortArgument(String name, short value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Short, value);
+		}
+
+		public void setIntArgument(String name, int value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Int, value);
+		}
+		
+		public void setLongArgument(String name, long value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Long, value);
+		}
+
+		public void setFloatArgument(String name, float value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Float, value);
+		}
+		
+		public void setDoubleArgument(String name, double value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Double, value);
+		}
+		
+		public void setStringArgument(String name, String value) {
+			arguments[name] = new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.String, value);
+		}
+		
+		public void setTypeArgument(String name, JvmTypeInfo value) {
+			arguments[name] = new JvmAnnotationArgument.TypeValue(value);
+		}
+
+		public void setEnumArgument(String name, JvmTypeInfo type, String field) {
+			arguments[name] = new JvmAnnotationArgument.EnumValue(type, field);
+		}
+
+		public JvmAnnotationArrayValueBuilder setArrayArgument(String name) {
+			var result = new JvmAnnotationArrayValueBuilder();
+			arguments[name] = result;
+			return result;
+		}
+		
+		public JvmAnnotationValueBuilder setAnnotationArgument(String name, JvmTypeInfo type, boolean runtimeVisible) {
+			var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+			arguments[name] = result;
+			return result;
+		}
+	}
+	
+	public class JvmAnnotationArrayValueBuilder : JvmAnnotationArgument.ArrayValue {
+		public void addBooleanArgument(boolean value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Boolean, value));
+		}
+		
+		public void addByteArgument(byte value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Byte, value));
+		}
+		
+		public void addCharArgument(char value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Char, value));
+		}
+		
+		public void addShortArgument(short value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Short, value));
+		}
+
+		public void addIntArgument(int value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Int, value));
+		}
+		
+		public void addLongArgument(long value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Long, value));
+		}
+
+		public void addFloatArgument(float value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Float, value));
+		}
+		
+		public void addDoubleArgument(double value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.Double, value));
+		}
+		
+		public void addStringArgument(String value) {
+			elements.add(new JvmAnnotationArgument.SimpleValue(AnnotationArgumentKind.String, value));
+		}
+		
+		public void addTypeArgument(JvmTypeInfo value) {
+			elements.add(new JvmAnnotationArgument.TypeValue(value));
+		}
+
+		public void addEnumArgument(JvmTypeInfo type, String field) {
+			elements.add(new JvmAnnotationArgument.EnumValue(type, field));
+		}
+
+		public JvmAnnotationArrayValueBuilder addArrayArgument() {
+			var result = new JvmAnnotationArrayValueBuilder();
+			elements.add(result);
+			return result;
+		}
+		
+		public JvmAnnotationValueBuilder addAnnotationArgument(JvmTypeInfo type, boolean runtimeVisible) {
+			var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+			elements.add(result);
+			return result;
+		}
+	}
+}

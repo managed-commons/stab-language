@@ -1,0 +1,1133 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.util;
+using org.objectweb.asm;
+using stab.query;
+
+package stab.bytecode {
+
+	public class JvmLocalInfo {
+		private JvmTypeInfo type;
+		private String name;
+		private int index;
+		Label beginLabel;
+		Label endLabel;
+		
+		JvmLocalInfo(JvmTypeInfo type, String name, int index, Label beginLabel, Label endLabel) {
+			this.type = type;
+			this.name = name;
+			this.index = index;
+			this.beginLabel = beginLabel;
+			this.endLabel = endLabel;
+		}
+
+		public JvmTypeInfo Type {
+			get {
+				return type;
+			}
+		}
+
+		public String Name {
+			get {
+				return name;
+			}
+		}
+
+		public int Index {
+			get {
+				return index;
+			}
+		}
+	}
+
+	public class JvmCodeGenerator {
+		private JvmMethodBuilder method;
+		private ArrayList<JvmInstruction> instructions;
+		private ArrayList<ScopeInfo> scopes;
+		private ArrayList<JvmLocalInfo> locals;
+		private ArrayList<ExceptionHandler> exceptionTable;
+	
+		JvmCodeGenerator(JvmMethodBuilder method) {
+			this.instructions = new ArrayList<JvmInstruction>();
+			this.method = method;
+			this.scopes = new ArrayList<ScopeInfo>();
+			this.locals = new ArrayList<JvmLocalInfo>();
+			this.exceptionTable = new ArrayList<ExceptionHandler>();
+		}
+
+		public JvmMethodBuilder Method {
+			get {
+				return method;
+			}
+		}
+		
+		public Iterable<JvmInstruction> Instructions {
+			get {
+				return instructions;
+			}
+		}
+
+		public JvmLabelMarker defineLabel() {
+			checkCreated();
+			return new JvmLabelMarker(new Label());
+		}
+		
+		public void markLabel(JvmLabelMarker label) {
+			checkCreated();
+			instructions.add(label);
+		}
+
+		public void removeThis() {
+			checkCreated();
+			locals.remove(0);
+			for (int i = 0; i < instructions.size(); i++) {
+				if (instructions[i] instanceof LocalVariableInstruction) {
+					var lv = (LocalVariableInstruction)instructions[i];
+					instructions.set(i, new LocalVariableInstruction(lv.Opcode, lv.LocalVariable - 1));
+				}
+			}
+		}
+		
+		public void beginScope() {
+			checkCreated();
+			if (scopes.isEmpty()) {
+				var beginLabel = new Label();
+				instructions.add(new JvmLabelMarker(beginLabel));
+				this.scopes.add(new ScopeInfo(0, new Label()));
+				if (!method.IsStatic) {
+					declareLocal(method.DeclaringType, "this").beginLabel = beginLabel;
+				}
+				foreach (var p in method.Parameters) {
+					declareLocal(p.Type, p.Name).beginLabel = beginLabel;
+				}
+			} else {
+				this.scopes.add(new ScopeInfo(this.scopes[this.scopes.size() - 1].localIndex, new Label()));
+			}
+		}
+		
+		public void endScope() {
+			checkCreated();
+			if (this.scopes.isEmpty()) {
+				return;
+			}
+			var currentScope = this.scopes.remove(this.scopes.size() - 1);
+			if (this.scopes.isEmpty() || currentScope.locals.size() > 0) {
+				instructions.add(new JvmLabelMarker(currentScope.endLabel));
+			}
+		}
+
+		public void emptyScope() {
+			while (!this.scopes.isEmpty()) {
+				endScope();
+			}
+		}
+		
+		public JvmLocalInfo declareLocal(JvmTypeInfo type, String name) {
+			return declareLocal(type, name, false);
+		}
+
+		public JvmLocalInfo declareLocal(JvmTypeInfo type, String name, boolean mark) {
+			checkCreated();
+			var currentScope = this.scopes[this.scopes.size() - 1];
+			var result = new JvmLocalInfo(type, name, currentScope.localIndex, null, currentScope.endLabel);
+			switch (type.getTypeKind()) {
+			case Long:
+			case Double:
+				currentScope.localIndex += 2;
+				break;
+			default:
+				currentScope.localIndex++;
+				break;
+			}
+			locals.add(result);
+			currentScope.locals[name] = result;
+		
+			if (mark) {
+				if (result.beginLabel == null) {
+					if (instructions[instructions.size() - 1].Opcode == JvmOpcode.LabelMarker) {
+						result.beginLabel = ((JvmLabelMarker)instructions[instructions.size() - 1]).Label;
+					} else {
+						result.beginLabel = new Label();
+						instructions.add(new JvmLabelMarker(result.beginLabel));
+					}
+				}
+			}
+			return result;
+		}
+		
+		public JvmLocalInfo getLocal(String name) {
+			for (int i = scopes.size() - 1; i >= 0; --i) {
+				var l = this.scopes[i].locals[name];
+				if (l != null) {
+					return l;
+				}
+			}
+			throw new IllegalStateException("Undefined local: " + name);
+		}
+
+		public Iterable<String> getAllLocalNames() {
+			var result = Query.empty<String>();
+			for (int i = scopes.size() - 1; i >= 0; --i) {
+				result = result.concat(scopes[i].locals.keySet());
+			}
+			return result;
+		}
+		
+		public void exceptionHandler(JvmLabelMarker from, JvmLabelMarker to, JvmLabelMarker target, JvmTypeInfo type) {
+			exceptionTable.add(new ExceptionHandler(from.Label, to.Label, target.Label, type));
+		}
+
+		public void emit(JvmOpcode opcode) {
+			checkCreated();
+			switch (opcode) {
+			case Aaload:
+				instructions.add(JvmInstruction.Aaload);
+				break;
+
+			case Aastore:
+				instructions.add(JvmInstruction.Aastore);
+				break;
+
+			case Aconst_Null:
+				instructions.add(JvmInstruction.Aconst_Null);
+				break;
+
+			case Areturn:
+				instructions.add(JvmInstruction.Areturn);
+				break;
+
+			case Arraylength:
+				instructions.add(JvmInstruction.Arraylength);
+				break;
+
+			case Athrow:
+				instructions.add(JvmInstruction.Athrow);
+				break;
+
+			case Baload:
+				instructions.add(JvmInstruction.Baload);
+				break;
+
+			case Bastore:
+				instructions.add(JvmInstruction.Bastore);
+				break;
+
+			case Caload:
+				instructions.add(JvmInstruction.Caload);
+				break;
+
+			case Castore:
+				instructions.add(JvmInstruction.Castore);
+				break;
+
+			case D2f:
+				instructions.add(JvmInstruction.D2f);
+				break;
+
+			case D2i:
+				instructions.add(JvmInstruction.D2i);
+				break;
+
+			case D2l:
+				instructions.add(JvmInstruction.D2l);
+				break;
+
+			case Dadd:
+				instructions.add(JvmInstruction.Dadd);
+				break;
+
+			case Daload:
+				instructions.add(JvmInstruction.Daload);
+				break;
+
+			case Dastore:
+				instructions.add(JvmInstruction.Dastore);
+				break;
+
+			case Dcmpg:
+				instructions.add(JvmInstruction.Dcmpg);
+				break;
+
+			case Dcmpl:
+				instructions.add(JvmInstruction.Dcmpl);
+				break;
+
+			case Dconst_0:
+				instructions.add(JvmInstruction.Dconst_0);
+				break;
+
+			case Dconst_1:
+				instructions.add(JvmInstruction.Dconst_1);
+				break;
+
+			case Ddiv:
+				instructions.add(JvmInstruction.Ddiv);
+				break;
+
+			case Dmul:
+				instructions.add(JvmInstruction.Dmul);
+				break;
+
+			case Dneg:
+				instructions.add(JvmInstruction.Dneg);
+				break;
+
+			case Drem:
+				instructions.add(JvmInstruction.Drem);
+				break;
+
+			case Dreturn:
+				instructions.add(JvmInstruction.Dreturn);
+				break;
+				
+			case Dsub:
+				instructions.add(JvmInstruction.Dsub);
+				break;
+
+			case Dup:
+				instructions.add(JvmInstruction.Dup);
+				break;
+
+			case Dup_X1:
+				instructions.add(JvmInstruction.Dup_X1);
+				break;
+
+			case Dup_X2:
+				instructions.add(JvmInstruction.Dup_X2);
+				break;
+
+			case Dup2:
+				instructions.add(JvmInstruction.Dup2);
+				break;
+
+			case Dup2_X1:
+				instructions.add(JvmInstruction.Dup2_X1);
+				break;
+
+			case Dup2_X2:
+				instructions.add(JvmInstruction.Dup2_X2);
+				break;
+
+			case F2d:
+				instructions.add(JvmInstruction.F2d);
+				break;
+
+			case F2i:
+				instructions.add(JvmInstruction.F2i);
+				break;
+
+			case F2l:
+				instructions.add(JvmInstruction.F2l);
+				break;
+
+			case Fadd:
+				instructions.add(JvmInstruction.Fadd);
+				break;
+
+			case Faload:
+				instructions.add(JvmInstruction.Faload);
+				break;
+
+			case Fastore:
+				instructions.add(JvmInstruction.Fastore);
+				break;
+
+			case Fcmpg:
+				instructions.add(JvmInstruction.Fcmpg);
+				break;
+
+			case Fcmpl:
+				instructions.add(JvmInstruction.Fcmpl);
+				break;
+
+			case Fconst_0:
+				instructions.add(JvmInstruction.Fconst_0);
+				break;
+
+			case Fconst_1:
+				instructions.add(JvmInstruction.Fconst_1);
+				break;
+
+			case Fconst_2:
+				instructions.add(JvmInstruction.Fconst_2);
+				break;
+
+			case Fdiv:
+				instructions.add(JvmInstruction.Fdiv);
+				break;
+
+			case Fmul:
+				instructions.add(JvmInstruction.Fmul);
+				break;
+
+			case Fneg:
+				instructions.add(JvmInstruction.Fneg);
+				break;
+
+			case Frem:
+				instructions.add(JvmInstruction.Frem);
+				break;
+
+			case Freturn:
+				instructions.add(JvmInstruction.Freturn);
+				break;
+				
+			case Fsub:
+				instructions.add(JvmInstruction.Fsub);
+				break;
+
+			case I2b:
+				instructions.add(JvmInstruction.I2b);
+				break;
+
+			case I2c:
+				instructions.add(JvmInstruction.I2c);
+				break;
+
+			case I2d:
+				instructions.add(JvmInstruction.I2d);
+				break;
+
+			case I2f:
+				instructions.add(JvmInstruction.I2f);
+				break;
+
+			case I2l:
+				instructions.add(JvmInstruction.I2l);
+				break;
+
+			case I2s:
+				instructions.add(JvmInstruction.I2s);
+				break;
+
+			case Iadd:
+				instructions.add(JvmInstruction.Iadd);
+				break;
+
+			case Iaload:
+				instructions.add(JvmInstruction.Iaload);
+				break;
+
+			case Iand:
+				instructions.add(JvmInstruction.Iand);
+				break;
+
+			case Iastore:
+				instructions.add(JvmInstruction.Iastore);
+				break;
+
+			case Iconst_0:
+				instructions.add(JvmInstruction.Iconst_0);
+				break;
+
+			case Iconst_1:
+				instructions.add(JvmInstruction.Iconst_1);
+				break;
+
+			case Iconst_2:
+				instructions.add(JvmInstruction.Iconst_2);
+				break;
+
+			case Iconst_3:
+				instructions.add(JvmInstruction.Iconst_3);
+				break;
+
+			case Iconst_4:
+				instructions.add(JvmInstruction.Iconst_4);
+				break;
+
+			case Iconst_5:
+				instructions.add(JvmInstruction.Iconst_5);
+				break;
+
+			case Iconst_M1:
+				instructions.add(JvmInstruction.Iconst_M1);
+				break;
+
+			case Idiv:
+				instructions.add(JvmInstruction.Idiv);
+				break;
+
+			case Imul:
+				instructions.add(JvmInstruction.Imul);
+				break;
+
+			case Ineg:
+				instructions.add(JvmInstruction.Ineg);
+				break;
+
+			case Ior:
+				instructions.add(JvmInstruction.Ior);
+				break;
+
+			case Irem:
+				instructions.add(JvmInstruction.Irem);
+				break;
+
+			case Ireturn:
+				instructions.add(JvmInstruction.Ireturn);
+				break;
+				
+			case Ishl:
+				instructions.add(JvmInstruction.Ishl);
+				break;
+
+			case Ishr:
+				instructions.add(JvmInstruction.Ishr);
+				break;
+
+			case Isub:
+				instructions.add(JvmInstruction.Isub);
+				break;
+
+			case Iushr:
+				instructions.add(JvmInstruction.Iushr);
+				break;
+
+			case Ixor:
+				instructions.add(JvmInstruction.Ixor);
+				break;
+
+			case L2d:
+				instructions.add(JvmInstruction.L2d);
+				break;
+
+			case L2f:
+				instructions.add(JvmInstruction.L2f);
+				break;
+
+			case L2i:
+				instructions.add(JvmInstruction.L2i);
+				break;
+
+			case Ladd:
+				instructions.add(JvmInstruction.Ladd);
+				break;
+
+			case Laload:
+				instructions.add(JvmInstruction.Laload);
+				break;
+
+			case Land:
+				instructions.add(JvmInstruction.Land);
+				break;
+
+			case Lastore:
+				instructions.add(JvmInstruction.Lastore);
+				break;
+
+			case Lcmp:
+				instructions.add(JvmInstruction.Lcmp);
+				break;
+
+			case Lconst_0:
+				instructions.add(JvmInstruction.Lconst_0);
+				break;
+
+			case Lconst_1:
+				instructions.add(JvmInstruction.Lconst_1);
+				break;
+
+			case Ldiv:
+				instructions.add(JvmInstruction.Ldiv);
+				break;
+
+			case Lmul:
+				instructions.add(JvmInstruction.Lmul);
+				break;
+
+			case Lneg:
+				instructions.add(JvmInstruction.Lneg);
+				break;
+
+			case Lor:
+				instructions.add(JvmInstruction.Lor);
+				break;
+
+			case Lrem:
+				instructions.add(JvmInstruction.Lrem);
+				break;
+
+			case Lreturn:
+				instructions.add(JvmInstruction.Lreturn);
+				break;
+				
+			case Lshl:
+				instructions.add(JvmInstruction.Lshl);
+				break;
+
+			case Lshr:
+				instructions.add(JvmInstruction.Lshr);
+				break;
+
+			case Lsub:
+				instructions.add(JvmInstruction.Lsub);
+				break;
+
+			case Lushr:
+				instructions.add(JvmInstruction.Lushr);
+				break;
+
+			case Lxor:
+				instructions.add(JvmInstruction.Lxor);
+				break;
+
+			case Monitorenter:
+				instructions.add(JvmInstruction.Monitorenter);
+				break;
+
+			case Monitorexit:
+				instructions.add(JvmInstruction.Monitorexit);
+				break;
+
+			case Nop:
+				instructions.add(JvmInstruction.Nop);
+				break;
+
+			case Pop:
+				instructions.add(JvmInstruction.Pop);
+				break;
+
+			case Pop2:
+				instructions.add(JvmInstruction.Pop2);
+				break;
+
+			case Return:
+				instructions.add(JvmInstruction.Return);
+				break;
+
+			case Saload:
+				instructions.add(JvmInstruction.Saload);
+				break;
+
+			case Sastore:
+				instructions.add(JvmInstruction.Sastore);
+				break;
+
+			case Swap:
+				instructions.add(JvmInstruction.Swap);
+				break;
+
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+		}
+		
+		public void emit(JvmOpcode opcode, int operand) {
+			checkCreated();
+			switch (opcode) {
+			case Newarray:
+				switch (operand) {
+				case 4:
+					instructions.add(JvmInstruction.Newarray_4);
+					break;
+
+				case 5:
+					instructions.add(JvmInstruction.Newarray_5);
+					break;
+
+				case 6:
+					instructions.add(JvmInstruction.Newarray_6);
+					break;
+
+				case 7:
+					instructions.add(JvmInstruction.Newarray_7);
+					break;
+
+				case 8:
+					instructions.add(JvmInstruction.Newarray_8);
+					break;
+
+				case 9:
+					instructions.add(JvmInstruction.Newarray_9);
+					break;
+
+				case 10:
+					instructions.add(JvmInstruction.Newarray_10);
+					break;
+
+				case 11:
+					instructions.add(JvmInstruction.Newarray_11);
+					break;
+
+				default:
+					throw new IllegalStateException("Illegal opcode operand: " + operand);
+				}
+				break;
+
+			case Bipush:
+			case Sipush:
+				instructions.add(new IntOperandInstruction(opcode, operand));
+				break;
+				
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+		}
+
+		public void emit(JvmOpcode opcode, JvmLocalInfo local) {
+			checkCreated();
+			int operand = local.Index;
+			switch (opcode) {
+			case Aload:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Aload_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Aload_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Aload_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Aload_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Astore:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Astore_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Astore_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Astore_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Astore_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Dload:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Dload_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Dload_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Dload_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Dload_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Dstore:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Dstore_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Dstore_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Dstore_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Dstore_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Fload:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Fload_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Fload_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Fload_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Fload_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Fstore:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Fstore_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Fstore_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Fstore_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Fstore_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Iload:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Iload_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Iload_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Iload_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Iload_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Istore:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Istore_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Istore_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Istore_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Istore_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Lload:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Lload_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Lload_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Lload_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Lload_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+				
+			case Lstore:
+				switch (operand) {
+				case 0:
+					instructions.add(JvmInstruction.Lstore_0);
+					break;
+
+				case 1:
+					instructions.add(JvmInstruction.Lstore_1);
+					break;
+
+				case 2:
+					instructions.add(JvmInstruction.Lstore_2);
+					break;
+
+				case 3:
+					instructions.add(JvmInstruction.Lstore_3);
+					break;
+
+				default:
+					instructions.add(new LocalVariableInstruction(opcode, operand));
+					break;
+				}
+				break;
+
+			case Ret:
+				instructions.add(new LocalVariableInstruction(opcode, operand));
+				break;
+				
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+			if (local.beginLabel == null) {
+				if (instructions[instructions.size() - 1].Opcode == JvmOpcode.LabelMarker) {
+					local.beginLabel = ((JvmLabelMarker)instructions[instructions.size() - 1]).Label;
+				} else {
+					local.beginLabel = new Label();
+					instructions.add(new JvmLabelMarker(local.beginLabel));
+				}
+			}
+		}
+		
+		public void emit(JvmOpcode opcode, JvmFieldInfo field) {
+			checkCreated();
+			if (field == null) {
+				throw new NullPointerException("field");
+			}
+			switch (opcode) {
+			case Getfield:
+				instructions.add(new FieldInstruction(JvmOpcode.Getfield, field));
+				break;
+
+			case Getstatic:
+				instructions.add(new FieldInstruction(JvmOpcode.Getstatic, field));
+				break;
+
+			case Putfield:
+				instructions.add(new FieldInstruction(JvmOpcode.Putfield, field));
+				break;
+
+			case Putstatic:
+				instructions.add(new FieldInstruction(JvmOpcode.Putstatic, field));
+				break;
+			
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+		}
+
+		public void emit(JvmOpcode opcode, JvmMethodInfo method) {
+			checkCreated();
+			if (method == null) {
+				throw new NullPointerException("method");
+			}
+			switch (opcode) {
+			case Invokedynamic:
+			case Invokeinterface:
+			case Invokespecial:
+			case Invokestatic:
+			case Invokevirtual:
+				instructions.add(new MethodInstruction(opcode, method));
+				break;
+				
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+		}
+
+		public void emit(JvmOpcode opcode, JvmTypeInfo type) {
+			checkCreated();
+			if (type == null) {
+				throw new NullPointerException("type");
+			}
+			switch (opcode) {
+			case Anewarray:
+			case Checkcast:
+			case Instanceof:
+			case New:
+				instructions.add(new TypeInstruction(opcode, type));
+				break;
+			
+			case Ldc:
+				instructions.add(new LoadConstantInstruction(Type.getType(type.getDescriptor())));
+				break;
+				
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+		}
+
+		public void emit(JvmOpcode opcode, JvmLabelMarker label) {
+			if (label == null) {
+				throw new NullPointerException("label");
+			}
+			checkCreated();
+			switch (opcode) {
+			case Goto:
+			case If_acmpeq:
+			case If_acmpne:
+			case If_icmpeq:
+			case If_icmpge:
+			case If_icmpgt:
+			case If_icmple:
+			case If_icmplt:
+			case If_icmpne:
+			case Ifeq:
+			case Ifge:
+			case Ifgt:
+			case Ifle:
+			case Iflt:
+			case Ifne:
+			case Ifnonnull:
+			case Ifnull:
+			case Jsr:
+				instructions.add(new JumpInstruction(opcode, label));
+				break;
+				
+			default:
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+		}
+		
+		public void emit(JvmOpcode opcode, Object constant) {
+			checkCreated();
+			if (opcode != JvmOpcode.Ldc) {
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+			instructions.add(new LoadConstantInstruction(constant));
+		}
+
+		public void emit(JvmOpcode opcode, JvmLocalInfo local, int increment) {
+			checkCreated();
+			if (opcode != JvmOpcode.Iinc) {
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+			instructions.add(new IncrementInstruction(local.getIndex(), increment));
+		}
+
+		public void emit(JvmOpcode opcode, JvmTypeInfo type, int dimensions) {
+			checkCreated();
+			if (opcode != JvmOpcode.Multianewarray) {
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+			instructions.add(new MultiNewArrayInstruction(type, dimensions));
+		}
+
+		public void emit(JvmOpcode opcode, int minimumKey, int maximumKey, JvmLabelMarker[] labels, JvmLabelMarker defaultLabel) {
+			checkCreated();
+			if (opcode != JvmOpcode.Tableswitch) {
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+			instructions.add(new TableSwitchInstruction(minimumKey, maximumKey, labels, defaultLabel));
+		}
+
+		public void emit(JvmOpcode opcode, int[] keys, JvmLabelMarker[] labels, JvmLabelMarker defaultLabel) {
+			checkCreated();
+			if (opcode != JvmOpcode.Lookupswitch) {
+				throw new IllegalStateException("Illegal opcode usage: " + opcode);
+			}
+			instructions.add(new LookupSwitchInstruction(keys, labels, defaultLabel));
+		}
+		
+		void accept(MethodVisitor visitor) {
+			if (!scopes.isEmpty()) {
+				throw new IllegalStateException("Scope stack not empty");
+			}
+			visitor.visitCode();
+			foreach (var e in exceptionTable) {
+				visitor.visitTryCatchBlock(e.from, e.to, e.target, (e.type == null) ? null : e.type.FullName);
+			}
+			foreach (var i in instructions) {
+				i.accept(visitor);
+			}
+			foreach (var l in locals) {
+				visitor.visitLocalVariable(l.Name, l.Type.Descriptor, l.Type.Signature, l.beginLabel, l.endLabel, l.getIndex());
+			}
+			visitor.visitMaxs(0, 0);
+		}
+		
+		private void checkCreated() {
+			method.checkCreated();
+		}
+		
+		private class ScopeInfo {
+			int localIndex;
+			Label endLabel;
+			HashMap<String, JvmLocalInfo> locals;
+			
+			ScopeInfo(int localIndex, Label endLabel) {
+				this.localIndex = localIndex;
+				this.endLabel = endLabel;
+				this.locals = new HashMap<String, JvmLocalInfo>();
+			}
+		}
+		
+		private class ExceptionHandler {
+			Label from;
+			Label to;
+			Label target;
+			JvmTypeInfo type;
+			
+			ExceptionHandler(Label from, Label to, Label target, JvmTypeInfo type) {
+				this.from = from;
+				this.to = to;
+				this.target = target;
+				this.type = type;
+			}
+		}
+
+	}
+	
+}
