@@ -1209,7 +1209,7 @@ package stab.compiler {
 		
 		protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, JvmTypeInfo targetType, boolean nested) {
 			var nameExpression = memberAccess.Member;
-			var name = context.getIdentifier(nameExpression.NameOffset, nameExpression.NameLength);
+			var name = nameExpression.Name ?? context.getIdentifier(nameExpression.NameOffset, nameExpression.NameLength);
 			handleExpression(memberAccess.TargetObject, null, true);
 			var typeArgs = getTypeArguments(nameExpression.TypeArguments);
 			var tinfo = memberAccess.TargetObject.getUserData(typeof(ExpressionInfo));

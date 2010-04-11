@@ -175,5 +175,55 @@ package stab.compiler.test {
 		public void groupJoin() {
 			doTest("GroupJoin", new Class<?>[] {}, new Object[] {}, "|A1: B1 |A2: B2 B3 |A3: B4 ");
 		}
+		
+		[Test]
+		public void selectLINQ() {
+			doTest("SelectLINQ", new Class<?>[] {}, new Object[] {}, "ABC");
+		}
+		
+		[Test]
+		public void castLINQ() {
+			doTest("CastLINQ", new Class<?>[] {}, new Object[] {}, "abcdef");
+		}
+		
+		[Test]
+		public void groupByLINQ() {
+			doTest("GroupByLINQ", new Class<?>[] {}, new Object[] {}, "(a)bc(d)efg");
+		}
+		
+		[Test]
+		public void groupBy2LINQ() {
+			doTest("GroupBy2LINQ", new Class<?>[] {}, new Object[] {}, "(a)BC(d)EFG");
+		}
+		
+		[Test]
+		public void groupJoinLINQ() {
+			doTest("GroupJoinLINQ", new Class<?>[] {}, new Object[] {}, "|A1: B1 |A2: B2 B3 |A3: B4 ");
+		}
+		
+		[Test]
+		public void orderByLINQ() {
+			doTest("OrderByLINQ", new Class<?>[] {}, new Object[] {}, "abbccc");
+		}
+		
+		[Test]
+		public void thenByLINQ() {
+			doTest("ThenByLINQ", new Class<?>[] {}, new Object[] {}, "abcaabbccaaabbbccc");
+		}
+		
+		[Test]
+		public void thenBy2LINQ() {
+			doTest("ThenBy2LINQ", new Class<?>[] {}, new Object[] {}, "abcaabbccaaabbbccc");
+		}
+		
+		[Test]
+		public void whereLINQ() {
+			doTest("WhereLINQ", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void where2LINQ() {
+			doTest("Where2LINQ", new Class<?>[] {}, new Object[] {}, 5);
+		}
 	}
 }

@@ -69,6 +69,9 @@ package stab.syntaxtree {
 				target.DisabledWarnings = infos.disabledWarnings;
 			}
 			var member = new SimpleNameExpressionNode { Name = name };
+			member.Filename = infos.filename;
+			member.Line = infos.line;
+			member.DisabledWarnings = infos.disabledWarnings;
 			target = new MemberAccessExpressionNode { TargetObject = target, Member = member };
 			target.Filename = infos.filename;
 			target.Line = infos.line;
@@ -516,6 +519,7 @@ package stab.syntaxtree {
 								Member = new SimpleNameExpressionNode { Name = "selectMany" }
 							};
 							copyNodeInfos(clause, member);
+							copyNodeInfos(clause, member.Member);
 							var invocation = new InvocationExpressionNode { TargetObject = member };
 							copyNodeInfos(clause, invocation);
 							
@@ -586,6 +590,7 @@ package stab.syntaxtree {
 								Member = new SimpleNameExpressionNode { Name = "select" }
 							};
 							copyNodeInfos(clause, member);
+							copyNodeInfos(clause, member.Member);
 							var invocation = new InvocationExpressionNode { TargetObject = member };
 							copyNodeInfos(clause, invocation);
 
@@ -635,6 +640,7 @@ package stab.syntaxtree {
 								Member = new SimpleNameExpressionNode { Name = "where" }
 							};
 							copyNodeInfos(clause, member);
+							copyNodeInfos(clause, member.Member);
 							var invocation = new InvocationExpressionNode { TargetObject = member };
 							copyNodeInfos(clause, invocation);
 
@@ -665,6 +671,7 @@ package stab.syntaxtree {
 									Member = new SimpleNameExpressionNode { Name = method }
 								};
 								copyNodeInfos(clause, member);
+								copyNodeInfos(clause, member.Member);
 								var invocation = new InvocationExpressionNode { TargetObject = member };
 								copyNodeInfos(clause, invocation);
 
@@ -714,6 +721,7 @@ package stab.syntaxtree {
 									Member = new SimpleNameExpressionNode { Name = "select" }
 								};
 								copyNodeInfos(body, member);
+								copyNodeInfos(body, member.Member);
 								var invocation = new InvocationExpressionNode { TargetObject = member };
 								copyNodeInfos(body, invocation);
 								var lambdaBody = new ExpressionStatementNode { Expression = handleExpression(select, scope, false) };
@@ -735,6 +743,7 @@ package stab.syntaxtree {
 							Member = new SimpleNameExpressionNode { Name = "groupBy" }
 						};
 						copyNodeInfos(body, member);
+						copyNodeInfos(body, member.Member);
 						var invocation = new InvocationExpressionNode { TargetObject = member };
 						copyNodeInfos(body, invocation);
 
