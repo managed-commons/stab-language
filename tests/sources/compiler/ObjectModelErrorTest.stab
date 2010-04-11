@@ -1,0 +1,172 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using org.junit;
+
+package stab.compiler.test {
+
+	public class ObjectModelErrorTest : ErrorTest {
+		protected override String ResourcesPath {
+			get {
+				return "ObjectModelErrorTest";
+			}
+		}
+		
+		[Test]
+		public void multipleBaseClasses() {
+			doTest("MultipleBaseClasses", new String[]{ 
+		"MultipleBaseClasses.stab (1, 36) error 187: Class 'C' cannot have multiple base classes: 'java.lang.String' and 'java.lang.Object'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void sameNameClasses() {
+			doTest("SameNameClasses", new String[]{ "SameNameClasses.stab (4, 14) error 69: A type 'C' is already defined" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void baseMissingDefaultConstructor() {
+			doTest("BaseMissingDefaultConstructor", new String[]{
+				"BaseMissingDefaultConstructor.stab (1, 14) error 74: 'Base' does not contain a constructor without argument" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void constructorTypo() {
+			doTest("ConstructorTypo", new String[]{ "ConstructorTypo.stab (2, 12) error 120: Method 'X' must have a return type" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void staticInvocation() {
+			doTest("StaticInvocation", new String[]{
+				"StaticInvocation.stab (6, 13) error 137: Cannot apply invocation to any method, delegate or extension method" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void staticThisAccess() {
+			doTest("StaticThisAccess", new String[]{ "StaticThisAccess.stab (5, 9) error 162: Keyword 'this' is not valid in a static context" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void classInInterfaceList() {
+			doTest("ClassInInterfaceList", new String[]{
+				"ClassInInterfaceList.stab (1, 26) error 80: Interface 'Iface' cannot have a base class: 'java.lang.Object'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void unexpectedModifiers() {
+			doTest("UnexpectedModifiers",
+				new String[]{ "UnexpectedModifiers.stab (1, 25) error 174: Modifier 'protected' cannot be used here",
+							  "UnexpectedModifiers.stab (1, 25) error 174: Modifier 'private' cannot be used here" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void methodOverride() {
+			doTest("MethodOverride", new String[]{
+				"MethodOverride.stab (2, 26) error 139: No method 'm()' found to override in base types of 'C'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void sameNameGenericClasses() {
+			doTest("SameNameGenericClasses", new String[]{ "SameNameGenericClasses.stab (4, 18) error 69: A type 'C' is already defined" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void finalBaseClass() {
+			doTest("FinalBaseClass", new String[]{ "FinalBaseClass.stab (4, 18) error 94: 'B': cannot derive from final class 'A'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void unimplementedAbstractMethod() {
+			doTest("UnimplementedAbstractMethod", new String[]{
+				"UnimplementedAbstractMethod.stab (5, 14) error 61: 'D' does not implement inherited abstract method 'C.m()'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void circularBaseTypeDependency() {
+			doTest("CircularBaseTypeDependency", new String[]{
+				"CircularBaseTypeDependency.stab (1, 7) error 79: Circular base type dependency involving 'B' and 'D'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void overridePrivate() {
+			doTest("OverridePrivate", new String[]{
+				"OverridePrivate.stab (7, 26) error 139: No method 'm()' found to override in base types of 'D'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void overridePackagePrivate() {
+			doTest("OverridePackagePrivate", new String[]{
+				"OverridePackagePrivate.stab (10, 30) error 139: No method 'm()' found to override in base types of 'p2.D'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void outerClassMethod() {
+			doTest("OuterClassMethod", new String[]{
+				"OuterClassMethod.stab (7, 13) error 176: The name 'm1' cannot be resolved in this context" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void finalizeOverriding() {
+			doTest("FinalizeOverriding", new String[]{
+				"FinalizeOverriding.stab (2, 26) error 97: A class cannot declare a 'finalize' method. Use the destructor syntax instead" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void covariance() {
+			doTest("Covariance", new String[]{
+		"Covariance.stab (10, 28) error 108: 'CovarianceAux.copy()' has a return type incompatible with the return type of 'Covariance.copy()'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void covariance2() {
+			doTest("Covariance2", new String[]{
+		"Covariance2.stab (8, 19) error 108: 'CovarianceAux.copy()' has a return type incompatible with the return type of 'Covariance.copy()'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void extendsTypeVariable() {
+			doTest("ExtendsTypeVariable", new String[]{
+				"ExtendsTypeVariable.stab (1, 14) error 86: Cannot derive from 'T' because it is a type variable" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void inconsistentAccessibility() {
+			doTest("InconsistentAccessibility", new String[]{
+				"InconsistentAccessibility.stab (7, 14) error 110: Type 'C' is less accessible than method 'm'" },
+				new String[] {});
+		}
+	}
+}

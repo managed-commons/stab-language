@@ -1,0 +1,93 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using org.junit;
+
+package stab.compiler.test {
+
+	public class StatementsErrorTest : ErrorTest {
+		protected override String ResourcesPath {
+			get {
+				return "StatementsErrorTest";
+			}
+		}
+		
+		[Test]
+		public void labelOutsideScope() {
+			doTest("LabelOutsideScope", new String[]{ 
+				"LabelOutsideScope.stab (4, 13) error 173: No such label 'label' within the scope of the goto statement" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void whileNull() {
+			doTest("WhileNull", new String[]{ 
+				"WhileNull.stab (3, 16) error 134: Cannot implicitly convert type '<null>' to 'boolean'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void definiteAssignment() {
+			doTest("DefiniteAssignment", new String[]{ 
+				"DefiniteAssignment.stab (3, 9) error 183: Variable 'i' is used but never initialized" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void definiteAssignment2() {
+			doTest("DefiniteAssignment2", new String[]{ 
+				"DefiniteAssignment2.stab (4, 13) error 169: Use of unassigned local variable 'i'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void definiteAssignment3() {
+			doTest("DefiniteAssignment3", new String[]{ 
+				"DefiniteAssignment3.stab (6, 13) error 169: Use of unassigned local variable 'i'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void definiteAssignment4() {
+			doTest("DefiniteAssignment4", new String[]{ 
+				"DefiniteAssignment4.stab (10, 20) error 169: Use of unassigned local variable 'i'" },
+				new String[] {
+				"DefiniteAssignment4.stab (13, 9) warning 189: Unreachable statement" });
+		}
+		
+		[Test]
+		public void definiteAssignment5() {
+			doTest("DefiniteAssignment5", new String[]{ 
+				"DefiniteAssignment5.stab (13, 16) error 169: Use of unassigned local variable 'i'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void definiteAssignment6() {
+			doTest("DefiniteAssignment6", new String[]{ 
+				"DefiniteAssignment6.stab (22, 16) error 169: Use of unassigned local variable 'result'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void definiteAssignment7() {
+			doTest("DefiniteAssignment7", new String[]{ 
+				"DefiniteAssignment7.stab (7, 17) error 169: Use of unassigned local variable 'b'" },
+				new String[] {});
+		}
+	}
+}

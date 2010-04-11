@@ -1,0 +1,63 @@
+Features ==============================
+
+1 - LINQ
+2 - using
+3 - Expression trees
+4 - Generic constructors
+	* syntax for this and super clauses (this<T1, T2>(...))
+	* syntax for new (new <T1, T2> C(...))
+5 - [Conditional("DEBUG")] for instrumentation
+6 - package annotations
+7 - javadoc
+
+
+Issues ================================
+
+- allow -runtimelib to be optional (for runtime compilation)
+- source/lines in bytecode
+- generate exception clauses for Java interop?
+- validate generic constraints
+- test constant expressions with static final fields
+- generate bridge methods for public abstract methods implemented in private superclasses?
+- create an InternalErrorException class
+- return t[] => stack trace
+- str1 + str2 + 1 => stack trace
+
+Errors ================================
+
+public class C<T> {
+	private T[] t;
+	public C() {
+		t = new T[1];
+	}
+}
+
+=> Warning: generic type array creation is unsafe.
+==============================
+using java.lang;
+
+public class ArrayInitializerAutoboxing {
+	public static int method(short s) {
+		Integer[] t = { s };
+		return t[0];
+	}
+}
+=> Error: wrong array element type
+==============================
+public class VarArray {
+	public static void method() {
+		var t = { 1, 2 };
+	}
+}
+=> Error: cannot use array initializer with var
+===============================
+public class C {
+	public void m() {
+		finalize();
+	}
+	protected finalize() {
+		
+	}
+}
+=> Error: cannot call finalize()
+=> Error: cannot override finalize() : use destructor instead

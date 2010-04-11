@@ -1,0 +1,179 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using org.junit;
+
+package stab.compiler.test {
+
+	public class LibraryTest : ExecutionTest {
+		protected override String ResourcesPath {
+			get {
+				return "LibraryTest";
+			}
+		}
+		
+		[Test]
+		public void count() {
+			doTest("Count", new Class<?>[] {}, new Object[] {}, 3);
+		}
+		
+		[Test]
+		public void count2() {
+			doTest("Count2", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void any() {
+			doTest("Any", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void range() {
+			doTest("Range", new Class<?>[] {}, new Object[] {}, 3628800);
+		}
+		
+		[Test]
+		public void asIterable() {
+			doTest("AsIterable", new Class<?>[] {}, new Object[] {}, 3628800);
+		}
+		
+		[Test]
+		public void asIterable2() {
+			doTest("AsIterable2", new Class<?>[] {}, new Object[] {}, "abc");
+		}
+		
+		[Test]
+		public void empty() {
+			doTest("Empty", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void countInt() {
+			doTest("CountInt", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void select() {
+			doTest("Select", new Class<?>[] {}, new Object[] {}, "ABC");
+		}
+		
+		[Test]
+		public void selectInt() {
+			doTest("SelectInt", new Class<?>[] {}, new Object[] {}, 6);
+		}
+		
+		[Test]
+		public void selectInt2() {
+			doTest("SelectInt2", new Class<?>[] {}, new Object[] {}, "abc");
+		}
+		
+		[Test]
+		public void selectInt3() {
+			doTest("SelectInt3", new Class<?>[] {}, new Object[] {}, "246");
+		}
+		
+		[Test]
+		public void where() {
+			doTest("Where", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void where2() {
+			doTest("Where2", new Class<?>[] {}, new Object[] {}, 5);
+		}
+		
+		[Test]
+		public void distinct() {
+			doTest("Distinct", new Class<?>[] {}, new Object[] {}, 3);
+		}
+		
+		[Test]
+		public void sequenceEqual() {
+			doTest("SequenceEqual", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void sequenceEqual2() {
+			doTest("SequenceEqual2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void orderBy() {
+			doTest("OrderBy", new Class<?>[] {}, new Object[] {}, "abbccc");
+		}
+		
+		[Test]
+		public void thenBy() {
+			doTest("ThenBy", new Class<?>[] {}, new Object[] {}, "abcaabbccaaabbbccc");
+		}
+		
+		[Test]
+		public void thenBy2() {
+			doTest("ThenBy2", new Class<?>[] {}, new Object[] {}, "abcaabbccaaabbbccc");
+		}
+		
+		[Test]
+		public void selectMany() {
+			doTest("SelectMany", new Class<?>[] {}, new Object[] {}, "a1b1c1a2b2c2");
+		}
+		
+		[Test]
+		public void whereSequenceEqual() {
+			doTest("WhereSequenceEqual", new Class<?>[] {}, new Object[] {}, "obj2");
+		}
+		
+		[Test]
+		public void cast() {
+			doTest("Cast", new Class<?>[] {}, new Object[] {}, "abcdef");
+		}
+		
+		[Test]
+		public void castToInt() {
+			doTest("CastToInt", new Class<?>[] {}, new Object[] {}, 10);
+		}
+		
+		[Test]
+		public void castToInt2() {
+			doTest("CastToInt2", new Class<?>[] {}, new Object[] {}, 10);
+		}
+		
+		[Test]
+		public void groupBy() {
+			doTest("GroupBy", new Class<?>[] {}, new Object[] {}, "(a)bc(d)efg");
+		}
+		
+		[Test]
+		public void ofType() {
+			doTest("OfType", new Class<?>[] {}, new Object[] {}, "abcdef");
+		}
+		
+		[Test]
+		public void groupBy2() {
+			doTest("GroupBy2", new Class<?>[] {}, new Object[] {}, "(a)BC(d)EFG");
+		}
+		
+		[Test]
+		public void join() {
+			doTest("Join", new Class<?>[] {}, new Object[] {}, "|A1: B1|A2: B2|A2: B3|A3: B4");
+		}
+		
+		[Test]
+		public void groupJoin() {
+			doTest("GroupJoin", new Class<?>[] {}, new Object[] {}, "|A1: B1 |A2: B2 B3 |A3: B4 ");
+		}
+	}
+}

@@ -1,0 +1,12 @@
+public class Destructor {
+	public static void test() {
+		var obj = new Destructor();
+	}
+	
+	~Destructor() {
+		cleanup();
+	}
+	
+	private void cleanup() {
+	}
+}
