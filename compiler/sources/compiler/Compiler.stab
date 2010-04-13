@@ -191,6 +191,12 @@ package stab.compiler {
 				return;
 			}
 
+			// Annotations generation
+			generateAnnotations();
+			if (context.HasErrors) {
+				return;
+			}
+            
 			// Code validation
 			validateCode();
 			if (context.HasErrors) {
@@ -1908,66 +1914,54 @@ package stab.compiler {
 		}
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
-		// Code validation
-		
-		private void validateCode() {
+		// Annotations generation
+
+        private void generateAnnotations() {
 			try {
 				context.MemberResolver.initialize();
 				foreach (var compilationUnit in context.CompilationUnits) {
 					context.Text = compilationUnit.Text;
-					queryTranslator = new QueryTranslator(context.Text);
 					context.MemberResolver.enterScope();
 					try {
-						validateCode(compilationUnit.Body);
+						generateAnnotations(compilationUnit.Body);
 					} catch (CodeErrorException) {
 					} finally {
 						context.MemberResolver.leaveScope();
 					}
 				}
-				
-				// Implicit constructors validation
-				foreach (var methodBuilder in context.ConstructorBuilders) {
-					var baseConstructor = methodBuilder.DeclaringType.BaseType.getMethod("<init>",
-							(methodBuilder.DeclaringType.IsEnum)
-								? new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT }
-								: Query.empty<JvmTypeInfo>());
-					if (baseConstructor == null) {
-						context.addError(CompileErrorId.BaseMissingDefaultConstructor,
-							methodBuilder.DeclaringType.BaseType.getUserData(typeof(ClassDeclarationNode)),
-							BytecodeHelper.getDisplayName(methodBuilder.DeclaringType.BaseType));
-					}
-				}
 			} finally {
 				context.MemberResolver.dispose();
 			}
-		}
+        }
 
-		private void validateCode(PackageBodyNode packageBody) {
+		private void generateAnnotations(PackageBodyNode packageBody) {
 			var packageInfo = packageBody.getUserData(typeof(PackageInfo));
 			context.MemberResolver.usingDirective(packageInfo.memberInfos, packageInfo.packages, packageInfo.packageAliases);
-			// TODO: Annotations
 		
+            // TODO: package annotations
+        
 			foreach (var member in packageBody.Members) {
 				switch (member.PackageMemberKind) {
 				case Package:
-					validateCode((PackageDeclarationNode)member);
+					generateAnnotations((PackageDeclarationNode)member);
 					break;
 				case Class:
-					validateClassCode((ClassDeclarationNode)member);
+					generateClassAnnotations((ClassDeclarationNode)member);
 					break;
 				case Interface:
-					validateInterfaceCode((InterfaceDeclarationNode)member);
+					generateInterfaceAnnotations((InterfaceDeclarationNode)member);
 					break;
 				case Delegate:
-					validateDelegateCode((DelegateDeclarationNode)member);
+					generateDelegateAnnotations((DelegateDeclarationNode)member);
 					break;
 				default:
 					throw new Exception("Internal error: unhandled member kind: " + member.PackageMemberKind);
 				}
 			}
 		}
-		
-		private void validateCode(PackageDeclarationNode packageDeclaration) {
+        
+        		
+		private void generateAnnotations(PackageDeclarationNode packageDeclaration) {
 			if (packageDeclaration.Body != null) {
 				// TODO: Annotations
 				
@@ -1975,7 +1969,7 @@ package stab.compiler {
 					context.MemberResolver.enterPackage(context.getIdentifier(identifier.Offset, identifier.Length));
 				}
 				try {
-					validateCode(packageDeclaration.Body);
+					generateAnnotations(packageDeclaration.Body);
 				} finally {
 					for (int i = packageDeclaration.Identifiers.size() - 1; i >= 0; --i) {
 						context.MemberResolver.leavePackage();
@@ -1983,66 +1977,45 @@ package stab.compiler {
 				}
 			}
 		}
-
-		private void validateClassCode(ClassDeclarationNode classDeclaration) {
+		private void generateClassAnnotations(ClassDeclarationNode classDeclaration) {
 			validateAnnotationSection(classDeclaration.Annotations, ElementType.TYPE);
-			
 			var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+			bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
+            
 			context.CurrentType = typeBuilder;
 			context.MemberResolver.enterType(typeBuilder);
 			try {
-				var t = visitBaseTypes(typeBuilder, new HashSet<JvmTypeInfo>());
-				if (t != null) {
-					throw context.error(CompileErrorId.CircularBaseTypeDependency, classDeclaration,
-						BytecodeHelper.getDisplayName(typeBuilder), BytecodeHelper.getDisplayName(t));
-				}
-				
-				if (!typeBuilder.IsAbstract) {
-					var abstractMethods =
-						typeBuilder.getBaseTypes().takeWhile(p => p.IsAbstract).selectMany(p => p.Methods).where(p => p.IsAbstract);
-					var nonAbstractMethods =
-						typeBuilder.Methods.concat(typeBuilder.getBaseClasses().selectMany(p => p.Methods)).where(p => !p.IsAbstract).toList();
-					foreach (var m in abstractMethods) {
-						if (!nonAbstractMethods.any(p => p.isOverriding(m))) {
-							context.addError(CompileErrorId.AbstractMethodNotImplemented, classDeclaration,
-								BytecodeHelper.getDisplayName(typeBuilder),
-								BytecodeHelper.getDisplayName(m.DeclaringType),
-								BytecodeHelper.getDisplayName(m));
-						}
-					}
-				}
-				
 				foreach (var member in classDeclaration.Members) {
 					switch (member.TypeMemberKind) {
 					case Class:
-						validateClassCode((ClassDeclarationNode)member);
+						generateClassAnnotations((ClassDeclarationNode)member);
 						break;
 					case Interface:
-						validateInterfaceCode((InterfaceDeclarationNode)member);
+						generateInterfaceAnnotations((InterfaceDeclarationNode)member);
 						break;
 					case Delegate:
-						validateDelegateCode((DelegateDeclarationNode)member);
+						generateDelegateAnnotations((DelegateDeclarationNode)member);
 						break;
 					case Method:
-						validateClassMethodCode((MethodDeclarationNode)member);
+						generateMethodAnnotations((MethodDeclarationNode)member);
 						break;
 					case Field:
-						validateClassFieldCode((FieldDeclarationNode)member);
+						generateFieldAnnotations((FieldDeclarationNode)member);
 						break;
 					case Indexer:
-						validateClassIndexerCode((IndexerDeclarationNode)member);
+						generateIndexerAnnotations((IndexerDeclarationNode)member);
 						break;
 					case Property:
-						validateClassPropertyCode((PropertyDeclarationNode)member);
+						generatePropertyAnnotations((PropertyDeclarationNode)member);
 						break;
 					case EnumConstant:
-						validateEnumConstantCode((EnumConstantDeclarationNode)member);
+						generateEnumConstantAnnotations((EnumConstantDeclarationNode)member);
 						break;
 					case Constructor:
-						validateConstructorCode((ConstructorDeclarationNode)member);
+						generateConstructorAnnotations((ConstructorDeclarationNode)member);
 						break;
 					case Destructor:
-						validateDestructorCode((DestructorDeclarationNode)member);
+						generateDestructorAnnotations((DestructorDeclarationNode)member);
 						break;
 					default:
 						throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
@@ -2054,43 +2027,24 @@ package stab.compiler {
 			}
 		}
 
-		private static JvmTypeInfo visitBaseTypes(JvmTypeInfo type, HashSet<JvmTypeInfo> visited) {
-			if (!visited.add(type)) {
-				return type.IsInterface ? type : type.BaseType;
-			}
-			if (type.IsInterface) {
-				foreach (var i in type.Interfaces) {
-					var t = visitBaseTypes(i, visited);
-					if (t != null) {
-						return i;
-					}
-				}
-				return null;
-			} else {
-				if (type.BaseType == null) {
-					return null;
-				}
-				return visitBaseTypes(type.BaseType, visited);
-			}
-		}
-
-		private void validateInterfaceCode(InterfaceDeclarationNode interfaceDeclaration) {
+		private void generateInterfaceAnnotations(InterfaceDeclarationNode interfaceDeclaration) {
 			validateAnnotationSection(interfaceDeclaration.Annotations, ElementType.TYPE);
-			
 			var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
+			bytecodeGenerator.generateAnnotationsBytecode(interfaceDeclaration.Annotations, typeBuilder);
+            
 			context.CurrentType = typeBuilder;
 			context.MemberResolver.enterType(typeBuilder);
 			try {
 				foreach (var member in interfaceDeclaration.Members) {
 					switch (member.TypeMemberKind) {
 					case Method:
-						validateInterfaceMethodCode((MethodDeclarationNode)member);
+						generateInterfaceMethodAnnotations((MethodDeclarationNode)member);
 						break;
 					case Indexer:
-						validateInterfaceIndexerCode((IndexerDeclarationNode)member);
+						generateIndexerAnnotations((IndexerDeclarationNode)member);
 						break;
 					case Property:
-						validateInterfacePropertyCode((PropertyDeclarationNode)member);
+						generatePropertyAnnotations((PropertyDeclarationNode)member);
 						break;
 					case Class:
 					case Delegate:
@@ -2108,106 +2062,25 @@ package stab.compiler {
 			}
 		}
 
-		private void validateDestructorCode(DestructorDeclarationNode destructorDeclaration) {
+		private void generateDestructorAnnotations(DestructorDeclarationNode destructorDeclaration) {
 			validateAnnotationSection(destructorDeclaration.Annotations, ElementType.METHOD);
-
 			var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
-			methodBuilder.addOrReplaceUserData(destructorDeclaration);
-			try {
-				context.CodeValidationContext.enterMethod(methodBuilder);
-				queryTranslator.translate(destructorDeclaration.Body);
-				this.statementValidator.handleStatement(destructorDeclaration.Body, null);
-				if (!context.HasErrors) {
-					validateControlFlow(methodBuilder, destructorDeclaration.Body, true);
-				}
-			} finally {
-				context.CodeValidationContext.leaveMethod();
-			}
+			bytecodeGenerator.generateAnnotationsBytecode(destructorDeclaration.Annotations, methodBuilder);
 		}
 
-		private void validateConstructorCode(ConstructorDeclarationNode constructorDeclaration) {
+		private void generateConstructorAnnotations(ConstructorDeclarationNode constructorDeclaration) {
 			validateAnnotationSection(constructorDeclaration.Annotations, ElementType.METHOD);
-
 			var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
-			methodBuilder.addOrReplaceUserData(constructorDeclaration);
-			var typeBuilder = (JvmTypeBuilder)methodBuilder.DeclaringType;
-			try {
-				context.CodeValidationContext.enterMethod(methodBuilder);
-				
-				var initializer = constructorDeclaration.Initializer;
-				var isStatic = constructorDeclaration.Modifiers.contains(Modifier.Static);
-				if (initializer != null) {
-					var initType = (initializer.IsSuper) ? typeBuilder.BaseType : typeBuilder;
-					var constructors = initType.Methods.where(p => p.Name.equals("<init>"));
-					foreach (var arg in initializer.Arguments) {
-						if (arg.ExpressionKind != ExpressionKind.Lambda) {
-							expressionValidator.handleExpression(arg, null, true);
-						}
-					}
-					var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, initializer.Arguments, JvmTypeInfo.VOID);
-					var info = new ExpressionInfo(initType);
-					info.Method = constructor;
-					initializer.addUserData(info);
-				} else if (!isStatic) {
-					// TODO: check overloading
-					JvmMethodInfo base;
-					if (typeBuilder.IsEnum) {
-						var paramTypes = new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT };
-						base = typeBuilder.BaseType.getMethod("<init>", paramTypes);
-					} else {
-						base = typeBuilder.getBaseType().getMethod("<init>", Query.empty<JvmTypeInfo>());
-					}
-					if (base == null) {
-						context.addError(CompileErrorId.BaseMissingDefaultConstructor,
-							constructorDeclaration,
-							typeBuilder.BaseType.FullName);
-					} else {
-						var info = new ExpressionInfo(typeBuilder.BaseType);
-						info.Method = base;
-						constructorDeclaration.addUserData(info);
-					}
-				}
-				queryTranslator.translate(constructorDeclaration.Body);
-				statementValidator.handleStatement(constructorDeclaration.Body, null);
-				if (!context.HasErrors) {
-					validateControlFlow(methodBuilder, constructorDeclaration.Body, !isStatic);
-				}
-			} finally {
-				context.CodeValidationContext.leaveMethod();
-			}
+			bytecodeGenerator.generateAnnotationsBytecode(constructorDeclaration.Annotations, methodBuilder);
 		}
 
-		private void validateEnumConstantCode(EnumConstantDeclarationNode enumConstant) {
-			validateAnnotationSection(enumConstant.getAnnotations(), ElementType.FIELD);
-			
-			context.CodeValidationContext.IsStatic = true;
-			foreach (var e in enumConstant.Arguments) {
-				expressionValidator.handleExpression(e, null, true);
-			}
-			var fieldBuilder = enumConstant.getUserData(typeof(JvmFieldBuilder));
-			var typeBuilder = (JvmTypeBuilder)fieldBuilder.DeclaringType;
-			var constructors = typeBuilder.Methods.where(p => p.Name.equals("<init>"));
-			var arguments = new ArrayList<ExpressionNode>();
-			var arg1 = new SimpleNameExpressionNode();
-			arg1.addUserData(new ExpressionInfo(context.TypeSystem.StringType));
-			arguments.add(arg1);
-			var arg2 = new SimpleNameExpressionNode();
-			arg2.addUserData(new ExpressionInfo(JvmTypeInfo.INT));
-			arguments.add(arg2);
-			arguments.addAll(enumConstant.Arguments);
-			var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, arguments, JvmTypeInfo.VOID);
-			var info = new ExpressionInfo(typeBuilder);
-			info.setMethod(constructor);
-			enumConstant.addUserData(info);
-			var clinit = (JvmMethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<JvmTypeInfo>());
-			if (clinit == null) {
-				clinit = typeBuilder.defineMethod("<clinit>");
-				clinit.setStatic(true);
-				clinit.setReturnType(JvmTypeInfo.VOID);
-			}
+		private void generateEnumConstantAnnotations(EnumConstantDeclarationNode enumConstant) {
+			validateAnnotationSection(enumConstant.Annotations, ElementType.FIELD);
+            var field = enumConstant.getUserData(typeof(JvmFieldBuilder));
+            bytecodeGenerator.generateAnnotationsBytecode(enumConstant.Annotations, field);
 		}
 
-		private void validateClassIndexerCode(IndexerDeclarationNode indexerDeclaration) {
+		private void generateIndexerAnnotations(IndexerDeclarationNode indexerDeclaration) {
 			validateAnnotationSection(indexerDeclaration.Annotations, ElementType.METHOD);
 			var get = indexerDeclaration.GetAccessor;
 			if (get != null) {
@@ -2217,55 +2090,11 @@ package stab.compiler {
 			if (set != null) {
 				validateAnnotationSection(set.Annotations, ElementType.METHOD);
 			}
-
-			var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-			var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-			
-			var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder);
-			indexerDeclaration.addUserData(memberInfo);
-			
-			var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
-			if (indexerDeclaration.Modifiers.contains(Modifier.Override)) {
-				var baseIndexer = overriden.where(p => !p.DeclaringType.IsInterface).firstOrDefault();
-				if (baseIndexer == null) {
-					context.addError(CompileErrorId.NoIndexerToOverride, indexerDeclaration,
-						BytecodeHelper.getDisplayName((getBuilder ?? setBuilder).DeclaringType));
-				} else {
-					var meth = baseIndexer.GetAccessor;
-					if (meth == null) {
-						if (get != null) {
-							context.addError(CompileErrorId.NoOverridableGetAccessor, get,
-								BytecodeHelper.getDisplayName(baseIndexer.DeclaringType) + "."
-								+ BytecodeHelper.getIndexerDisplayName(getBuilder));
-						}
-						meth = baseIndexer.SetAccessor;
-					}
-					if (meth.IsFinal) {
-						context.addError(CompileErrorId.FinalIndexerOverride, indexerDeclaration,
-								BytecodeHelper.getDisplayName(baseIndexer.DeclaringType));
-					}
-					if (baseIndexer.SetAccessor == null) {
-						if (set != null) {
-							context.addError(CompileErrorId.NoOverridableSetAccessor, set,
-								BytecodeHelper.getDisplayName(baseIndexer.getDeclaringType()) + "."
-								+ BytecodeHelper.getIndexerDisplayName(setBuilder));
-						}
-					}
-				}
-			} else {
-				foreach (var mi in overriden) {
-					if (!mi.DeclaringType.IsInterface) {
-						context.addError(CompileErrorId.MissingOverrideIndexer, indexerDeclaration,
-							BytecodeHelper.getDisplayName(mi.DeclaringType));
-						break;
-					}
-				}
-			}
-
-			validateAccessors(get, set);
+			bytecodeGenerator.emitAccessorAnnotations(indexerDeclaration.GetAccessor, indexerDeclaration.Annotations);
+			bytecodeGenerator.emitAccessorAnnotations(indexerDeclaration.SetAccessor, indexerDeclaration.Annotations);
 		}
 
-		private void validateClassPropertyCode(PropertyDeclarationNode propertyDeclaration) {
+		private void generatePropertyAnnotations(PropertyDeclarationNode propertyDeclaration) {
 			validateAnnotationSection(propertyDeclaration.Annotations, ElementType.METHOD);
 			var get = propertyDeclaration.GetAccessor;
 			if (get != null) {
@@ -2275,218 +2104,50 @@ package stab.compiler {
 			if (set != null) {
 				validateAnnotationSection(set.Annotations, ElementType.METHOD);
 			}
-
-			var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-			var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-
-			var name = context.getIdentifier(propertyDeclaration.NameOffset, propertyDeclaration.NameLength);
-			var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder, name);
-			propertyDeclaration.addUserData(memberInfo);
-			
-			var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
-			if (propertyDeclaration.Modifiers.contains(Modifier.Override)) {
-				MemberInfo baseProperty = overriden.where(p => !p.DeclaringType.IsInterface).firstOrDefault();
-				if (baseProperty == null) {
-					context.addError(CompileErrorId.NoPropertyToOverride, propertyDeclaration,
-							BytecodeHelper.getDisplayName((getBuilder ?? setBuilder).DeclaringType), name);
-				} else {
-					var meth = baseProperty.GetAccessor;
-					if (meth == null) {
-						if (get != null) {
-							context.addError(CompileErrorId.NoOverridableGetAccessor, get,
-								BytecodeHelper.getDisplayName(baseProperty.DeclaringType) + "."
-								+ BytecodeHelper.getPropertyDisplayName(getBuilder, name));
-						}
-						meth = baseProperty.SetAccessor;
-					}
-					if (meth.IsFinal) {
-						context.addError(CompileErrorId.FinalPropertyOverride, propertyDeclaration,
-							BytecodeHelper.getDisplayName(baseProperty.DeclaringType), name);
-					}
-					if (baseProperty.SetAccessor == null) {
-						if (set != null) {
-							context.addError(CompileErrorId.NoOverridableSetAccessor, set,
-								BytecodeHelper.getDisplayName(baseProperty.DeclaringType) + "."
-								+ BytecodeHelper.getPropertyDisplayName(getBuilder, name));
-						}
-					}
-				}
-			} else {
-				foreach (var mi in overriden) {
-					if (!mi.DeclaringType.IsInterface) {
-						context.addError(CompileErrorId.MissingOverrideProperty, propertyDeclaration,
-								BytecodeHelper.getDisplayName(mi.DeclaringType));
-						break;
-					}
-				}
-			}
-			
-			validateAccessors(get, set);
+			bytecodeGenerator.emitAccessorAnnotations(propertyDeclaration.GetAccessor, propertyDeclaration.Annotations);
+			bytecodeGenerator.emitAccessorAnnotations(propertyDeclaration.SetAccessor, propertyDeclaration.Annotations);
 		}
 
-		private void validateAccessors(AccessorDeclarationNode get, AccessorDeclarationNode set) {
-			if (get != null && get.Body != null) {
-				var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
-				methodBuilder.addOrReplaceUserData(get);
-				try {
-					context.CodeValidationContext.enterMethod(methodBuilder);
-
-					queryTranslator.translate(get.Body);
-					statementValidator.handleStatement(get.Body, null);
-					if (!context.HasErrors) {
-						validateControlFlow(methodBuilder, get.Body, true);
-					}
-				} finally {
-					context.CodeValidationContext.leaveMethod();
-				}
-			}
-			if (set != null && set.Body != null) {
-				var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
-				methodBuilder.addOrReplaceUserData(set);
-				try {
-					context.CodeValidationContext.enterMethod(methodBuilder);
-					methodBuilder.addUserData(context.MemberResolver.getLocal("value"));
-
-					queryTranslator.translate(set.Body);
-					statementValidator.handleStatement(set.Body, null);
-					if (!context.HasErrors) {
-						validateControlFlow(methodBuilder, set.Body, true);
-					}
-				} finally {
-					context.CodeValidationContext.leaveMethod();
-				}
-			}
-		}
-		
-		private void validateInterfaceMethodCode(MethodDeclarationNode methodDeclaration) {
+        		
+		private void generateInterfaceMethodAnnotations(MethodDeclarationNode methodDeclaration) {
 			validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
 			var method = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
 			if (methodDeclaration.DefaultValue != null) {
 				validateAnnotationArgument(method, methodDeclaration.DefaultValue);
 			}
-		}
-		
-		private void validateInterfaceIndexerCode(IndexerDeclarationNode indexerDeclaration) {
-			validateAnnotationSection(indexerDeclaration.Annotations, ElementType.METHOD);
-			var get = indexerDeclaration.GetAccessor;
-			if (get != null) {
-				validateAnnotationSection(get.Annotations, ElementType.METHOD);
-			}
-			var set = indexerDeclaration.GetAccessor;
-			if (set != null) {
-				validateAnnotationSection(set.Annotations, ElementType.METHOD);
-			}
-		}
-		
-		private void validateInterfacePropertyCode(PropertyDeclarationNode propertyDeclaration) {
-			validateAnnotationSection(propertyDeclaration.Annotations, ElementType.METHOD);
-			var get = propertyDeclaration.GetAccessor;
-			if (get != null) {
-				validateAnnotationSection(get.Annotations, ElementType.METHOD);
-			}
-			var set = propertyDeclaration.GetAccessor;
-			if (set != null) {
-				validateAnnotationSection(set.Annotations, ElementType.METHOD);
-			}
+            bytecodeGenerator.generateInterfaceMethodAnnotations(methodDeclaration);
 		}
 
-		private void validateDelegateCode(DelegateDeclarationNode delegateDeclaration) {
+		private void generateDelegateAnnotations(DelegateDeclarationNode delegateDeclaration) {
 			validateAnnotationSection(delegateDeclaration.Annotations, ElementType.TYPE);
+			var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+ 			bytecodeGenerator.generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
 		}
 
-		private void validateClassMethodCode(MethodDeclarationNode methodDeclaration) {
+		private void generateMethodAnnotations(MethodDeclarationNode methodDeclaration) {
 			validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
-			
+			foreach (var section in methodDeclaration.Annotations) {
+				foreach (var annotation in section.Annotations) {
+                    if (annotation.getUserData(typeof(JvmTypeInfo)).FullName.equals("stab/lang/Conditional")) {
+                        var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+                        if (methodBuilder.ReturnType != JvmTypeInfo.VOID) {
+                            context.addError(CompileErrorId.ConditionalMethodNotVoid, methodDeclaration);
+                        }
+                    }
+                }
+            }
 			var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
-			methodBuilder.addOrReplaceUserData(methodDeclaration);
-			try {
-				context.CodeValidationContext.enterMethod(methodBuilder);
-				context.CodeValidationContext.IsStatic = methodBuilder.IsStatic;
-			
-				var member = MemberInfo.getInfo(methodBuilder);
-				foreach (var mi in member.getOverridenMembers(context.AnnotatedTypeSystem)) {
-					var meth = mi.Method;
-					if (!meth.ReturnType.isAssignableFrom(methodBuilder.ReturnType)) {
-						context.addError(CompileErrorId.IncompatibleOverridingReturnType, methodDeclaration,
-								BytecodeHelper.getDisplayName(methodBuilder.DeclaringType),
-								BytecodeHelper.getDisplayName(methodBuilder),
-								BytecodeHelper.getDisplayName(meth.DeclaringType));
-					}
-				}
-				checkAccessibility(methodBuilder, methodDeclaration);
-				checkOverloading(methodBuilder, methodDeclaration.Modifiers, methodDeclaration);
-				if (methodDeclaration.Body != null) {
-					queryTranslator.translate(methodDeclaration.Body);
-					this.statementValidator.handleStatement(methodDeclaration.Body, null);
-					if (!context.HasErrors) {
-						validateControlFlow(methodBuilder, methodDeclaration.Body, true);
-					}
-				} else if (!methodDeclaration.IsPartial && !methodBuilder.IsAbstract && !methodBuilder.IsNative) {
-					context.addError(CompileErrorId.MethodWithoutBody, methodDeclaration,
-						BytecodeHelper.getDisplayName(methodBuilder.DeclaringType), BytecodeHelper.getDisplayName(methodBuilder));
-				}
-			} finally {
-				context.CodeValidationContext.leaveMethod();
-			}
-		}
-
-		private void checkAccessibility(JvmMethodInfo method, SyntaxNode node) {
-			if (!method.IsPublic || !method.DeclaringType.IsPublic) {
-				return;
-			}
-			if (!method.ReturnType.IsPrimitive && !method.ReturnType.IsPublic) {
-				context.addError(CompileErrorId.InconsistentAccessibility, node,
-					BytecodeHelper.getDisplayName(method.ReturnType), method.Name);
-			}
+			bytecodeGenerator.generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
 		}
 		
-		private void checkOverloading(JvmMethodInfo method, EnumSet<Modifier> modifiers, SyntaxNode node) {
-			var superMethod = method.DeclaringType.getBaseClasses().selectMany(p => p.Methods).firstOrDefault(p => method.isOverriding(p));
-			if (superMethod != null) {
-				if (superMethod.IsPublic) {
-					if (modifiers.contains(Modifier.Protected) || modifiers.contains(Modifier.Private) || !modifiers.contains(Modifier.Public)) {
-						context.addError(CompileErrorId.ReduceMethodVisibility, node,
-							BytecodeHelper.getDisplayName(method.DeclaringType),
-							BytecodeHelper.getDisplayName(method),
-							BytecodeHelper.getDisplayName(superMethod.DeclaringType));
-					}
-				}
-				if (modifiers.contains(Modifier.Virtual)) {
-					context.addError(CompileErrorId.IllegalVirtualMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
-							BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
-				}
-				if (superMethod.IsFinal) {
-					if (modifiers.contains(Modifier.Override)) {
-						context.addError(CompileErrorId.IllegalOverrideMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
-								BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
-					}
-				} else if (!modifiers.contains(Modifier.Override)) {
-					context.addError(CompileErrorId.MissingOverride, node, BytecodeHelper.getDisplayName(method.DeclaringType),
-							BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
-				}
-			} else if (modifiers.contains(Modifier.Override)) {
-				context.addError(CompileErrorId.NoMethodToOverride, node,
-					BytecodeHelper.getDisplayName(method.DeclaringType), BytecodeHelper.getDisplayName(method));
-			}
-		}
-		
-		private void validateControlFlow(JvmMethodBuilder methodBuilder, BlockStatementNode body, boolean insertReturn) {
-			var uninitializedLocals = this.reachabilityChecker.checkMethod(methodBuilder, body, insertReturn);
-			foreach (var li in uninitializedLocals) {
-				if (li.assignmentCount > 0) {
-					if (li.referenceCount > 0) {
-						this.assignmentChecker.visitStatement(li);
-					} else {
-						context.addWarning(CompileErrorId.VariableNeverRead, li.declaration, li.local.Name);
-					}
-				} else if (li.referenceCount > 0) {
-					context.addError(CompileErrorId.VariableUninitialized, li.declaration, li.local.Name);
-				} else {
-					context.addWarning(CompileErrorId.VariableNeverUsed, li.declaration, li.local.Name);
-				}
-			}
-		}
-		
+		private void generateFieldAnnotations(FieldDeclarationNode fieldDeclaration) {
+			validateAnnotationSection(fieldDeclaration.Annotations, ElementType.FIELD);
+			foreach (var decl in fieldDeclaration.Declarators) {
+				var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+				bytecodeGenerator.generateAnnotationsBytecode(fieldDeclaration.Annotations, fieldBuilder);
+            }
+        }
+        
 		private void validateAnnotationSection(List<AnnotationSectionNode> annotations, ElementType elementType) {
 			foreach (var section in annotations) {
 				foreach (var annotation in section.Annotations) {
@@ -2603,9 +2264,484 @@ package stab.compiler {
 			}
 		}
 		
-		private void validateClassFieldCode(FieldDeclarationNode fieldDeclaration) {
-			validateAnnotationSection(fieldDeclaration.Annotations, ElementType.FIELD);
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// Code validation
+		
+		private void validateCode() {
+			try {
+				context.MemberResolver.initialize();
+				foreach (var compilationUnit in context.CompilationUnits) {
+					context.Text = compilationUnit.Text;
+					queryTranslator = new QueryTranslator(context.Text);
+					context.MemberResolver.enterScope();
+					try {
+						validateCode(compilationUnit.Body);
+					} catch (CodeErrorException) {
+					} finally {
+						context.MemberResolver.leaveScope();
+					}
+				}
+				
+				// Implicit constructors validation
+				foreach (var methodBuilder in context.ConstructorBuilders) {
+					var baseConstructor = methodBuilder.DeclaringType.BaseType.getMethod("<init>",
+							(methodBuilder.DeclaringType.IsEnum)
+								? new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT }
+								: Query.empty<JvmTypeInfo>());
+					if (baseConstructor == null) {
+						context.addError(CompileErrorId.BaseMissingDefaultConstructor,
+							methodBuilder.DeclaringType.BaseType.getUserData(typeof(ClassDeclarationNode)),
+							BytecodeHelper.getDisplayName(methodBuilder.DeclaringType.BaseType));
+					}
+				}
+			} finally {
+				context.MemberResolver.dispose();
+			}
+		}
+
+		private void validateCode(PackageBodyNode packageBody) {
+			var packageInfo = packageBody.getUserData(typeof(PackageInfo));
+			context.MemberResolver.usingDirective(packageInfo.memberInfos, packageInfo.packages, packageInfo.packageAliases);
+		
+			foreach (var member in packageBody.Members) {
+				switch (member.PackageMemberKind) {
+				case Package:
+					validateCode((PackageDeclarationNode)member);
+					break;
+				case Class:
+					validateClassCode((ClassDeclarationNode)member);
+					break;
+				case Interface:
+				case Delegate:
+					break;
+				default:
+					throw new Exception("Internal error: unhandled member kind: " + member.PackageMemberKind);
+				}
+			}
+		}
+		
+		private void validateCode(PackageDeclarationNode packageDeclaration) {
+			if (packageDeclaration.Body != null) {
+				// TODO: Annotations
+				
+				foreach (var identifier in packageDeclaration.Identifiers) {
+					context.MemberResolver.enterPackage(context.getIdentifier(identifier.Offset, identifier.Length));
+				}
+				try {
+					validateCode(packageDeclaration.Body);
+				} finally {
+					for (int i = packageDeclaration.Identifiers.size() - 1; i >= 0; --i) {
+						context.MemberResolver.leavePackage();
+					}
+				}
+			}
+		}
+
+		private void validateClassCode(ClassDeclarationNode classDeclaration) {
+			var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+			context.CurrentType = typeBuilder;
+			context.MemberResolver.enterType(typeBuilder);
+			try {
+				var t = visitBaseTypes(typeBuilder, new HashSet<JvmTypeInfo>());
+				if (t != null) {
+					throw context.error(CompileErrorId.CircularBaseTypeDependency, classDeclaration,
+						BytecodeHelper.getDisplayName(typeBuilder), BytecodeHelper.getDisplayName(t));
+				}
+				
+				if (!typeBuilder.IsAbstract) {
+					var abstractMethods =
+						typeBuilder.getBaseTypes().takeWhile(p => p.IsAbstract).selectMany(p => p.Methods).where(p => p.IsAbstract);
+					var nonAbstractMethods =
+						typeBuilder.Methods.concat(typeBuilder.getBaseClasses().selectMany(p => p.Methods)).where(p => !p.IsAbstract).toList();
+					foreach (var m in abstractMethods) {
+						if (!nonAbstractMethods.any(p => p.isOverriding(m))) {
+							context.addError(CompileErrorId.AbstractMethodNotImplemented, classDeclaration,
+								BytecodeHelper.getDisplayName(typeBuilder),
+								BytecodeHelper.getDisplayName(m.DeclaringType),
+								BytecodeHelper.getDisplayName(m));
+						}
+					}
+				}
+				
+				foreach (var member in classDeclaration.Members) {
+					switch (member.TypeMemberKind) {
+					case Class:
+						validateClassCode((ClassDeclarationNode)member);
+						break;
+					case Method:
+						validateClassMethodCode((MethodDeclarationNode)member);
+						break;
+					case Field:
+						validateClassFieldCode((FieldDeclarationNode)member);
+						break;
+					case Indexer:
+						validateClassIndexerCode((IndexerDeclarationNode)member);
+						break;
+					case Property:
+						validateClassPropertyCode((PropertyDeclarationNode)member);
+						break;
+					case EnumConstant:
+						validateEnumConstantCode((EnumConstantDeclarationNode)member);
+						break;
+					case Constructor:
+						validateConstructorCode((ConstructorDeclarationNode)member);
+						break;
+					case Destructor:
+						validateDestructorCode((DestructorDeclarationNode)member);
+						break;
+					case Interface:
+					case Delegate:
+						break;
+					default:
+						throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
+					}
+					context.CurrentType = typeBuilder;
+				}
+			} finally {
+				context.MemberResolver.leaveType();
+			}
+		}
+
+		private static JvmTypeInfo visitBaseTypes(JvmTypeInfo type, HashSet<JvmTypeInfo> visited) {
+			if (!visited.add(type)) {
+				return type.IsInterface ? type : type.BaseType;
+			}
+			if (type.IsInterface) {
+				foreach (var i in type.Interfaces) {
+					var t = visitBaseTypes(i, visited);
+					if (t != null) {
+						return i;
+					}
+				}
+				return null;
+			} else {
+				if (type.BaseType == null) {
+					return null;
+				}
+				return visitBaseTypes(type.BaseType, visited);
+			}
+		}
+
+		private void validateDestructorCode(DestructorDeclarationNode destructorDeclaration) {
+			var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+			methodBuilder.addOrReplaceUserData(destructorDeclaration);
+			try {
+				context.CodeValidationContext.enterMethod(methodBuilder);
+				queryTranslator.translate(destructorDeclaration.Body);
+				this.statementValidator.handleStatement(destructorDeclaration.Body, null);
+				if (!context.HasErrors) {
+					validateControlFlow(methodBuilder, destructorDeclaration.Body, true);
+				}
+			} finally {
+				context.CodeValidationContext.leaveMethod();
+			}
+		}
+
+		private void validateConstructorCode(ConstructorDeclarationNode constructorDeclaration) {
+			var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+			methodBuilder.addOrReplaceUserData(constructorDeclaration);
+			var typeBuilder = (JvmTypeBuilder)methodBuilder.DeclaringType;
+			try {
+				context.CodeValidationContext.enterMethod(methodBuilder);
+				
+				var initializer = constructorDeclaration.Initializer;
+				var isStatic = constructorDeclaration.Modifiers.contains(Modifier.Static);
+				if (initializer != null) {
+					var initType = (initializer.IsSuper) ? typeBuilder.BaseType : typeBuilder;
+					var constructors = initType.Methods.where(p => p.Name.equals("<init>"));
+					foreach (var arg in initializer.Arguments) {
+						if (arg.ExpressionKind != ExpressionKind.Lambda) {
+							expressionValidator.handleExpression(arg, null, true);
+						}
+					}
+					var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, initializer.Arguments, JvmTypeInfo.VOID);
+					var info = new ExpressionInfo(initType);
+					info.Method = constructor;
+					initializer.addUserData(info);
+				} else if (!isStatic) {
+					// TODO: check overloading
+					JvmMethodInfo base;
+					if (typeBuilder.IsEnum) {
+						var paramTypes = new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT };
+						base = typeBuilder.BaseType.getMethod("<init>", paramTypes);
+					} else {
+						base = typeBuilder.getBaseType().getMethod("<init>", Query.empty<JvmTypeInfo>());
+					}
+					if (base == null) {
+						context.addError(CompileErrorId.BaseMissingDefaultConstructor,
+							constructorDeclaration,
+							typeBuilder.BaseType.FullName);
+					} else {
+						var info = new ExpressionInfo(typeBuilder.BaseType);
+						info.Method = base;
+						constructorDeclaration.addUserData(info);
+					}
+				}
+				queryTranslator.translate(constructorDeclaration.Body);
+				statementValidator.handleStatement(constructorDeclaration.Body, null);
+				if (!context.HasErrors) {
+					validateControlFlow(methodBuilder, constructorDeclaration.Body, !isStatic);
+				}
+			} finally {
+				context.CodeValidationContext.leaveMethod();
+			}
+		}
+
+		private void validateEnumConstantCode(EnumConstantDeclarationNode enumConstant) {
+			context.CodeValidationContext.IsStatic = true;
+			foreach (var e in enumConstant.Arguments) {
+				expressionValidator.handleExpression(e, null, true);
+			}
+			var fieldBuilder = enumConstant.getUserData(typeof(JvmFieldBuilder));
+			var typeBuilder = (JvmTypeBuilder)fieldBuilder.DeclaringType;
+			var constructors = typeBuilder.Methods.where(p => p.Name.equals("<init>"));
+			var arguments = new ArrayList<ExpressionNode>();
+			var arg1 = new SimpleNameExpressionNode();
+			arg1.addUserData(new ExpressionInfo(context.TypeSystem.StringType));
+			arguments.add(arg1);
+			var arg2 = new SimpleNameExpressionNode();
+			arg2.addUserData(new ExpressionInfo(JvmTypeInfo.INT));
+			arguments.add(arg2);
+			arguments.addAll(enumConstant.Arguments);
+			var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, arguments, JvmTypeInfo.VOID);
+			var info = new ExpressionInfo(typeBuilder);
+			info.setMethod(constructor);
+			enumConstant.addUserData(info);
+			var clinit = (JvmMethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<JvmTypeInfo>());
+			if (clinit == null) {
+				clinit = typeBuilder.defineMethod("<clinit>");
+				clinit.setStatic(true);
+				clinit.setReturnType(JvmTypeInfo.VOID);
+			}
+		}
+
+		private void validateClassIndexerCode(IndexerDeclarationNode indexerDeclaration) {
+			var get = indexerDeclaration.GetAccessor;
+			var set = indexerDeclaration.SetAccessor;
+			var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
+			var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
 			
+			var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder);
+			indexerDeclaration.addUserData(memberInfo);
+			
+			var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
+			if (indexerDeclaration.Modifiers.contains(Modifier.Override)) {
+				var baseIndexer = overriden.where(p => !p.DeclaringType.IsInterface).firstOrDefault();
+				if (baseIndexer == null) {
+					context.addError(CompileErrorId.NoIndexerToOverride, indexerDeclaration,
+						BytecodeHelper.getDisplayName((getBuilder ?? setBuilder).DeclaringType));
+				} else {
+					var meth = baseIndexer.GetAccessor;
+					if (meth == null) {
+						if (get != null) {
+							context.addError(CompileErrorId.NoOverridableGetAccessor, get,
+								BytecodeHelper.getDisplayName(baseIndexer.DeclaringType) + "."
+								+ BytecodeHelper.getIndexerDisplayName(getBuilder));
+						}
+						meth = baseIndexer.SetAccessor;
+					}
+					if (meth.IsFinal) {
+						context.addError(CompileErrorId.FinalIndexerOverride, indexerDeclaration,
+								BytecodeHelper.getDisplayName(baseIndexer.DeclaringType));
+					}
+					if (baseIndexer.SetAccessor == null) {
+						if (set != null) {
+							context.addError(CompileErrorId.NoOverridableSetAccessor, set,
+								BytecodeHelper.getDisplayName(baseIndexer.getDeclaringType()) + "."
+								+ BytecodeHelper.getIndexerDisplayName(setBuilder));
+						}
+					}
+				}
+			} else {
+				foreach (var mi in overriden) {
+					if (!mi.DeclaringType.IsInterface) {
+						context.addError(CompileErrorId.MissingOverrideIndexer, indexerDeclaration,
+							BytecodeHelper.getDisplayName(mi.DeclaringType));
+						break;
+					}
+				}
+			}
+
+			validateAccessors(get, set);
+		}
+
+		private void validateClassPropertyCode(PropertyDeclarationNode propertyDeclaration) {
+			var get = propertyDeclaration.GetAccessor;
+			var set = propertyDeclaration.SetAccessor;
+			var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
+			var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
+
+			var name = context.getIdentifier(propertyDeclaration.NameOffset, propertyDeclaration.NameLength);
+			var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder, name);
+			propertyDeclaration.addUserData(memberInfo);
+			
+			var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
+			if (propertyDeclaration.Modifiers.contains(Modifier.Override)) {
+				MemberInfo baseProperty = overriden.where(p => !p.DeclaringType.IsInterface).firstOrDefault();
+				if (baseProperty == null) {
+					context.addError(CompileErrorId.NoPropertyToOverride, propertyDeclaration,
+							BytecodeHelper.getDisplayName((getBuilder ?? setBuilder).DeclaringType), name);
+				} else {
+					var meth = baseProperty.GetAccessor;
+					if (meth == null) {
+						if (get != null) {
+							context.addError(CompileErrorId.NoOverridableGetAccessor, get,
+								BytecodeHelper.getDisplayName(baseProperty.DeclaringType) + "."
+								+ BytecodeHelper.getPropertyDisplayName(getBuilder, name));
+						}
+						meth = baseProperty.SetAccessor;
+					}
+					if (meth.IsFinal) {
+						context.addError(CompileErrorId.FinalPropertyOverride, propertyDeclaration,
+							BytecodeHelper.getDisplayName(baseProperty.DeclaringType), name);
+					}
+					if (baseProperty.SetAccessor == null) {
+						if (set != null) {
+							context.addError(CompileErrorId.NoOverridableSetAccessor, set,
+								BytecodeHelper.getDisplayName(baseProperty.DeclaringType) + "."
+								+ BytecodeHelper.getPropertyDisplayName(getBuilder, name));
+						}
+					}
+				}
+			} else {
+				foreach (var mi in overriden) {
+					if (!mi.DeclaringType.IsInterface) {
+						context.addError(CompileErrorId.MissingOverrideProperty, propertyDeclaration,
+								BytecodeHelper.getDisplayName(mi.DeclaringType));
+						break;
+					}
+				}
+			}
+			
+			validateAccessors(get, set);
+		}
+
+		private void validateAccessors(AccessorDeclarationNode get, AccessorDeclarationNode set) {
+			if (get != null && get.Body != null) {
+				var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
+				methodBuilder.addOrReplaceUserData(get);
+				try {
+					context.CodeValidationContext.enterMethod(methodBuilder);
+
+					queryTranslator.translate(get.Body);
+					statementValidator.handleStatement(get.Body, null);
+					if (!context.HasErrors) {
+						validateControlFlow(methodBuilder, get.Body, true);
+					}
+				} finally {
+					context.CodeValidationContext.leaveMethod();
+				}
+			}
+			if (set != null && set.Body != null) {
+				var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
+				methodBuilder.addOrReplaceUserData(set);
+				try {
+					context.CodeValidationContext.enterMethod(methodBuilder);
+					methodBuilder.addUserData(context.MemberResolver.getLocal("value"));
+
+					queryTranslator.translate(set.Body);
+					statementValidator.handleStatement(set.Body, null);
+					if (!context.HasErrors) {
+						validateControlFlow(methodBuilder, set.Body, true);
+					}
+				} finally {
+					context.CodeValidationContext.leaveMethod();
+				}
+			}
+		}
+
+		private void validateClassMethodCode(MethodDeclarationNode methodDeclaration) {
+			var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+			methodBuilder.addOrReplaceUserData(methodDeclaration);
+			try {
+				context.CodeValidationContext.enterMethod(methodBuilder);
+				context.CodeValidationContext.IsStatic = methodBuilder.IsStatic;
+			
+				var member = MemberInfo.getInfo(methodBuilder);
+				foreach (var mi in member.getOverridenMembers(context.AnnotatedTypeSystem)) {
+					var meth = mi.Method;
+					if (!meth.ReturnType.isAssignableFrom(methodBuilder.ReturnType)) {
+						context.addError(CompileErrorId.IncompatibleOverridingReturnType, methodDeclaration,
+								BytecodeHelper.getDisplayName(methodBuilder.DeclaringType),
+								BytecodeHelper.getDisplayName(methodBuilder),
+								BytecodeHelper.getDisplayName(meth.DeclaringType));
+					}
+				}
+				checkAccessibility(methodBuilder, methodDeclaration);
+				checkOverloading(methodBuilder, methodDeclaration.Modifiers, methodDeclaration);
+				if (methodDeclaration.Body != null) {
+					queryTranslator.translate(methodDeclaration.Body);
+					this.statementValidator.handleStatement(methodDeclaration.Body, null);
+					if (!context.HasErrors) {
+						validateControlFlow(methodBuilder, methodDeclaration.Body, true);
+					}
+				} else if (!methodDeclaration.IsPartial && !methodBuilder.IsAbstract && !methodBuilder.IsNative) {
+					context.addError(CompileErrorId.MethodWithoutBody, methodDeclaration,
+						BytecodeHelper.getDisplayName(methodBuilder.DeclaringType), BytecodeHelper.getDisplayName(methodBuilder));
+				}
+			} finally {
+				context.CodeValidationContext.leaveMethod();
+			}
+		}
+
+		private void checkAccessibility(JvmMethodInfo method, SyntaxNode node) {
+			if (!method.IsPublic || !method.DeclaringType.IsPublic) {
+				return;
+			}
+			if (!method.ReturnType.IsPrimitive && !method.ReturnType.IsPublic) {
+				context.addError(CompileErrorId.InconsistentAccessibility, node,
+					BytecodeHelper.getDisplayName(method.ReturnType), method.Name);
+			}
+		}
+		
+		private void checkOverloading(JvmMethodInfo method, EnumSet<Modifier> modifiers, SyntaxNode node) {
+			var superMethod = method.DeclaringType.getBaseClasses().selectMany(p => p.Methods).firstOrDefault(p => method.isOverriding(p));
+			if (superMethod != null) {
+				if (superMethod.IsPublic) {
+					if (modifiers.contains(Modifier.Protected) || modifiers.contains(Modifier.Private) || !modifiers.contains(Modifier.Public)) {
+						context.addError(CompileErrorId.ReduceMethodVisibility, node,
+							BytecodeHelper.getDisplayName(method.DeclaringType),
+							BytecodeHelper.getDisplayName(method),
+							BytecodeHelper.getDisplayName(superMethod.DeclaringType));
+					}
+				}
+				if (modifiers.contains(Modifier.Virtual)) {
+					context.addError(CompileErrorId.IllegalVirtualMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
+							BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
+				}
+				if (superMethod.IsFinal) {
+					if (modifiers.contains(Modifier.Override)) {
+						context.addError(CompileErrorId.IllegalOverrideMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
+								BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
+					}
+				} else if (!modifiers.contains(Modifier.Override)) {
+					context.addError(CompileErrorId.MissingOverride, node, BytecodeHelper.getDisplayName(method.DeclaringType),
+							BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
+				}
+			} else if (modifiers.contains(Modifier.Override)) {
+				context.addError(CompileErrorId.NoMethodToOverride, node,
+					BytecodeHelper.getDisplayName(method.DeclaringType), BytecodeHelper.getDisplayName(method));
+			}
+		}
+		
+		private void validateControlFlow(JvmMethodBuilder methodBuilder, BlockStatementNode body, boolean insertReturn) {
+			var uninitializedLocals = this.reachabilityChecker.checkMethod(methodBuilder, body, insertReturn);
+			foreach (var li in uninitializedLocals) {
+				if (li.assignmentCount > 0) {
+					if (li.referenceCount > 0) {
+						this.assignmentChecker.visitStatement(li);
+					} else {
+						context.addWarning(CompileErrorId.VariableNeverRead, li.declaration, li.local.Name);
+					}
+				} else if (li.referenceCount > 0) {
+					context.addError(CompileErrorId.VariableUninitialized, li.declaration, li.local.Name);
+				} else {
+					context.addWarning(CompileErrorId.VariableNeverUsed, li.declaration, li.local.Name);
+				}
+			}
+		}
+        
+		private void validateClassFieldCode(FieldDeclarationNode fieldDeclaration) {
 			var first = true;
 			foreach (var decl in fieldDeclaration.Declarators) {
 				if (decl.Value == null) {
@@ -2663,12 +2799,11 @@ package stab.compiler {
 				case Class:
 					generateClassBytecode((ClassDeclarationNode)member);
 					break;
-				case Interface:
-					generateInterfaceBytecode((InterfaceDeclarationNode)member);
-					break;
 				case Delegate:
 					bytecodeGenerator.generateDelegateBytecode((DelegateDeclarationNode)member);
 					break;
+				case Interface:
+                    break;
 				default:
 					throw new Exception("Internal error: unhandled member kind: " + member.PackageMemberKind);
 				}
@@ -2684,7 +2819,6 @@ package stab.compiler {
 		private void generateClassBytecode(ClassDeclarationNode classDeclaration) {
 			var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
             typeBuilder.setSourceFile(PathHelper.getFileName(classDeclaration.Filename));
-			bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
 			context.CurrentType = typeBuilder;
 			
 			if (typeBuilder.IsEnum) {
@@ -2696,20 +2830,15 @@ package stab.compiler {
 				case Class:
 					generateClassBytecode((ClassDeclarationNode)member);
 					break;
-				case Interface:
-					generateInterfaceBytecode((InterfaceDeclarationNode)member);
-					break;
-				case Delegate:
-					bytecodeGenerator.generateDelegateBytecode((DelegateDeclarationNode)member);
-					break;
 				case Method:
 					bytecodeGenerator.generateMethodBytecode((MethodDeclarationNode)member);
 					break;
 				case Field:
 					bytecodeGenerator.generateFieldBytecode((FieldDeclarationNode)member);
 					break;
-				case EnumConstant:
-					break;
+				case Delegate:
+					bytecodeGenerator.generateDelegateBytecode((DelegateDeclarationNode)member);
+                    break;
 				case Indexer:
 					bytecodeGenerator.generateIndexerBytecode((IndexerDeclarationNode)member);
 					break;
@@ -2722,37 +2851,9 @@ package stab.compiler {
 				case Destructor:
 					bytecodeGenerator.generateDestructorBytecode((DestructorDeclarationNode)member);
 					break;
-				default:
-					throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
-				}
-				context.CurrentType = typeBuilder;
-			}
-		}
-		
-		private void generateInterfaceBytecode(InterfaceDeclarationNode interfaceDeclaration) {
-			var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
-            typeBuilder.setSourceFile(PathHelper.getFileName(interfaceDeclaration.Filename));
-			bytecodeGenerator.generateAnnotationsBytecode(interfaceDeclaration.Annotations, typeBuilder);
-			context.CurrentType = typeBuilder;
-			
-			foreach (var member in interfaceDeclaration.Members) {
-				switch (member.TypeMemberKind) {
-				case Method:
-					bytecodeGenerator.generateInterfaceMethodBytecode((MethodDeclarationNode)member);
-					break;
-				case Indexer:
-					bytecodeGenerator.generateInterfaceIndexerBytecode((IndexerDeclarationNode)member);
-					break;
-				case Property:
-					bytecodeGenerator.generateInterfacePropertyBytecode((PropertyDeclarationNode)member);
-					break;
-				case Class:
-				case Delegate:
-				case EnumConstant:
-				case Field:
 				case Interface:
-				case Constructor:
-				case Destructor:
+				case EnumConstant:
+					break;
 				default:
 					throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
 				}

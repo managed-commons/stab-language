@@ -482,7 +482,7 @@ package stab.compiler {
 		public static boolean shouldIgnoreCalls(CompilerContext context, JvmMethodInfo method) {
 			foreach (var ann in BytecodeHelper.getAnnotations(context.AnnotatedTypeSystem, method)) {
 				if (BytecodeHelper.isConditional(ann)) {
-					foreach (var elt in ann.getArgument("symbols").Elements) {
+					foreach (var elt in ann.getArgument("value").Elements) {
 						if (context.Symbols.contains(elt.Value)) {
 							return false;
 						}

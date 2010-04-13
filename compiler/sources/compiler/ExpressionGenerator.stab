@@ -44,10 +44,10 @@ package stab.compiler {
 		
 		public override Void handleExpression(ExpressionNode expression, TargetLabels labels, boolean nested) {
 			var generator = context.MethodGenerationContext.Generator;
-			if (expression.Line != 0 && expression.Line != context.MethodGenerationContext.PreviousLineNumber) {
+			if (expression.Line > context.MethodGenerationContext.PreviousLineNumber) {
                 var label = generator.defineLabel();
                 generator.markLabel(label);
-                generator.lineNumber(expression.Line, label);
+                generator.lineNumber(expression.Line + 1, label);
                 context.MethodGenerationContext.PreviousLineNumber = expression.Line;
             }            
 			var info = expression.getUserData(typeof(ExpressionInfo));
@@ -817,21 +817,6 @@ package stab.compiler {
 			var method = info.Method;
 			if (method.IsExcludedFromCompilation || CompilerHelper.shouldIgnoreCalls(context, method)) {
 				return null;
-			}
-			foreach (var ann in BytecodeHelper.getAnnotations(context.AnnotatedTypeSystem, method)) {
-				if (BytecodeHelper.isConditional(ann)) {
-					var generate = false;
-					foreach (var elt in ann.getArgument("symbols").Elements) {
-						if (context.Symbols.contains(elt.Value)) {
-							generate = true;
-							break;
-						}
-					}
-					if (!generate) {
-						return null;
-					}
-					break;
-				}
 			}
 			if (!method.IsStatic) {
 				if (BytecodeHelper.isDelegateType(method.DeclaringType) && method.Name.equals("invoke")) {

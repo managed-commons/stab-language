@@ -42,6 +42,6 @@ package stab.lang {
 
 	[Target({ ElementType.METHOD })]
 	public interface Conditional : Annotation {
-		java.lang.String[] symbols();
+		java.lang.String[] value();
 	}
 }

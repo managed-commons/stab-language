@@ -83,7 +83,6 @@ package stab.compiler {
 		
 		void generateMethodBytecode(MethodDeclarationNode methodDeclaration) {
 			var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
-			generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
 			if (methodDeclaration.Body != null) {
 				context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, methodDeclaration.Body),
 					context.LambdaScopes[methodBuilder]);
@@ -103,11 +102,10 @@ package stab.compiler {
 		
 		void generateFieldBytecode(FieldDeclarationNode fieldDeclaration) {
 			foreach (var decl in fieldDeclaration.Declarators) {
-				var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
-				generateAnnotationsBytecode(fieldDeclaration.Annotations, fieldBuilder);
 				if (decl.Value == null) {
 					continue;
 				}
+				var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
 				if (fieldBuilder.IsStatic) {
 					var info = decl.Value.getUserData(typeof(ExpressionInfo));
 					if (info.IsConstant && info.BoxingKind == BoxingKind.None) {
@@ -122,7 +120,6 @@ package stab.compiler {
 				return;
 			}
 			var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
-			generateAnnotationsBytecode(constructorDeclaration.Annotations, methodBuilder);
 			context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, constructorDeclaration.Body),
 				context.LambdaScopes[methodBuilder]);
 			var generator = context.MethodGenerationContext.Generator;
@@ -159,7 +156,6 @@ package stab.compiler {
 
 		void generateDestructorBytecode(DestructorDeclarationNode destructorDeclaration) {
 			var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
-			generateAnnotationsBytecode(destructorDeclaration.Annotations, methodBuilder);
 			context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, destructorDeclaration.Body),
 				context.LambdaScopes[methodBuilder]);
 			var generator = context.MethodGenerationContext.Generator;
@@ -199,15 +195,7 @@ package stab.compiler {
 			var get = indexerDeclaration.GetAccessor;
 			var set = indexerDeclaration.SetAccessor;
 			var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-			if (getBuilder != null) {
-				generateAnnotationsBytecode(indexerDeclaration.Annotations, getBuilder);
-				generateAnnotationsBytecode(get.Annotations, getBuilder);
-			}
 			var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-			if (setBuilder != null) {
-				generateAnnotationsBytecode(indexerDeclaration.Annotations, setBuilder);
-				generateAnnotationsBytecode(set.Annotations, setBuilder);
-			}
 			
 			var memberInfo = indexerDeclaration.getUserData(typeof(MemberInfo));
 			var overriden = memberInfo.getOverridenMembers(context.getAnnotatedTypeSystem());
@@ -253,15 +241,7 @@ package stab.compiler {
 			var get = propertyDeclaration.GetAccessor;
 			var set = propertyDeclaration.SetAccessor;
 			var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-			if (getBuilder != null) {
-				generateAnnotationsBytecode(propertyDeclaration.Annotations, getBuilder);
-				generateAnnotationsBytecode(get.Annotations, getBuilder);
-			}
 			var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-			if (setBuilder != null) {
-				generateAnnotationsBytecode(propertyDeclaration.Annotations, setBuilder);
-				generateAnnotationsBytecode(set.Annotations, setBuilder);
-			}
 			JvmFieldBuilder fieldBuilder = null;
 			var memberInfo = propertyDeclaration.getUserData(typeof(MemberInfo));
 			var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
@@ -344,7 +324,7 @@ package stab.compiler {
 			}
 		}
 
-		void generateInterfaceMethodBytecode(MethodDeclarationNode methodDeclaration) {
+		void generateInterfaceMethodAnnotations(MethodDeclarationNode methodDeclaration) {
 			var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
 			generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
 			if (methodDeclaration.DefaultValue != null) {
@@ -353,18 +333,8 @@ package stab.compiler {
 				generateAnnotationArgument("", methodDeclaration.DefaultValue, annotationValueBuilder);
 			}
 		}
-
-		void generateInterfaceIndexerBytecode(IndexerDeclarationNode indexerDeclaration) {
-			emitAccessorAnnotations(indexerDeclaration.GetAccessor, indexerDeclaration.Annotations);
-			emitAccessorAnnotations(indexerDeclaration.SetAccessor, indexerDeclaration.Annotations);
-		}
-
-		void generateInterfacePropertyBytecode(PropertyDeclarationNode propertyDeclaration) {
-			emitAccessorAnnotations(propertyDeclaration.GetAccessor, propertyDeclaration.Annotations);
-			emitAccessorAnnotations(propertyDeclaration.SetAccessor, propertyDeclaration.Annotations);
-		}
 		
-		private void emitAccessorAnnotations(AccessorDeclarationNode accessor, List<AnnotationSectionNode> commonAnnotations) {
+		void emitAccessorAnnotations(AccessorDeclarationNode accessor, List<AnnotationSectionNode> commonAnnotations) {
 			var builder = (accessor == null) ? null : accessor.getUserData(typeof(JvmMethodBuilder));
 			if (builder != null) {
 				generateAnnotationsBytecode(commonAnnotations, builder);
@@ -375,7 +345,6 @@ package stab.compiler {
 		void generateDelegateBytecode(DelegateDeclarationNode delegateDeclaration) {
 			var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
             typeBuilder.setSourceFile(PathHelper.getFileName(delegateDeclaration.Filename));
-			generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
 			context.CurrentType = typeBuilder;
 			var parameterTypes = Collections.singletonList(context.TypeSystem.ObjectType);
 			var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod("<init>", parameterTypes);
@@ -533,18 +502,6 @@ package stab.compiler {
 			gen.emit(BytecodeHelper.getReturnOpcode(overloadedMethod.ReturnType));
 			gen.endScope();
 		}
-
-        public override Void handleStatement(StatementNode statement, Void source) {
-			var info = statement.getUserData(typeof(StatementInfo));
-			if (info != null && statement.Line != 0 && statement.Line != context.MethodGenerationContext.PreviousLineNumber) {
-                var generator = context.MethodGenerationContext.Generator;
-                var label = generator.defineLabel();
-                generator.markLabel(label);
-                generator.lineNumber(statement.Line, label);
-                context.MethodGenerationContext.PreviousLineNumber = statement.Line;
-            }            
-            return super.handleStatement(statement, null);
-        }
         
 		protected override Void handleBlock(BlockStatementNode block, Void source) {
 			var info = block.getUserData(typeof(StatementInfo));
@@ -1925,7 +1882,7 @@ package stab.compiler {
 			}
 		}
 		
-		private void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmFieldBuilder fieldBuilder) {
+		void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmFieldBuilder fieldBuilder) {
 			foreach (var section in annotations) {
 				foreach (var annotation in section.Annotations) {
 					var type = annotation.getUserData(typeof(JvmTypeInfo));
@@ -1937,7 +1894,7 @@ package stab.compiler {
 			}
 		}
 		
-		private void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmMethodBuilder methodBuilder) {
+		void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmMethodBuilder methodBuilder) {
 			foreach (var section in annotations) {
 				foreach (var annotation in section.Annotations) {
 					var type = annotation.getUserData(typeof(JvmTypeInfo));
@@ -2532,7 +2489,6 @@ package stab.compiler {
 							continue;
 						}
 						var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
-						generateAnnotationsBytecode(fieldDeclaration.getAnnotations(), fieldBuilder);
 						if (fieldBuilder.IsStatic) {
 							var ei = decl.getValue().getUserData(typeof(ExpressionInfo));
 							if (ei != null && (!ei.IsConstant || ei.BoxingKind != BoxingKind.None)) {
@@ -2555,7 +2511,6 @@ package stab.compiler {
 					var enumConstantDeclaration = (EnumConstantDeclarationNode)member;
 					var constructor = enumConstantDeclaration.getUserData(typeof(ExpressionInfo)).Method;
 					var field = enumConstantDeclaration.getUserData(typeof(JvmFieldBuilder));
-					generateAnnotationsBytecode(enumConstantDeclaration.Annotations, field);
 					generator.emit(JvmOpcode.New, constructor.DeclaringType);
 					generator.emit(JvmOpcode.Dup);
 					generator.emit(JvmOpcode.Ldc, field.Name);

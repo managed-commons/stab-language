@@ -150,7 +150,8 @@ package stab.compiler {
 		MultipleBaseClass,
 		AmbiguousTypeName,
 		UnreachableStatement,
-		UnexpectedMethodReference
+		UnexpectedMethodReference,
+        ConditionalMethodNotVoid
 	}
 
 	class Resources {
