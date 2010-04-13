@@ -5,15 +5,13 @@ Features ==============================
 3 - Generic constructors
 	* syntax for this and super clauses (this<T1, T2>(...))
 	* syntax for new (new <T1, T2> C(...))
-4 - [Conditional("DEBUG")] for instrumentation
-5 - package annotations
-6 - javadoc
+4 - package annotations
+5 - javadoc
 
 
 Issues ================================
 
 - allow -runtimelib to be optional (for runtime compilation)
-- source/lines in bytecode
 - generate exception clauses for Java interop?
 - validate generic constraints
 - test constant expressions with static final fields
@@ -21,6 +19,8 @@ Issues ================================
 - create an InternalErrorException class
 - return t[] => stack trace
 - str1 + str2 + 1 => stack trace
+- test [Conditional("DEBUG")]
+- test partial methods
 
 Errors ================================
 

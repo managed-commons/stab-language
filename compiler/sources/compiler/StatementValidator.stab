@@ -17,6 +17,7 @@
 using java.lang;
 using java.util;
 using stab.bytecode;
+using stab.helpers;
 using stab.query;
 using stab.syntaxtree;
 
@@ -496,7 +497,8 @@ package stab.compiler {
 			if (context.Iterables[context.CodeValidationContext.CurrentMethod] == null) {
 				var prefix = "_" + context.CodeValidationContext.CurrentMethod.Name + "_Iterable";
 				int n = context.CurrentType.NestedTypes.count(p => p.Name.startsWith(prefix));
-				JvmTypeBuilder typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType(prefix + n);
+				var typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType(prefix + n);
+                typeBuilder.setSourceFile(PathHelper.getFileName(yieldStatement.Filename));
 				typeBuilder.setSynthetic(true);
 				typeBuilder.setSuper(true);
 				context.Iterables[context.CodeValidationContext.CurrentMethod] = typeBuilder;

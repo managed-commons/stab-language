@@ -44,6 +44,12 @@ package stab.compiler {
 		
 		public override Void handleExpression(ExpressionNode expression, TargetLabels labels, boolean nested) {
 			var generator = context.MethodGenerationContext.Generator;
+			if (expression.Line != 0 && expression.Line != context.MethodGenerationContext.PreviousLineNumber) {
+                var label = generator.defineLabel();
+                generator.markLabel(label);
+                generator.lineNumber(expression.Line, label);
+                context.MethodGenerationContext.PreviousLineNumber = expression.Line;
+            }            
 			var info = expression.getUserData(typeof(ExpressionInfo));
 			if (info == null) {
 				generator.emit(JvmOpcode.Aconst_Null);

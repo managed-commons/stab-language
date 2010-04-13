@@ -2683,6 +2683,7 @@ package stab.compiler {
 
 		private void generateClassBytecode(ClassDeclarationNode classDeclaration) {
 			var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            typeBuilder.setSourceFile(PathHelper.getFileName(classDeclaration.Filename));
 			bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
 			context.CurrentType = typeBuilder;
 			
@@ -2730,6 +2731,7 @@ package stab.compiler {
 		
 		private void generateInterfaceBytecode(InterfaceDeclarationNode interfaceDeclaration) {
 			var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
+            typeBuilder.setSourceFile(PathHelper.getFileName(interfaceDeclaration.Filename));
 			bytecodeGenerator.generateAnnotationsBytecode(interfaceDeclaration.Annotations, typeBuilder);
 			context.CurrentType = typeBuilder;
 			

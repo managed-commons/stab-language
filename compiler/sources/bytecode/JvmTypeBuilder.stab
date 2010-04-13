@@ -35,6 +35,8 @@ package stab.bytecode {
 		private ArrayList<JvmAnnotationValue> annotations;
 		private JvmTypeInfo declaringType;
 		private ArrayList<JvmTypeInfo> nestedTypes;
+        private String sourceFile;
+        private String sourceDebugExtension;
 		
 		JvmTypeBuilder(JvmTypeInfo declaringType, String name)
 			: super(TypeKind.Reference, name) {
@@ -47,6 +49,26 @@ package stab.bytecode {
 			this.annotations = new ArrayList<JvmAnnotationValue>();
 			this.nestedTypes = new ArrayList<JvmTypeInfo>();
 		}
+
+        public String SourceFile {
+            get {
+                return sourceFile;
+            }
+        }
+
+        public void setSourceFile(String sourceFile) {
+            this.sourceFile = sourceFile;
+        }
+        
+        public String SourceDebugExtension {
+            get {
+                return sourceDebugExtension;
+            }
+        }
+
+        public void setSourceDebugExtension(String sourceDebugExtension) {
+            this.sourceDebugExtension = sourceDebugExtension;
+        }
 		
 		public override JvmTypeInfo DeclaringType {
 			get {
@@ -188,7 +210,9 @@ package stab.bytecode {
 			var classWriter = new ClassWriterNoReflection(typeSystem, ClassWriter.COMPUTE_FRAMES);
 			classWriter.visit(Opcodes.V1_6, modifiers, getFullName(), BytecodeHelper.getClassSignature(this),
 				baseType.getFullName(), getTypeNames(interfaces));
-
+            if (sourceFile != null || sourceDebugExtension != null) {
+                classWriter.visitSource(sourceFile, sourceDebugExtension);
+            }
 			foreach (var a in annotations) {
 				a.accept(classWriter.visitAnnotation(a.Type.Descriptor, a.IsRuntimeVisible));
 			}

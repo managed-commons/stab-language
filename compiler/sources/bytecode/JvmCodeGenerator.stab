@@ -61,6 +61,7 @@ package stab.bytecode {
 		private ArrayList<ScopeInfo> scopes;
 		private ArrayList<JvmLocalInfo> locals;
 		private ArrayList<ExceptionHandler> exceptionTable;
+        private ArrayList<LineNumberInfo> lineNumbers;
 	
 		JvmCodeGenerator(JvmMethodBuilder method) {
 			this.instructions = new ArrayList<JvmInstruction>();
@@ -68,6 +69,7 @@ package stab.bytecode {
 			this.scopes = new ArrayList<ScopeInfo>();
 			this.locals = new ArrayList<JvmLocalInfo>();
 			this.exceptionTable = new ArrayList<ExceptionHandler>();
+            this.lineNumbers = new ArrayList<LineNumberInfo>();
 		}
 
 		public JvmMethodBuilder Method {
@@ -92,6 +94,11 @@ package stab.bytecode {
 			instructions.add(label);
 		}
 
+        public void lineNumber(int line, JvmLabelMarker label) {
+			checkCreated();
+            lineNumbers.add(new LineNumberInfo(line, label.Label));
+        }
+        
 		public void removeThis() {
 			checkCreated();
 			locals.remove(0);
@@ -1095,6 +1102,9 @@ package stab.bytecode {
 			foreach (var l in locals) {
 				visitor.visitLocalVariable(l.Name, l.Type.Descriptor, l.Type.Signature, l.beginLabel, l.endLabel, l.getIndex());
 			}
+            foreach (var l in lineNumbers) {
+                visitor.visitLineNumber(l.line, l.label);
+            }
 			visitor.visitMaxs(0, 0);
 		}
 		
@@ -1128,6 +1138,15 @@ package stab.bytecode {
 			}
 		}
 
+        private class LineNumberInfo {
+            int line;
+            Label label;
+            
+            LineNumberInfo(int line, Label label) {
+                this.line = line;
+                this.label = label;
+            }
+        }
 	}
 	
 }

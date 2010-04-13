@@ -1011,6 +1011,7 @@ package stab.compiler {
 			if (typeBuilder == null) {
 				int n = context.CurrentType.NestedTypes.where(p => p.Name.startsWith("LambdaScope")).count();
 				typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType("LambdaScope" + n);
+                typeBuilder.setSourceFile(PathHelper.getFileName(lambda.Filename));
 				context.LambdaScopes[context.CodeValidationContext.RootMethod] = typeBuilder;
 				typeBuilder.setSynthetic(true);
 				typeBuilder.setSuper(true);
@@ -1127,12 +1128,16 @@ package stab.compiler {
 					}
 				} else {
 					var block = new BlockStatementNode();
+                    block.Filename = lambda.Body.Filename;
 					block.Line = lambda.Body.Line;
 					block.Column = lambda.Body.Column;
+                    block.DisabledWarnings = lambda.Body.DisabledWarnings;
 					var returnNode = new ReturnStatementNode();
 					block.Statements.add(returnNode);
+                    returnNode.Filename = lambda.Body.Filename;
 					returnNode.Line = lambda.Body.Line;
 					returnNode.Column = lambda.Body.Column;
+                    returnNode.DisabledWarnings = lambda.Body.DisabledWarnings;
 					returnNode.Value = ((ExpressionStatementNode)lambda.Body).Expression;
 					lambda.Body = block;
 					this.StatementValidator.handleStatement(block, null);

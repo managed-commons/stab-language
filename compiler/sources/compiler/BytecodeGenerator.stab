@@ -18,6 +18,7 @@ using java.lang;
 using java.lang.annotation;
 using java.util;
 using stab.bytecode;
+using stab.helpers;
 using stab.query;
 using stab.syntaxtree;
 
@@ -373,6 +374,7 @@ package stab.compiler {
 		
 		void generateDelegateBytecode(DelegateDeclarationNode delegateDeclaration) {
 			var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+            typeBuilder.setSourceFile(PathHelper.getFileName(delegateDeclaration.Filename));
 			generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
 			context.CurrentType = typeBuilder;
 			var parameterTypes = Collections.singletonList(context.TypeSystem.ObjectType);
@@ -532,6 +534,18 @@ package stab.compiler {
 			gen.endScope();
 		}
 
+        public override Void handleStatement(StatementNode statement, Void source) {
+			var info = statement.getUserData(typeof(StatementInfo));
+			if (info != null && statement.Line != 0 && statement.Line != context.MethodGenerationContext.PreviousLineNumber) {
+                var generator = context.MethodGenerationContext.Generator;
+                var label = generator.defineLabel();
+                generator.markLabel(label);
+                generator.lineNumber(statement.Line, label);
+                context.MethodGenerationContext.PreviousLineNumber = statement.Line;
+            }            
+            return super.handleStatement(statement, null);
+        }
+        
 		protected override Void handleBlock(BlockStatementNode block, Void source) {
 			var info = block.getUserData(typeof(StatementInfo));
 			if (info == null) {

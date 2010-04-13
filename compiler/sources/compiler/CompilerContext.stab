@@ -313,9 +313,11 @@ package stab.compiler {
 			this.foreachStatement = 0;
 			this.YieldCount = 0;
 			this.stringSwitch = 0;
+            this.PreviousLineNumber = 0;
 		}
 		
 		void enterLambda(JvmMethodBuilder method) {
+            this.PreviousLineNumber = 0;
 			this.methods.add(method);
 			this.Generator = method.CodeGenerator;
 		}
@@ -421,6 +423,11 @@ package stab.compiler {
 			set;
 		}
 		
+        int PreviousLineNumber {
+            get;
+            set;
+        }
+        
 		int nextForeachStatement() {
 			return foreachStatement++;
 		}
