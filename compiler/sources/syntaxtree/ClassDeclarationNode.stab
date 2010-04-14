@@ -32,7 +32,7 @@ package stab.syntaxtree {
 				return PackageMemberKind.Class;
 			}
 		}
-		
+        
 		public boolean IsEnum {
 			get;
 			set;

@@ -30,7 +30,13 @@ package stab.parser {
 		private int savedLine;
 		private int savedColumn;
 		private IntIterable savedDisabledWarnings;
-
+        private boolean wasSingleLineDocComment;
+        private int docCommentStartPosition;
+        private int docCommentEndPosition;
+ 
+        public Parser() {
+        }
+        
 		public CompilationUnitNode parseCompilationUnit(IScanner scanner) {
 			this.scanner = scanner;
 			if (nextLexicalUnit(false) == LexicalUnit.EndOfStream) {
@@ -106,6 +112,11 @@ package stab.parser {
 							modifiers.clear();
 						}
 						var ns = new PackageDeclarationNode();
+                        if (docCommentEndPosition > 0) {
+                            ns.DocumentationOffset = docCommentStartPosition;
+                            ns.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                            docCommentEndPosition = 0;
+                        }
 						setScannerState(ns);
 						ns.Annotations.addAll(annotations);
 						annotations.clear();
@@ -278,6 +289,11 @@ package stab.parser {
 			}
 			var result = new ClassDeclarationNode { IsEnum = isEnum, IsPartial = partial,
 					NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+            if (docCommentEndPosition > 0) {
+                result.DocumentationOffset = docCommentStartPosition;
+                result.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			setScannerState(result);
 			result.Modifiers.addAll(modifiers);
 			result.Annotations.addAll(annotations);
@@ -557,6 +573,11 @@ package stab.parser {
 			}
 			var declaration = new InterfaceDeclarationNode { IsPartial = partial,
 				NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+            if (docCommentEndPosition > 0) {
+                declaration.DocumentationOffset = docCommentStartPosition;
+                declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			setScannerState(declaration);
 			declaration.Modifiers.addAll(modifiers);
 			declaration.Annotations.addAll(annotations);
@@ -619,6 +640,11 @@ package stab.parser {
 			switch (lexicalUnit) {
 			case OpenParenthesis:
 				var methodDeclaration = new MethodDeclarationNode { IsPartial = partial, ReturnType = type, NameOffset = sp, NameLength = len };
+                if (docCommentEndPosition > 0) {
+                    methodDeclaration.DocumentationOffset = docCommentStartPosition;
+                    methodDeclaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(methodDeclaration);
 				methodDeclaration.Modifiers.addAll(modifiers);
 				methodDeclaration.Annotations.addAll(annotations);
@@ -651,6 +677,11 @@ package stab.parser {
 
 			case OpenBrace:
 				var propertyDeclaration = new PropertyDeclarationNode { Type = type, NameOffset = sp, NameLength = len };
+                if (docCommentEndPosition > 0) {
+                    propertyDeclaration.DocumentationOffset = docCommentStartPosition;
+                    propertyDeclaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(propertyDeclaration);
 				propertyDeclaration.Modifiers.addAll(modifiers);
 				nextLexicalUnit(true);
@@ -663,6 +694,11 @@ package stab.parser {
 
 			case Assign: {
 				var declaration = new FieldDeclarationNode { Type = type };
+                if (docCommentEndPosition > 0) {
+                    declaration.DocumentationOffset = docCommentStartPosition;
+                    declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(declaration);
 				declaration.Modifiers.addAll(modifiers);
 				declaration.Annotations.addAll(annotations);
@@ -688,6 +724,11 @@ package stab.parser {
 
 			case Comma: {
 				var declaration = new FieldDeclarationNode { Type = type };
+                if (docCommentEndPosition > 0) {
+                    declaration.DocumentationOffset = docCommentStartPosition;
+                    declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(declaration);
 				declaration.Modifiers.addAll(modifiers);
 				declaration.Annotations.addAll(annotations);
@@ -712,6 +753,11 @@ package stab.parser {
 
 			case SemiColon: {
 				var declaration = new FieldDeclarationNode { Type = type };
+                if (docCommentEndPosition > 0) {
+                    declaration.DocumentationOffset = docCommentStartPosition;
+                    declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(declaration);
 				declaration.Modifiers.addAll(modifiers);
 				declaration.Annotations.addAll(annotations);
@@ -738,6 +784,11 @@ package stab.parser {
 
 		private ITypeMember parseEnumConstant(List<AnnotationSectionNode> annotations) {
 			var result = new EnumConstantDeclarationNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+            if (docCommentEndPosition > 0) {
+                result.DocumentationOffset = docCommentStartPosition;
+                result.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			setScannerState(result);
 			result.Annotations.addAll(annotations);
 			if (nextLexicalUnit(true) == LexicalUnit.OpenParenthesis) {
@@ -756,6 +807,11 @@ package stab.parser {
 		private ITypeMember parseConstructorDeclaration(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers,
 				boolean partial, int startPosition, int length, List<SimpleNameTypeReferenceNode> typeParameters) {
 			var declaration = new ConstructorDeclarationNode { NameOffset = startPosition, NameLength = length };
+            if (docCommentEndPosition > 0) {
+                declaration.DocumentationOffset = docCommentStartPosition;
+                declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			setSavedScannerState(declaration);
 			declaration.Modifiers.addAll(modifiers);
 			declaration.Annotations.addAll(annotations);
@@ -820,6 +876,11 @@ package stab.parser {
 				throw error(ParseErrorId.IdentifierExpected);
 			}
 			var declaration = new DestructorDeclarationNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+            if (docCommentEndPosition > 0) {
+                declaration.DocumentationOffset = docCommentStartPosition;
+                declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			setScannerState(declaration);
 			declaration.Modifiers.addAll(modifiers);
 			declaration.Annotations.addAll(annotations);
@@ -859,6 +920,11 @@ package stab.parser {
 		
 		private DelegateDeclarationNode parseDelegate(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers) {
 			var declaration = new DelegateDeclarationNode { ReturnType = parseType(true, true) };
+            if (docCommentEndPosition > 0) {
+                declaration.DocumentationOffset = docCommentStartPosition;
+                declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			declaration.Modifiers.addAll(modifiers);
 			declaration.Annotations.addAll(annotations);
 			if (!isIdentifier(lexicalUnit)) {
@@ -897,6 +963,11 @@ package stab.parser {
 			saveScannerState();
 			if (nextLexicalUnit(true) == LexicalUnit.OpenBrace) {
 				var declaration = new PropertyDeclarationNode { Type = type, NameOffset = sp, NameLength = len };
+                if (docCommentEndPosition > 0) {
+                    declaration.DocumentationOffset = docCommentStartPosition;
+                    declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(declaration);
 				declaration.Modifiers.addAll(modifiers);
 				declaration.Annotations.addAll(annotations);
@@ -909,6 +980,11 @@ package stab.parser {
 				return declaration;
 			} else {
 				var declaration = new MethodDeclarationNode { ReturnType = type, NameOffset = sp, NameLength = len };
+                if (docCommentEndPosition > 0) {
+                    declaration.DocumentationOffset = docCommentStartPosition;
+                    declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                    docCommentEndPosition = 0;
+                }
 				setSavedScannerState(declaration);
 				declaration.Modifiers.addAll(modifiers);
 				declaration.Annotations.addAll(annotations);
@@ -1014,6 +1090,11 @@ package stab.parser {
 		private IndexerDeclarationNode parseIndexerDeclaration(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers,
 				boolean partial, TypeReferenceNode type, boolean inInterface) {
 			var declaration = new IndexerDeclarationNode { Type = type };
+            if (docCommentEndPosition > 0) {
+                declaration.DocumentationOffset = docCommentStartPosition;
+                declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
+                docCommentEndPosition = 0;
+            }
 			setSavedScannerState(declaration);
 			declaration.Modifiers.addAll(modifiers);
 			declaration.Annotations.addAll(annotations);
@@ -3626,10 +3707,34 @@ package stab.parser {
 				case NewLine:
 					newLineOccured = true;
 					break;
+
+				case SingleLineComment:
+                    if (docCommentEndPosition > 0 && !wasSingleLineDocComment) {
+                        docCommentStartPosition = scanner.StartPosition;
+                        docCommentEndPosition = 0;
+                    }
+                    if (this.LexicalUnitLength > 2 && scanner.Text[scanner.StartPosition + 2] == '/') {
+                        if (docCommentEndPosition == 0 || !wasSingleLineDocComment) {
+                            docCommentStartPosition = scanner.StartPosition;
+                        }
+                        wasSingleLineDocComment = true;
+                        docCommentEndPosition = scanner.EndPosition;
+                    } else {
+                        docCommentEndPosition = 0;
+                    }
+                    break;
+                    
+				case DelimitedComment:
+                    if (this.LexicalUnitLength > 4 && scanner.Text[scanner.StartPosition + 2] == '*') {
+                        wasSingleLineDocComment = false;
+                        docCommentStartPosition = scanner.StartPosition;
+                        docCommentEndPosition = scanner.EndPosition;
+                    } else {
+                        docCommentEndPosition = 0;
+                    }
+                    break;
 					
 				case Whitespace:
-				case SingleLineComment:
-				case DelimitedComment:
 					break;
 					
 				default:
@@ -3656,5 +3761,4 @@ package stab.parser {
 			}
 		}
 	}
-	
 }

@@ -1253,6 +1253,7 @@ package stab.compiler {
 					throw context.error(CompileErrorId.UnresolvedName, nameExpression, name);
 				}
 			} else {
+                // TODO: verify that members are not only methods
 				var ttype = ValidationHelper.getType(context, memberAccess.TargetObject);
 				var staticOnly = false;
 				if (tinfo.Member != null && tinfo.Member.MemberKind == MemberKind.Type) {

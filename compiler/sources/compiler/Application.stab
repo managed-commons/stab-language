@@ -33,6 +33,7 @@ package stab.compiler {
 			Annotatedlibs,
 			Classpath,
 			Define,
+			Doc,
 			Help,
 			Out,
 			Runtimelib
@@ -78,6 +79,9 @@ package stab.compiler {
 				new OptionInfo { Option = Option.Define, Name = "define", ShortForm = "d",
 						Arguments = "<symbol list>",
 						Description = "a ; separated list of conditional compilation symbols" },
+				new OptionInfo { Option = Option.Doc, Name = "doc",
+						Arguments = "<file>",
+						Description = "Specify a file populated with the documentation comments in the\n\tinput files" },
 				new OptionInfo { Option = Option.Out, Name = "out",
 						Arguments = "<directory>",
 						Description = "specify output directory name (default: base name of the first\n\tinput file)" },
@@ -229,6 +233,10 @@ package stab.compiler {
 					}
 					break;
 				}
+                case Doc: {
+                    parameters.DocumentationFile = parameter;
+                    break;
+                }
 				case Out: {
 					parameters.OutputPath = parameter;
 					break;

@@ -297,5 +297,91 @@ package stab.parser {
 				}
 			}
 		}
+        
+        public static String decodeDocumentation(char[] text, int offset, int length) {
+            var end = offset + length;
+            offset++;
+            var sb = new StringBuilder();
+            if (text[offset] == '*') {
+                offset += 2;
+                for (var i = offset; i < end; i++) {
+                    var c = text[i];
+                    switch (c) {
+                    case '\r':
+                        sb.append(c);
+                        if (text[i + 1] == '\n') {
+                            i++;
+                        }
+                        goto case '\n';
+                        
+                    case '\u2028':
+                    case '\u2029':
+                    case '\n':
+                        sb.append(c);
+                        var done = false;
+                        while (i + 1 < end && !done) {
+                            switch (text[i + 1]) {
+                            case ' ':
+                            case '\t':
+                            case '\v':
+                            case '\f':
+                                i++;
+                                break;
+                            case '*':
+                                if (text[i + 2] != '/') {
+                                    i++;
+                                }
+                                goto default;
+                            default:
+                                done = true;
+                                break;
+                            }
+                        }
+                        break;
+                       
+                    case '*':
+                        if (text[i + 1] != '/') {
+                            sb.append(c);
+                        } else {
+                            i++;
+                        }
+                        break;
+                       
+                    default:
+                        sb.append(c);
+                        break;
+                    }
+                }                
+            } else {
+                offset += 2;
+                for (var i = offset; i < end; i++) {
+                    var c = text[i];
+                    switch (c) {
+                    case '\r':
+                        sb.append(c);
+                        if (text[i + 1] == '\n') {
+                            c = '\n';
+                            i++;
+                        }
+                        goto case '\n';
+                        
+                    case '\u2028':
+                    case '\u2029':
+                    case '\n':
+                        sb.append(c);
+                        do {
+                            i++;
+                        } while (i < end && text[i] != '/');
+                        i += 2;
+                        break;
+                        
+                    default:
+                        sb.append(c);
+                        break;
+                    }
+                }
+            }
+            return sb.toString();
+        }
 	}
 }

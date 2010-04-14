@@ -350,7 +350,19 @@ package stab.compiler {
 										}
 									} else if (cinfo != null) {
 										if (sinfo.getType().IsNumeric) {
-											if (((Number)sinfo.Value).intValue() == ((Number)cinfo.Value).intValue()) {
+                                            int svalue;
+                                            if (sinfo.Value instanceof Character) {
+                                                svalue = ((Character)sinfo.Value).charValue();
+                                            } else {
+                                                svalue = ((Number)sinfo.Value).intValue();
+                                            }
+                                            int cvalue;
+                                            if (cinfo.Value instanceof Character) {
+                                                cvalue = ((Character)cinfo.Value).charValue();
+                                            } else {
+                                                cvalue = ((Number)cinfo.Value).intValue();
+                                            }
+                                            if (svalue == cvalue) {
 												if (section.Statements.isEmpty()) {
 													addNext = true;
 												} else {

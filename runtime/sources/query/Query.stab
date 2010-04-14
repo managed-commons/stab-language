@@ -3250,6 +3250,7 @@ package stab.query {
 		}
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
+        //
 		
 		#pragma warning disable 170 // Ignore warning about raw generic types
 		

@@ -20,6 +20,9 @@ using java.util;
 
 package stab.lang {
 
+    /// <summary>
+    ///   <c>Delegate</c> is the base class for delegate types in the Stab language.
+    /// </summary>
 	public abstract class Delegate : Cloneable {
 		private Object target;
 		private Method method;

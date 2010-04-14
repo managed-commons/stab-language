@@ -66,6 +66,16 @@ package stab.syntaxtree {
 			}
 		}
 		
+        public int DocumentationOffset {
+            get;
+            set;
+        }
+		
+        public int DocumentationLength {
+            get;
+            set;
+        }
+        
 		public PackageBodyNode Body {
 			get;
 			set;
