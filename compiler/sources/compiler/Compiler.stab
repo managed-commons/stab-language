@@ -101,6 +101,7 @@ package stab.compiler {
 		private BytecodeGenerator bytecodeGenerator;
 		private HashMap<String, PartialTypeInfo> partialTypes;
 		private QueryTranslator queryTranslator;
+        private DocumentationBuilder documentationBuilder;
 		
 		public Compiler() {
 			this.partialTypes = new HashMap<String, PartialTypeInfo>();
@@ -166,6 +167,9 @@ package stab.compiler {
 			this.statementValidator = null;
 			this.expressionValidator = null;
 			this.reachabilityChecker = null;
+            this.assignmentChecker = null;
+            this.queryTranslator = null;
+            this.documentationBuilder = null;
 			return results;
 		}
 		
@@ -2881,9 +2885,15 @@ package stab.compiler {
 		
 		private void buildDocumentation(File file) {
             var doc = XmlHelper.load(new StringReader("<?xml version=\"1.0\"?><doc><members/></doc>"));
+            this.documentationBuilder = new DocumentationBuilder(context, (Element)doc.getDocumentElement().getFirstChild());
 			foreach (var compilationUnit in context.CompilationUnits) {
 				context.Text = compilationUnit.Text;
-				buildDocumentation("", compilationUnit.Body, (Element)doc.getDocumentElement().getFirstChild());
+                context.MemberResolver.enterScope();
+                try {
+                    buildDocumentation("", compilationUnit.Body);
+                } finally {
+                    context.MemberResolver.leaveScope();
+                }
 			}
             OutputStream stream = null;
             try {
@@ -2896,21 +2906,23 @@ package stab.compiler {
             }
 		}
 
-		private void buildDocumentation(String packageName, PackageBodyNode packageBody, Element members) {
-		
+		private void buildDocumentation(String packageName, PackageBodyNode packageBody) {
+			var packageInfo = packageBody.getUserData(typeof(PackageInfo));
+			context.MemberResolver.usingDirective(packageInfo.memberInfos, packageInfo.packages, packageInfo.packageAliases);
+            
 			foreach (var member in packageBody.Members) {
 				switch (member.PackageMemberKind) {
 				case Package:
-					buildDocumentation(packageName, (PackageDeclarationNode)member, members);
+					buildDocumentation(packageName, (PackageDeclarationNode)member);
 					break;
 				case Class:
-					buildClassDocumentation((ClassDeclarationNode)member, members);
+					buildClassDocumentation((ClassDeclarationNode)member);
 					break;
 				case Delegate:
-					buildDelegateDocumentation((DelegateDeclarationNode)member, members);
+					buildDelegateDocumentation((DelegateDeclarationNode)member);
 					break;
 				case Interface:
-					buildInterfaceDocumentation((InterfaceDeclarationNode)member, members);
+					buildInterfaceDocumentation((InterfaceDeclarationNode)member);
                     break;
 				default:
 					throw new Exception("Internal error: unhandled member kind: " + member.PackageMemberKind);
@@ -2918,205 +2930,174 @@ package stab.compiler {
 			}
 		}
 
-		private void buildDocumentation(String packageName, PackageDeclarationNode packageDeclaration, Element members) {
+		private void buildDocumentation(String packageName, PackageDeclarationNode packageDeclaration) {
 			if (packageDeclaration.Body != null) {
                 var name = getPackageName(packageName, packageDeclaration, '.');
-                if (packageDeclaration.DocumentationLength > 0) {
-                    var comment = ParserHelper.decodeDocumentation(context.Text, packageDeclaration.DocumentationOffset,
-                            packageDeclaration.DocumentationLength);
-                    appendDocumentation(members, "N:" + name, comment);
+                foreach (var identifier in packageDeclaration.Identifiers) {
+                    context.MemberResolver.enterPackage(context.getIdentifier(identifier.Offset, identifier.Length));
                 }
-				buildDocumentation(name, packageDeclaration.Body, members);
+                try {
+                    if (packageDeclaration.DocumentationLength > 0) {
+                        documentationBuilder.buildPackageDocumentation(name, packageDeclaration);
+                    }
+                    buildDocumentation(name, packageDeclaration.Body);
+                } finally {
+                    for (int i = packageDeclaration.Identifiers.size() - 1; i >= 0; --i) {
+                        context.MemberResolver.leavePackage();
+                    }
+                }
 			}
 		}
 
-		private void buildClassDocumentation(ClassDeclarationNode classDeclaration, Element members) {
+		private void buildClassDocumentation(ClassDeclarationNode classDeclaration) {
 			var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
 			context.CurrentType = typeBuilder;
-
-            if (classDeclaration.DocumentationLength > 0) {
-                var comment = ParserHelper.decodeDocumentation(context.Text, classDeclaration.DocumentationOffset,
-                        classDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(typeBuilder), comment);
-            }
-			
-			foreach (var member in classDeclaration.Members) {
-				switch (member.TypeMemberKind) {
-				case Class:
-					buildClassDocumentation((ClassDeclarationNode)member, members);
-					break;
-				case Method:
-					buildMethodDocumentation((MethodDeclarationNode)member, members);
-					break;
-				case Field:
-					buildFieldDocumentation((FieldDeclarationNode)member, members);
-					break;
-				case Delegate:
-					buildDelegateDocumentation((DelegateDeclarationNode)member, members);
-                    break;
-				case Indexer:
-					buildIndexerDocumentation((IndexerDeclarationNode)member, members);
-					break;
-				case Property:
-					buildPropertyDocumentation((PropertyDeclarationNode)member, members);
-					break;
-				case Constructor:
-					buildConstructorDocumentation((ConstructorDeclarationNode)member, members);
-					break;
-				case Destructor:
-					buildDestructorDocumentation((DestructorDeclarationNode)member, members);
-					break;
-				case Interface:
-					buildInterfaceDocumentation((InterfaceDeclarationNode)member, members);
-					break;
-				case EnumConstant:
-					buildEnumConstantDocumentation((EnumConstantDeclarationNode)member, members);
-					break;
-				default:
-					throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
-				}
-				context.CurrentType = typeBuilder;
+			context.MemberResolver.enterType(typeBuilder);
+			try {
+                if (classDeclaration.DocumentationLength > 0) {
+                    documentationBuilder.buildTypeDocumentation(typeBuilder, classDeclaration);
+                }
+                
+                foreach (var member in classDeclaration.Members) {
+                    switch (member.TypeMemberKind) {
+                    case Class:
+                        buildClassDocumentation((ClassDeclarationNode)member);
+                        break;
+                    case Method:
+                        buildMethodDocumentation((MethodDeclarationNode)member);
+                        break;
+                    case Field:
+                        buildFieldDocumentation((FieldDeclarationNode)member);
+                        break;
+                    case Delegate:
+                        buildDelegateDocumentation((DelegateDeclarationNode)member);
+                        break;
+                    case Indexer:
+                        buildIndexerDocumentation((IndexerDeclarationNode)member);
+                        break;
+                    case Property:
+                        buildPropertyDocumentation((PropertyDeclarationNode)member);
+                        break;
+                    case Constructor:
+                        buildConstructorDocumentation((ConstructorDeclarationNode)member);
+                        break;
+                    case Destructor:
+                        buildDestructorDocumentation((DestructorDeclarationNode)member);
+                        break;
+                    case Interface:
+                        buildInterfaceDocumentation((InterfaceDeclarationNode)member);
+                        break;
+                    case EnumConstant:
+                        buildEnumConstantDocumentation((EnumConstantDeclarationNode)member);
+                        break;
+                    default:
+                        throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
+                    }
+                    context.CurrentType = typeBuilder;
+                }
+			} finally {
+				context.MemberResolver.leaveType();
 			}
 		}
 
-		private void buildInterfaceDocumentation(InterfaceDeclarationNode interfaceDeclaration, Element members) {
+		private void buildInterfaceDocumentation(InterfaceDeclarationNode interfaceDeclaration) {
 			var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
 			context.CurrentType = typeBuilder;
-            
-            if (interfaceDeclaration.DocumentationLength > 0) {
-                var comment = ParserHelper.decodeDocumentation(context.Text, interfaceDeclaration.DocumentationOffset,
-                        interfaceDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(typeBuilder), comment);
-            }
-            
-            foreach (var member in interfaceDeclaration.Members) {
-                switch (member.TypeMemberKind) {
-                case Method:
-                    buildMethodDocumentation((MethodDeclarationNode)member, members);
-                    break;
-                case Indexer:
-                    buildIndexerDocumentation((IndexerDeclarationNode)member, members);
-                    break;
-                case Property:
-                    buildPropertyDocumentation((PropertyDeclarationNode)member, members);
-                    break;
-                case Class:
-                case Delegate:
-                case Interface:
-                case Constructor:
-                case Destructor:
-                case EnumConstant:
-                case Field:
-                default:
-                    throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
+			context.MemberResolver.enterType(typeBuilder);
+			try {
+                if (interfaceDeclaration.DocumentationLength > 0) {
+                    documentationBuilder.buildTypeDocumentation(typeBuilder, interfaceDeclaration);
                 }
-            }
+                
+                foreach (var member in interfaceDeclaration.Members) {
+                    switch (member.TypeMemberKind) {
+                    case Method:
+                        buildMethodDocumentation((MethodDeclarationNode)member);
+                        break;
+                    case Indexer:
+                        buildIndexerDocumentation((IndexerDeclarationNode)member);
+                        break;
+                    case Property:
+                        buildPropertyDocumentation((PropertyDeclarationNode)member);
+                        break;
+                    case Class:
+                    case Delegate:
+                    case Interface:
+                    case Constructor:
+                    case Destructor:
+                    case EnumConstant:
+                    case Field:
+                    default:
+                        throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
+                    }
+                }
+			} finally {
+				context.MemberResolver.leaveType();
+			}
 		}
 
-		private void buildDelegateDocumentation(DelegateDeclarationNode delegateDeclaration, Element members) {
-			var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
-			context.CurrentType = typeBuilder;
-            
+		private void buildDelegateDocumentation(DelegateDeclarationNode delegateDeclaration) {
             if (delegateDeclaration.DocumentationLength > 0) {
-                var comment = ParserHelper.decodeDocumentation(context.Text, delegateDeclaration.DocumentationOffset,
-                        delegateDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(typeBuilder), comment);
+                var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+                context.CurrentType = typeBuilder;
+                documentationBuilder.buildTypeDocumentation(typeBuilder, delegateDeclaration);
             }
         }
         
-		private void buildFieldDocumentation(FieldDeclarationNode fieldDeclaration, Element members) {
+		private void buildFieldDocumentation(FieldDeclarationNode fieldDeclaration) {
             if (fieldDeclaration.DocumentationLength > 0) {
                 var fieldBuilder = fieldDeclaration.getUserData(typeof(JvmFieldBuilder));
-                var comment = ParserHelper.decodeDocumentation(context.Text, fieldDeclaration.DocumentationOffset,
-                        fieldDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(fieldBuilder.Type), comment);
+                documentationBuilder.buildFieldDocumentation(fieldBuilder, fieldDeclaration);
             }
         }
         
-		private void buildEnumConstantDocumentation(EnumConstantDeclarationNode enumConstantDeclaration, Element members) {
+		private void buildEnumConstantDocumentation(EnumConstantDeclarationNode enumConstantDeclaration) {
             if (enumConstantDeclaration.DocumentationLength > 0) {
                 var fieldBuilder = enumConstantDeclaration.getUserData(typeof(JvmFieldBuilder));
-                var comment = ParserHelper.decodeDocumentation(context.Text, enumConstantDeclaration.DocumentationOffset,
-                        enumConstantDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(fieldBuilder.Type), comment);
+                documentationBuilder.buildFieldDocumentation(fieldBuilder, enumConstantDeclaration);
             }
         }
         
-		private void buildConstructorDocumentation(ConstructorDeclarationNode constructorDeclaration, Element members) {
+		private void buildConstructorDocumentation(ConstructorDeclarationNode constructorDeclaration) {
             if (constructorDeclaration.DocumentationLength > 0) {
                 var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
-                var comment = ParserHelper.decodeDocumentation(context.Text, constructorDeclaration.DocumentationOffset,
-                        constructorDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(methodBuilder), comment);
+                documentationBuilder.buildMethodDocumentation(methodBuilder, constructorDeclaration);
             }
         }
         
-		private void buildDestructorDocumentation(DestructorDeclarationNode destructorDeclaration, Element members) {
+		private void buildDestructorDocumentation(DestructorDeclarationNode destructorDeclaration) {
             if (destructorDeclaration.DocumentationLength > 0) {
                 var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
-                var comment = ParserHelper.decodeDocumentation(context.Text, destructorDeclaration.DocumentationOffset,
-                        destructorDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(methodBuilder), comment);
+                documentationBuilder.buildMethodDocumentation(methodBuilder, destructorDeclaration);
             }
         }
         
-		private void buildMethodDocumentation(MethodDeclarationNode methodDeclaration, Element members) {
+		private void buildMethodDocumentation(MethodDeclarationNode methodDeclaration) {
             if (methodDeclaration.DocumentationLength > 0) {
                 var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
-                var comment = ParserHelper.decodeDocumentation(context.Text, methodDeclaration.DocumentationOffset,
-                        methodDeclaration.DocumentationLength);
-                appendDocumentation(members, getIdString(methodBuilder), comment);
+                documentationBuilder.buildMethodDocumentation(methodBuilder, methodDeclaration);
             }
         }
         
-		private void buildIndexerDocumentation(IndexerDeclarationNode indexerDeclaration, Element members) {
+		private void buildIndexerDocumentation(IndexerDeclarationNode indexerDeclaration) {
             if (indexerDeclaration.DocumentationLength > 0) {
                 var get = indexerDeclaration.GetAccessor;
                 var set = indexerDeclaration.SetAccessor;
                 var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
                 var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-            
-                var comment = ParserHelper.decodeDocumentation(context.Text, indexerDeclaration.DocumentationOffset,
-                        indexerDeclaration.DocumentationLength);
-                appendDocumentation(members, "P:" + BytecodeHelper.getIndexerDisplayName(getBuilder ?? setBuilder), comment);
+                documentationBuilder.buildIndexerDocumentation(getBuilder ?? setBuilder, indexerDeclaration);
             }
         }
         
-		private void buildPropertyDocumentation(PropertyDeclarationNode propertyDeclaration, Element members) {
+		private void buildPropertyDocumentation(PropertyDeclarationNode propertyDeclaration) {
             if (propertyDeclaration.DocumentationLength > 0) {
                 var get = propertyDeclaration.GetAccessor;
                 var set = propertyDeclaration.SetAccessor;
                 var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
                 var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-            
-                var comment = ParserHelper.decodeDocumentation(context.Text, propertyDeclaration.DocumentationOffset,
-                        propertyDeclaration.DocumentationLength);
-                var name = context.getIdentifier(propertyDeclaration.NameOffset, propertyDeclaration.NameLength);
-                appendDocumentation(members, "P:" + BytecodeHelper.getPropertyDisplayName(getBuilder ?? setBuilder, name), comment);
+                var name = propertyDeclaration.getUserData(typeof(MemberInfo)).Name;
+                documentationBuilder.buildPropertyDocumentation(getBuilder ?? setBuilder, name, propertyDeclaration);
             }
-        }
-
-        private void appendDocumentation(Element members, String idString, String comment) {
-            var xml = "<?xml version=\"1.0\"?><member name=\"" + idString + "\">" + comment + "</member>";
-            try {
-                var doc = XmlHelper.load(new StringReader(xml));
-                members.appendChild(members.getOwnerDocument().importNode(doc.getDocumentElement(), true));
-            } catch (org.xml.sax.SAXException) {
-                // TODO: addWarning
-                members.appendChild(members.getOwnerDocument().createComment(idString + " is documented with a malformed XML comment"));
-            }
-        }
-        
-        private static String getIdString(JvmTypeInfo type) {
-            return "T:" + BytecodeHelper.getDisplayName(type);
-        }
-        
-        private static String getIdString(JvmFieldInfo field) {
-            return "F:" + BytecodeHelper.getDisplayName(field.DeclaringType) + "." + field.Name;
-        }
-        
-        private static String getIdString(JvmMethodInfo method) {
-            return "M:" + BytecodeHelper.getDisplayName(method.DeclaringType) + "." + BytecodeHelper.getDisplayName(method);
         }
         
 		///////////////////////////////////////////////////////////////////////////////////////////

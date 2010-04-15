@@ -77,7 +77,7 @@ package stab.compiler {
 			}
 			return result == null;
 		}
-		
+
 		public static String getDisplayName(JvmTypeInfo type) {
 			if (type == null) {
 				return "<null>";
@@ -107,7 +107,7 @@ package stab.compiler {
 				var result = type.FullName.replace('/', '.').replace('$', '.');
 				if (type.GenericArguments.any()) {
 					var sb = new StringBuilder();
-					sb.append(result).append("<");
+					sb.append(result).append('<');
 					var first = true;
 					foreach (var t in type.GenericArguments) {
 						if (first) {
@@ -117,7 +117,7 @@ package stab.compiler {
 						}
 						sb.append(getDisplayName(t));
 					}
-					sb.append(">");
+					sb.append('>');
 					result = sb.toString();
 				}
 				return result;

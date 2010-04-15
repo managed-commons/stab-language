@@ -21,7 +21,7 @@ using java.util;
 package stab.lang {
 
     /// <summary>
-    ///   <c>Delegate</c> is the base class for delegate types in the Stab language.
+    /// <c>Delegate</c> is the base class for delegate types in the Stab language.
     /// </summary>
 	public abstract class Delegate : Cloneable {
 		private Object target;
@@ -36,6 +36,9 @@ package stab.lang {
 		protected abstract Method getMethodCore();
 		protected abstract Object getMethodSignature();
 		
+        /// <summary>
+        /// Gets the object on which the current delegate is invoked, or null if the delegate represents a static method
+        /// </summary>
 		public Object Target {
 			get {
 				return (delegates == null) ? target : delegates[sizeof(delegates) - 1].target;
@@ -55,6 +58,9 @@ package stab.lang {
 			}
 		}
 		
+        /// <summary>
+        /// <see cref="Object.equals"/>
+        /// </summary>
 		public override boolean equals(Object obj) {
 			if (obj == null || !(obj instanceof Delegate)) {
 				return false;

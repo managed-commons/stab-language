@@ -151,7 +151,18 @@ package stab.compiler {
 		AmbiguousTypeName,
 		UnreachableStatement,
 		UnexpectedMethodReference,
-        ConditionalMethodNotVoid
+        ConditionalMethodNotVoid,
+        MalformedXmlComment,
+        InvalidParamElement,
+        InvalidParamNameAttribute,
+        InvalidTypeparamElement,
+        InvalidTypeparamNameAttribute,
+        MissingDocAttribute,
+        UnresolvedCref,
+        ExpectedExceptionInCref,
+        IncludeFileNotFound,
+        IncludeFileInvalid,
+        IncludePathInvalid,
 	}
 
 	class Resources {

@@ -3005,6 +3005,55 @@ package stab.query {
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////////
+		// take
+		//
+        
+        public static Iterable<TSource> take<TSource>(this Iterable<TSource> source, int count) {
+			if (source == null) throw new NullPointerException("source");
+
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+                yield return it.next();
+            }
+        }
+        
+        public static IntIterable take(this IntIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+                yield return it.nextInt();
+            }
+        }
+        
+        public static LongIterable take(this LongIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+                yield return it.nextLong();
+            }
+        }
+        
+        public static FloatIterable take(this FloatIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+                yield return it.nextFloat();
+            }
+        }
+        
+        public static DoubleIterable take(this DoubleIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+                yield return it.nextDouble();
+            }
+        }
+
+		///////////////////////////////////////////////////////////////////////////////////////////
 		// takeWhile
 		//
 		
