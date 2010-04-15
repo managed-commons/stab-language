@@ -16,6 +16,7 @@
  */
 using java.lang;
 using java.io;
+using java.util;
 using javax.xml.xpath;
 using org.w3c.dom;
 using stab.bytecode;
@@ -296,7 +297,13 @@ package stab.compiler {
                 if (cref.Length > 1 && cref[1] == ':') {
                     return;
                 }
-                int idx = cref.indexOf('.');
+                String arguments = null;
+                int idx = cref.indexOf('(');
+                if (idx != -1) {
+                    arguments = cref.substring(idx);
+                    cref = cref.substring(0, idx);
+                }
+                idx = cref.indexOf('.');
                 String name;
                 if (idx == -1) {
                     name = cref;
@@ -323,7 +330,7 @@ package stab.compiler {
                             return;
                         }
                     }
-                    var found = false;
+                    boolean found;
                     do {
                         idx = cref.indexOf('.');
                         if (idx == -1) {
@@ -333,6 +340,7 @@ package stab.compiler {
                             name = cref.substring(0, idx);
                             cref = cref.substring(idx + 1);
                         }
+                        found = false;
                         foreach (var s in context.MemberResolver.TypeFinder.getSubPackages(packageName)) {
                             if (s.equals(name)) {
                                 packageName = packageName + '/' + name;
@@ -347,15 +355,20 @@ package stab.compiler {
                         }
                     } while (cref != null && found);
                     var type = context.TypeSystem.getType(packageName + '/' + name);
-                    replaceCref(element, exception, type, cref);
+                    replaceCref(element, exception, type, cref, arguments);
                 } else {
-                    replaceCref(element, exception, members, cref);
+                    replaceCref(element, exception, members, cref, arguments);
                 }
             }
         }
         
-        private void replaceCref(Element element, boolean exception, JvmTypeInfo type, String suffix) {
+        private void replaceCref(Element element, boolean exception, JvmTypeInfo type, String suffix, String arguments) {
             if (suffix == null) {
+                if (arguments != null) {
+                    context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
+                    element.setAttribute("cref", "!" + element.getAttribute("cref"));
+                    return;
+                }
                 if (exception) {
                     if (!context.TypeSystem.getType("java/lang/Throwable").isAssignableFrom(type)) {
                         context.addWarning(CompileErrorId.ExpectedExceptionInCref, node, element.getAttribute("cref"));
@@ -375,12 +388,12 @@ package stab.compiler {
                     suffix = suffix.substring(idx + 1);
                 }
 				var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, type, name, true);
-                replaceCref(element, exception, members, suffix);
+                replaceCref(element, exception, members, suffix, arguments);
             }
         }
         
-        private void replaceCref(Element element, boolean exception, Iterable<MemberInfo> members, String suffix) {
-            if (members.count() > 1) {
+        private void replaceCref(Element element, boolean exception, Iterable<MemberInfo> members, String suffix, String arguments) {
+            if (members.count() > 1 && !members.all(p => p.MemberKind == MemberKind.Method)) {
                 context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
                 element.setAttribute("cref", "!" + element.getAttribute("cref"));
                 return;
@@ -388,7 +401,7 @@ package stab.compiler {
             var member = members.first();
             switch (member.MemberKind) {
             case Type:
-                replaceCref(element, exception, member.Type, suffix);
+                replaceCref(element, exception, member.Type, suffix, arguments);
                 break;
             case Field:
                 if (exception) {
@@ -396,7 +409,7 @@ package stab.compiler {
                     element.setAttribute("cref", "!" + element.getAttribute("cref"));
                     return;
                 }
-                if (suffix != null) {
+                if (suffix != null || arguments != null) {
                     context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
                     element.setAttribute("cref", "!" + element.getAttribute("cref"));
                     return;
@@ -410,7 +423,7 @@ package stab.compiler {
                     element.setAttribute("cref", "!" + element.getAttribute("cref"));
                     return;
                 }
-                if (suffix != null) {
+                if (suffix != null || arguments != null) {
                     context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
                     element.setAttribute("cref", "!" + element.getAttribute("cref"));
                     return;
@@ -419,23 +432,141 @@ package stab.compiler {
                 break;
             
             case Method:
-                if (exception) {
-                    context.addWarning(CompileErrorId.ExpectedExceptionInCref, node, element.getAttribute("cref"));
-                    element.setAttribute("cref", "!" + element.getAttribute("cref"));
-                    return;
+                if (!exception && suffix == null) {
+                    if (arguments == null && members.count() == 1) {
+                        element.setAttribute("cref", getIdString(member.Method));
+                        return;
+                    } else if (arguments != null && arguments.endsWith(")")) {
+                        var args = new ArrayList<JvmTypeInfo>();
+                        if (arguments.Length > 2) {
+                            arguments = arguments.substring(1, arguments.Length - 1);
+                            int idx;
+                            while ((idx = arguments.indexOf(',')) != -1) {
+                                var name = arguments.substring(0, idx);
+                                arguments = arguments.substring(idx + 1);
+                                var type = getType(name);
+                                if (type == null) {
+                                    goto failed;
+                                }
+                                args.add(type);
+                            }
+                            if (arguments.Length == 0) {
+                                goto failed;
+                            }
+                            var type = getType(arguments);
+                            if (type == null) {
+                                goto failed;
+                            }
+                            args.add(type);
+                        }
+                        foreach (var m in members) {
+                            if (m.Method.Parameters.select(p => p.Type).sequenceEqual(args)) {
+                                element.setAttribute("cref", getIdString(m.Method));
+                                return;
+                            }
+                        }
+                    }
                 }
-                if (suffix == null) {
-                    element.setAttribute("cref", getIdString(member.Method));
-                } else {
-                    context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
-                    element.setAttribute("cref", "!" + element.getAttribute("cref"));
-                    return;
-                }
+            failed:
+                context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
+                element.setAttribute("cref", "!" + element.getAttribute("cref"));
                 break;
                 
             default:
                 break;
             }
+        }
+
+        private JvmTypeInfo getType(String name) {
+            name = name.trim();
+            int dimensions = 0;
+            while (name.endsWith("[]")) {
+                dimensions++;
+                name = name.substring(0, name.Length - 2);
+            }
+            JvmTypeInfo result;
+            switch (name) {
+            case "boolean":
+                result = JvmTypeInfo.BOOLEAN;
+                break;
+            case "byte":
+                result = JvmTypeInfo.BYTE;
+                break;
+            case "char":
+                result = JvmTypeInfo.CHAR;
+                break;
+            case "short":
+                result = JvmTypeInfo.SHORT;
+                break;
+            case "int":
+                result = JvmTypeInfo.INT;
+                break;
+            case "long":
+                result = JvmTypeInfo.LONG;
+                break;
+            case "float":
+                result = JvmTypeInfo.FLOAT;
+                break;
+            case "double":
+                result = JvmTypeInfo.DOUBLE;
+                break;
+            default:
+                int idx = name.indexOf(".");
+                String prefix;
+                if (idx == -1) {
+                    prefix = name;
+                    name = null;
+                } else {
+                    prefix = name.substring(0, idx);
+                    name = name.substring(idx + 1);
+                }
+                var members = context.MemberResolver.resolveName(context.CurrentType, prefix, Query.empty<JvmTypeInfo>()).toList();
+                if (!members.any()) {
+                    if (name == null) {
+                        return null;
+                    }
+                    var packageName = context.MemberResolver.getPackageFromAlias(prefix);
+                    if (packageName == null) {
+                        if (context.MemberResolver.TypeFinder.getSubPackages(prefix).any()
+                         || context.MemberResolver.TypeFinder.getClasses(prefix).any()) {
+                            packageName = prefix;
+                        } else {
+                            return null;
+                        }
+                    }
+                    var found = false;
+                    do {
+                        idx = name.indexOf('.');
+                        if (idx == -1) {
+                            prefix = name;
+                            name = null;
+                        } else {
+                            prefix = name.substring(0, idx);
+                            name = name.substring(idx + 1);
+                        }
+                        foreach (var s in context.MemberResolver.TypeFinder.getSubPackages(packageName)) {
+                            if (s.equals(prefix)) {
+                                packageName = packageName + '/' + prefix;
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found && !context.MemberResolver.TypeFinder.getClasses(packageName).contains(prefix)) {
+                            return null;
+                        }
+                    } while (name != null && found);
+                    result = context.TypeSystem.getType(packageName + '/' + prefix);
+                } else if (members.count() > 1) {
+                    return null;
+                } else {
+                    result = members.first().Type;
+                }
+                break;
+            }
+            while (dimensions-- > 0) {
+                type = type.ArrayType;
+            }
+            return result;
         }
         
         private Element copySee(Element see) {

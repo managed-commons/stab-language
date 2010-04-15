@@ -330,6 +330,9 @@ package stab.parser {
                             case '*':
                                 if (text[i + 2] != '/') {
                                     i++;
+                                    if (text[i + 1] == ' ') {
+                                        i++;
+                                    }
                                 }
                                 goto default;
                             default:
@@ -354,6 +357,9 @@ package stab.parser {
                 }                
             } else {
                 offset += 2;
+                if (offset < end && text[offset] == ' ') {
+                    offset++;
+                }
                 for (var i = offset; i < end; i++) {
                     var c = text[i];
                     switch (c) {
@@ -373,6 +379,9 @@ package stab.parser {
                             i++;
                         } while (i < end && text[i] != '/');
                         i += 2;
+                        if (i + 1 < end && text[i + 1] == ' ') {
+                            i++;
+                        }
                         break;
                         
                     default:

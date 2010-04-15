@@ -20,78 +20,192 @@ using java.util;
 package stab.lang {
 
     /// <summary>
-    ///   Gives access to an iterator over a collection of boolean values.
+    /// Gives access to an iterator over a collection of boolean values.
     /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface BooleanIterable : Iterable<Boolean> {
         /// <summary>
-        ///   Creates an iterator over a collection of boolean values.
+        /// Creates an iterator over a collection of boolean values.
         /// </summary>
 		BooleanIterator iterator();
 	}
 	
     /// <summary>
-    ///   Gives access to the elements of a collection of boolean values.
+    /// Gives access to the elements of a collection of boolean values.
     /// </summary>
 	public interface BooleanIterator : Iterator<Boolean> {
         /// <summary>
-        ///   Advances to the next boolean in the collection and returns it.
+        /// Advances to the next boolean in the collection and returns it.
         /// </summary>
 		boolean nextBoolean();
 	}
 
+    /// <summary>
+    /// Gives access to an iterator over a collection of byte values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface ByteIterable : Iterable<Byte> {
+        /// <summary>
+        /// Creates an iterator over a collection of byte values.
+        /// </summary>
 		ByteIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of byte values.
+    /// </summary>
 	public interface ByteIterator : Iterator<Byte> {
+        /// <summary>
+        /// Advances to the next byte in the collection and returns it.
+        /// </summary>
 		byte nextByte();
 	}
 
+
+    /// <summary>
+    /// Gives access to an iterator over a collection of char values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface CharIterable : Iterable<Character> {
+        /// <summary>
+        /// Creates an iterator over a collection of char values.
+        /// </summary>
 		CharIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of char values.
+    /// </summary>
 	public interface CharIterator : Iterator<Character> {
+        /// <summary>
+        /// Advances to the next char in the collection and returns it.
+        /// </summary>
 		char nextChar();
 	}
 
+
+    /// <summary>
+    /// Gives access to an iterator over a collection of short values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface ShortIterable : Iterable<Short> {
+        /// <summary>
+        /// Creates an iterator over a collection of short values.
+        /// </summary>
 		ShortIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of short values.
+    /// </summary>
 	public interface ShortIterator : Iterator<Short> {
+        /// <summary>
+        /// Advances to the next short in the collection and returns it.
+        /// </summary>
 		short nextShort();
 	}
 
+
+    /// <summary>
+    /// Gives access to an iterator over a collection of int values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface IntIterable : Iterable<Integer> {
+        /// <summary>
+        /// Creates an iterator over a collection of int values.
+        /// </summary>
 		IntIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of int values.
+    /// </summary>
 	public interface IntIterator : Iterator<Integer> {
+        /// <summary>
+        /// Advances to the next int in the collection and returns it.
+        /// </summary>
 		int nextInt();
 	}
 
+
+    /// <summary>
+    /// Gives access to an iterator over a collection of long values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface LongIterable : Iterable<Long> {
+        /// <summary>
+        /// Creates an iterator over a collection of long values.
+        /// </summary>
 		LongIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of long values.
+    /// </summary>
 	public interface LongIterator : Iterator<Long> {
+        /// <summary>
+        /// Advances to the next long in the collection and returns it.
+        /// </summary>
 		long nextLong();
 	}
 
+
+    /// <summary>
+    /// Gives access to an iterator over a collection of float values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface FloatIterable : Iterable<Float> {
+        /// <summary>
+        /// Creates an iterator over a collection of float values.
+        /// </summary>
 		FloatIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of float values.
+    /// </summary>
 	public interface FloatIterator : Iterator<Float> {
+        /// <summary>
+        /// Advances to the next float in the collection and returns it.
+        /// </summary>
 		float nextFloat();
 	}
 
+
+    /// <summary>
+    /// Gives access to an iterator over a collection of double values.
+    /// </summary>
+    /// <remarks>
+    /// The compiler uses this interface to compile the foreach construct without boxing / unboxing.
+    /// </remarks>
 	public interface DoubleIterable : Iterable<Double> {
+        /// <summary>
+        /// Creates an iterator over a collection of double values.
+        /// </summary>
 		DoubleIterator iterator();
 	}
 	
+    /// <summary>
+    /// Gives access to the elements of a collection of double values.
+    /// </summary>
 	public interface DoubleIterator : Iterator<Double> {
+        /// <summary>
+        /// Advances to the next double in the collection and returns it.
+        /// </summary>
 		double nextDouble();
 	}
 }

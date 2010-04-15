@@ -3046,8 +3046,10 @@ package stab.compiler {
         
 		private void buildFieldDocumentation(FieldDeclarationNode fieldDeclaration) {
             if (fieldDeclaration.DocumentationLength > 0) {
-                var fieldBuilder = fieldDeclaration.getUserData(typeof(JvmFieldBuilder));
-                documentationBuilder.buildFieldDocumentation(fieldBuilder, fieldDeclaration);
+                foreach (var decl in fieldDeclaration.Declarators) {
+                    var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                    documentationBuilder.buildFieldDocumentation(fieldBuilder, fieldDeclaration);
+                }
             }
         }
         

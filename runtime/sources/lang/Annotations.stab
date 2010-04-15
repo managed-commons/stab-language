@@ -17,34 +17,62 @@
 using java.lang.annotation;
 
 /// <summary>
-///   Contains the types required by the Stab language compiler.
+/// Contains the types required by the Stab language compiler to compile a program.
 /// </summary>
 package stab.lang {
 
+    /// <summary>
+    /// Indicates to the compiler that a method is the getter of an indexer.
+    /// </summary>
 	[Target({ ElementType.METHOD })]
 	public interface IndexerGet : Annotation {
 	}
 
+    /// <summary>
+    /// Indicates to the compiler that a method is the setter of an indexer.
+    /// </summary>
 	[Target({ ElementType.METHOD })]
 	public interface IndexerSet : Annotation {
 	}
 
+    /// <summary>
+    /// Indicates to the compiler that a method is the getter of a property.
+    /// </summary>
 	[Target({ ElementType.METHOD })]
 	public interface PropertyGet : Annotation {
+        /// <summary>
+        /// Specifies the name to give to a property. If no name is specified, the Javabean convention is used.
+        /// </summary>
 		java.lang.String name() = "";
 	}
 
+    /// <summary>
+    /// Indicates to the compiler that a method is the setter of a property.
+    /// </summary>
 	[Target({ ElementType.METHOD })]
 	public interface PropertySet : Annotation {
+        /// <summary>
+        /// Specifies the name to give to a property. If no name is specified, the Javabean convention is used.
+        /// </summary>
 		java.lang.String name() = "";
 	}
 
+    /// <summary>
+    /// Indicates to the compiler that a method is an extension method.
+    /// </summary>
 	[Target({ ElementType.METHOD })]
 	public interface ExtensionMethod : Annotation {
 	}
 
+    /// <summary>
+    /// Indicates to the compiler that the calls to a method must be compiled to bytecode only if
+    /// a symbol is defined.
+    /// </summary>
 	[Target({ ElementType.METHOD })]
 	public interface Conditional : Annotation {
+        /// <summary>
+        /// Specifies a list of symbols, at least one of which must be defined in order to compile the calls to the method.
+        /// </summary>
 		java.lang.String[] value();
 	}
 }

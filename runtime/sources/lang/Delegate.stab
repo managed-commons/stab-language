@@ -26,18 +26,24 @@ package stab.lang {
 	public abstract class Delegate : Cloneable {
 		private Object target;
 		private Method method;
-		protected Delegate[] delegates;
 		private Class<?> delegateClass;
+        
+        /// <summary>Used internally be the compiler to implement compound delegates.</summary>
+		protected Delegate[] delegates;
 		
 		protected Delegate(Object target) {
 			this.target = target;
 		}
 		
+        /// <summary>Implemented automatically by the compiler.</summary>
 		protected abstract Method getMethodCore();
+        
+        /// <summary>Implemented automatically by the compiler.</summary>
 		protected abstract Object getMethodSignature();
 		
         /// <summary>
-        /// Gets the object on which the current delegate is invoked, or null if the delegate represents a static method
+        /// Gets the object on which the current delegate is invoked, or null if the delegate represents a static method.
+        /// If this delegate is a compound delegate, the <c>Target</c> of the last delegate is returned.
         /// </summary>
 		public Object Target {
 			get {
@@ -45,6 +51,9 @@ package stab.lang {
 			}
 		}
 		
+        /// <summary>
+        /// Gets the method represented by this delegate.
+        /// </summary>
 		public Method Method {
 			get {
 				if (delegates == null) {
@@ -86,6 +95,13 @@ package stab.lang {
 			return getMethodSignature().equals(other.getMethodSignature());
 		}
 
+        /// <summary>
+        /// <see cref="Object.hashCode"/>
+        /// </summary>
+        public override int hashCode() {
+            return getDelegateClass().hashCode();
+        }
+        
 		public static Delegate combine(Delegate d1, Delegate d2) {
 			if (d1 == null) {
 				return d2;
