@@ -85,22 +85,6 @@ package stab.parser {
             var done = false;
             var modifiers = EnumSet.noneOf(typeof(Modifier));
             var annotations = new ArrayList<AnnotationSectionNode>();
-            if (global) {
-                do {
-                    if (lexicalUnit != LexicalUnit.OpenBracket) {
-                        done = true;
-                    } else {
-                        var annotationSection = parseAnnotationSection();
-                        if (annotationSection.Target == AnnotationSectionTarget.Package) {
-                            result.GlobalAnnotations.add(annotationSection);
-                        } else {
-                            annotations.add(annotationSection);
-                            done = true;
-                        }
-                    }
-                } while (!done);
-                done = false;
-            }
             do {
                 switch (lexicalUnit) {
                 case Keyword:
@@ -3218,50 +3202,8 @@ package stab.parser {
         private AnnotationSectionNode parseAnnotationSection() {
             var result = new AnnotationSectionNode();
             setScannerState(result);
-            if (!isIdentifier(nextLexicalUnit(true)) && lexicalUnit != LexicalUnit.Keyword) {
+            if (!isIdentifier(nextLexicalUnit(true))) {
                 throw error(ParseErrorId.IdentifierExpected);
-            }
-            var target = AnnotationSectionTarget.None;
-            switch (lexicalUnit) {
-            case Keyword:
-            case ContextualKeyword:
-                switch (scanner.Keyword) {
-                case Field:
-                    target = AnnotationSectionTarget.Field;
-                    break;
-
-                case Method:
-                    target = AnnotationSectionTarget.Method;
-                    break;
-
-                case Package:
-                    target = AnnotationSectionTarget.Package;
-                    break;
-
-                case Param:
-                    target = AnnotationSectionTarget.Param;
-                    break;
-
-                case Property:
-                    target = AnnotationSectionTarget.Property;
-                    break;
-
-                case Type:
-                    target = AnnotationSectionTarget.Type;
-                    break;
-
-                case Var:
-                    target = AnnotationSectionTarget.Var;
-                    break;
-                }
-                break;
-            }
-            var restorePoint = this.getRestorePoint();
-            if (target != AnnotationSectionTarget.None && nextLexicalUnit(true) == LexicalUnit.Colon) {
-                nextLexicalUnit(true);
-                result.Target = target;
-            } else {
-                this.restore(restorePoint);
             }
             do {
                 var attribute = new AnnotationCreationNode();
@@ -3271,7 +3213,7 @@ package stab.parser {
                     if (nextLexicalUnit(true) != LexicalUnit.CloseParenthesis) {
                         var namedValue = false;
                         if (isIdentifier(lexicalUnit)) {
-                            restorePoint = this.getRestorePoint();
+                            var restorePoint = this.getRestorePoint();
                             int sp = scanner.StartPosition;
                             int len = getLexicalUnitLength();
                             saveScannerState();

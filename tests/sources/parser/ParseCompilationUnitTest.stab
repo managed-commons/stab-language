@@ -47,16 +47,6 @@ package stab.parser.test {
 		public void testMethod() {
 			doTest("Method");
 		}
-		
-		[Test]
-		public void testGlobalAnnotation() {
-			doTest("GlobalAnnotation");
-		}
-
-		[Test]
-		public void testGlobalAnnotations() {
-			doTest("GlobalAnnotations");
-		}
 
 		[Test]
 		public void testMethodParameter() {
@@ -336,12 +326,6 @@ package stab.parser.test {
 					sb.append(";\r\n");
 				}
 				sb.append("\r\n");
-			}
-			if (packageBody.GlobalAnnotations.size() > 0) {
-				foreach (var attr in packageBody.GlobalAnnotations) {
-					print(attr, true, sb);
-				}
-				sb.append(indentText);
 			}
 			foreach (var m in packageBody.Members) {
 				switch (m.PackageMemberKind) {
@@ -859,10 +843,6 @@ package stab.parser.test {
 
 		private void print(AnnotationSectionNode a, boolean newline, StringBuilder sb) {
 			sb.append("[");
-			if (a.Target != AnnotationSectionTarget.None) {
-				sb.append(a.Target.toString().toLowerCase());
-				sb.append(": ");
-			}
 			foreach (var attr in a.getAnnotations()) {
 				print(attr.Type, sb);
 				if (attr.Initializer != null) {

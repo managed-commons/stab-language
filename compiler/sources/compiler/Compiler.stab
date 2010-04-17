@@ -1942,7 +1942,22 @@ package stab.compiler {
                     context.Text = compilationUnit.Text;
                     context.MemberResolver.enterScope();
                     try {
-                        generateAnnotations(compilationUnit.Body);
+                        generateAnnotations(compilationUnit.Body, true);
+                    } catch (CodeErrorException) {
+                    } finally {
+                        context.MemberResolver.leaveScope();
+                    }
+                }
+            } finally {
+                context.MemberResolver.dispose();
+            }
+            try {
+                context.MemberResolver.initialize();
+                foreach (var compilationUnit in context.CompilationUnits) {
+                    context.Text = compilationUnit.Text;
+                    context.MemberResolver.enterScope();
+                    try {
+                        generateAnnotations(compilationUnit.Body, false);
                     } catch (CodeErrorException) {
                     } finally {
                         context.MemberResolver.leaveScope();
@@ -1953,42 +1968,55 @@ package stab.compiler {
             }
         }
 
-        private void generateAnnotations(PackageBodyNode packageBody) {
+        private void generateAnnotations(PackageBodyNode packageBody, boolean annotationTypesOnly) {
             var packageInfo = packageBody.getUserData(typeof(PackageInfo));
             context.MemberResolver.usingDirective(packageInfo.memberInfos, packageInfo.packages, packageInfo.packageAliases);
-        
-            // TODO: package annotations
-        
+
             foreach (var member in packageBody.Members) {
                 switch (member.PackageMemberKind) {
                 case Package:
-                    generateAnnotations((PackageDeclarationNode)member);
+                    generateAnnotations((PackageDeclarationNode)member, annotationTypesOnly);
                     break;
                 case Class:
-                    generateClassAnnotations((ClassDeclarationNode)member);
+                    generateClassAnnotations((ClassDeclarationNode)member, annotationTypesOnly);
                     break;
                 case Interface:
-                    generateInterfaceAnnotations((InterfaceDeclarationNode)member);
+                    generateInterfaceAnnotations((InterfaceDeclarationNode)member, annotationTypesOnly);
                     break;
                 case Delegate:
-                    generateDelegateAnnotations((DelegateDeclarationNode)member);
+                    generateDelegateAnnotations((DelegateDeclarationNode)member, annotationTypesOnly);
                     break;
                 default:
                     throw new Exception("Internal error: unhandled member kind: " + member.PackageMemberKind);
                 }
             }
         }
-        
                 
-        private void generateAnnotations(PackageDeclarationNode packageDeclaration) {
+        private void generateAnnotations(PackageDeclarationNode packageDeclaration, boolean annotationTypesOnly) {
             if (packageDeclaration.Body != null) {
-                // TODO: Annotations
-                
                 foreach (var identifier in packageDeclaration.Identifiers) {
                     context.MemberResolver.enterPackage(context.getIdentifier(identifier.Offset, identifier.Length));
                 }
+                
+                if (!annotationTypesOnly && packageDeclaration.Annotations.size() > 0) {
+                    validateAnnotationSection(packageDeclaration.Annotations, ElementType.PACKAGE);
+                    var packageInfoName = context.MemberResolver.getCurrentPackage() + "/package-info";
+                    if (!context.TypeSystem.typeExists(packageInfoName)) {
+                        var t = context.TypeSystem.defineType(packageInfoName);
+                        context.TypeBuilders.add(t);
+                        t.setInterface(true);
+                        t.setAbstract(true);
+                        t.setBaseType(context.TypeSystem.ObjectType);
+                    }
+                    var packageInfo = context.TypeSystem.getType(packageInfoName);
+                    if (packageInfo instanceof JvmTypeBuilder) {
+                        bytecodeGenerator.generateAnnotationsBytecode(packageDeclaration.Annotations, (JvmTypeBuilder)packageInfo);
+                    } else {
+                        context.addError(CompileErrorId.PackageAnnotatedExternally, packageDeclaration);
+                    }
+                }
                 try {
-                    generateAnnotations(packageDeclaration.Body);
+                    generateAnnotations(packageDeclaration.Body, annotationTypesOnly);
                 } finally {
                     for (int i = packageDeclaration.Identifiers.size() - 1; i >= 0; --i) {
                         context.MemberResolver.leavePackage();
@@ -1996,10 +2024,12 @@ package stab.compiler {
                 }
             }
         }
-        private void generateClassAnnotations(ClassDeclarationNode classDeclaration) {
-            validateAnnotationSection(classDeclaration.Annotations, ElementType.TYPE);
+        private void generateClassAnnotations(ClassDeclarationNode classDeclaration, boolean annotationTypesOnly) {
             var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
-            bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
+            if (!annotationTypesOnly) {
+                validateAnnotationSection(classDeclaration.Annotations, ElementType.TYPE);
+                bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
+            }
             
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
@@ -2007,34 +2037,34 @@ package stab.compiler {
                 foreach (var member in classDeclaration.Members) {
                     switch (member.TypeMemberKind) {
                     case Class:
-                        generateClassAnnotations((ClassDeclarationNode)member);
+                        generateClassAnnotations((ClassDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Interface:
-                        generateInterfaceAnnotations((InterfaceDeclarationNode)member);
+                        generateInterfaceAnnotations((InterfaceDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Delegate:
-                        generateDelegateAnnotations((DelegateDeclarationNode)member);
+                        generateDelegateAnnotations((DelegateDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Method:
-                        generateMethodAnnotations((MethodDeclarationNode)member);
+                        generateMethodAnnotations((MethodDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Field:
-                        generateFieldAnnotations((FieldDeclarationNode)member);
+                        generateFieldAnnotations((FieldDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Indexer:
-                        generateIndexerAnnotations((IndexerDeclarationNode)member);
+                        generateIndexerAnnotations((IndexerDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Property:
-                        generatePropertyAnnotations((PropertyDeclarationNode)member);
+                        generatePropertyAnnotations((PropertyDeclarationNode)member, annotationTypesOnly);
                         break;
                     case EnumConstant:
-                        generateEnumConstantAnnotations((EnumConstantDeclarationNode)member);
+                        generateEnumConstantAnnotations((EnumConstantDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Constructor:
-                        generateConstructorAnnotations((ConstructorDeclarationNode)member);
+                        generateConstructorAnnotations((ConstructorDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Destructor:
-                        generateDestructorAnnotations((DestructorDeclarationNode)member);
+                        generateDestructorAnnotations((DestructorDeclarationNode)member, annotationTypesOnly);
                         break;
                     default:
                         throw new Exception("Internal error: unhandled member kind: " + member.TypeMemberKind);
@@ -2046,10 +2076,20 @@ package stab.compiler {
             }
         }
 
-        private void generateInterfaceAnnotations(InterfaceDeclarationNode interfaceDeclaration) {
-            validateAnnotationSection(interfaceDeclaration.Annotations, ElementType.TYPE);
+        private void generateInterfaceAnnotations(InterfaceDeclarationNode interfaceDeclaration, boolean annotationTypesOnly) {
             var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
-            bytecodeGenerator.generateAnnotationsBytecode(interfaceDeclaration.Annotations, typeBuilder);
+            var isAnnotation = typeBuilder.Interfaces.where(p => p.FullName.equals("java/lang/annotation/Annotation")).any();
+            if (annotationTypesOnly) {
+                if (isAnnotation) {
+                    validateAnnotationSection(interfaceDeclaration.Annotations, ElementType.TYPE);
+                    bytecodeGenerator.generateAnnotationsBytecode(interfaceDeclaration.Annotations, typeBuilder);
+                }
+            } else {
+                if (!isAnnotation) {
+                    validateAnnotationSection(interfaceDeclaration.Annotations, ElementType.TYPE);
+                    bytecodeGenerator.generateAnnotationsBytecode(interfaceDeclaration.Annotations, typeBuilder);
+                }
+            }
             
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
@@ -2057,13 +2097,13 @@ package stab.compiler {
                 foreach (var member in interfaceDeclaration.Members) {
                     switch (member.TypeMemberKind) {
                     case Method:
-                        generateInterfaceMethodAnnotations((MethodDeclarationNode)member);
+                        generateInterfaceMethodAnnotations((MethodDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Indexer:
-                        generateIndexerAnnotations((IndexerDeclarationNode)member);
+                        generateIndexerAnnotations((IndexerDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Property:
-                        generatePropertyAnnotations((PropertyDeclarationNode)member);
+                        generatePropertyAnnotations((PropertyDeclarationNode)member, annotationTypesOnly);
                         break;
                     case Class:
                     case Delegate:
@@ -2081,25 +2121,37 @@ package stab.compiler {
             }
         }
 
-        private void generateDestructorAnnotations(DestructorDeclarationNode destructorDeclaration) {
+        private void generateDestructorAnnotations(DestructorDeclarationNode destructorDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(destructorDeclaration.Annotations, ElementType.METHOD);
             var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(destructorDeclaration.Annotations, methodBuilder);
         }
 
-        private void generateConstructorAnnotations(ConstructorDeclarationNode constructorDeclaration) {
+        private void generateConstructorAnnotations(ConstructorDeclarationNode constructorDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(constructorDeclaration.Annotations, ElementType.METHOD);
             var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(constructorDeclaration.Annotations, methodBuilder);
         }
 
-        private void generateEnumConstantAnnotations(EnumConstantDeclarationNode enumConstant) {
+        private void generateEnumConstantAnnotations(EnumConstantDeclarationNode enumConstant, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(enumConstant.Annotations, ElementType.FIELD);
             var field = enumConstant.getUserData(typeof(JvmFieldBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(enumConstant.Annotations, field);
         }
 
-        private void generateIndexerAnnotations(IndexerDeclarationNode indexerDeclaration) {
+        private void generateIndexerAnnotations(IndexerDeclarationNode indexerDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(indexerDeclaration.Annotations, ElementType.METHOD);
             var get = indexerDeclaration.GetAccessor;
             if (get != null) {
@@ -2113,7 +2165,10 @@ package stab.compiler {
             bytecodeGenerator.emitAccessorAnnotations(indexerDeclaration.SetAccessor, indexerDeclaration.Annotations);
         }
 
-        private void generatePropertyAnnotations(PropertyDeclarationNode propertyDeclaration) {
+        private void generatePropertyAnnotations(PropertyDeclarationNode propertyDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(propertyDeclaration.Annotations, ElementType.METHOD);
             var get = propertyDeclaration.GetAccessor;
             if (get != null) {
@@ -2128,7 +2183,10 @@ package stab.compiler {
         }
 
                 
-        private void generateInterfaceMethodAnnotations(MethodDeclarationNode methodDeclaration) {
+        private void generateInterfaceMethodAnnotations(MethodDeclarationNode methodDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
             var method = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
             if (methodDeclaration.DefaultValue != null) {
@@ -2137,13 +2195,19 @@ package stab.compiler {
             bytecodeGenerator.generateInterfaceMethodAnnotations(methodDeclaration);
         }
 
-        private void generateDelegateAnnotations(DelegateDeclarationNode delegateDeclaration) {
+        private void generateDelegateAnnotations(DelegateDeclarationNode delegateDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(delegateDeclaration.Annotations, ElementType.TYPE);
             var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
              bytecodeGenerator.generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
         }
 
-        private void generateMethodAnnotations(MethodDeclarationNode methodDeclaration) {
+        private void generateMethodAnnotations(MethodDeclarationNode methodDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
             foreach (var section in methodDeclaration.Annotations) {
                 foreach (var annotation in section.Annotations) {
@@ -2159,7 +2223,10 @@ package stab.compiler {
             bytecodeGenerator.generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
         }
         
-        private void generateFieldAnnotations(FieldDeclarationNode fieldDeclaration) {
+        private void generateFieldAnnotations(FieldDeclarationNode fieldDeclaration, boolean annotationTypesOnly) {
+            if (!annotationTypesOnly) {
+                return;
+            }
             validateAnnotationSection(fieldDeclaration.Annotations, ElementType.FIELD);
             foreach (var decl in fieldDeclaration.Declarators) {
                 var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
@@ -2808,8 +2875,6 @@ package stab.compiler {
         }
 
         private void generateBytecode(PackageBodyNode packageBody) {
-            // TODO: package annotations
-        
             foreach (var member in packageBody.Members) {
                 switch (member.PackageMemberKind) {
                 case Package:

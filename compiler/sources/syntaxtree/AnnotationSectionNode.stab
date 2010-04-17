@@ -18,28 +18,10 @@ using java.util;
 
 package stab.syntaxtree {
 
-	public enum AnnotationSectionTarget {
-		None,
-		Event,
-		Field,
-		Method,
-		Package,
-		Param,
-		Property,
-		Var,
-		Type
-	}
-
 	public class AnnotationSectionNode : ExpressionNode {
 		public AnnotationSectionNode()
 			: super(ExpressionKind.Annotation) {
-			this.Target = AnnotationSectionTarget.None;
 			this.Annotations = new ArrayList<AnnotationCreationNode>();
-		}
-		
-		public AnnotationSectionTarget Target {
-			get;
-			set;
 		}
 		
 		public List<AnnotationCreationNode> Annotations {

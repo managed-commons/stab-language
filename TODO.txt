@@ -1,25 +1,21 @@
 Features ==============================
 
-1 - using
-2 - Expression trees
-3 - Generic constructors
+1 - Expression trees
+2 - Generic constructors
 	* syntax for this and super clauses (this<T1, T2>(...))
 	* syntax for new (new <T1, T2> C(...))
-4 - package annotations
-5 - javadoc
 
 
 Issues ================================
 
 - allow -runtimelib to be optional (for runtime compilation)
-- generate exception clauses for Java interop?
+- generate exception clauses for Java interop
 - validate generic constraints
 - test constant expressions with static final fields
 - generate bridge methods for public abstract methods implemented in private superclasses?
 - create an InternalErrorException class
 - return t[] => stack trace
 - str1 + str2 + 1 => stack trace
-- test [Conditional("DEBUG")]
 - test partial methods
 
 Errors ================================

@@ -34,16 +34,10 @@ package stab.syntaxtree {
 	public class PackageBodyNode : SyntaxNode {
 		public PackageBodyNode() {
 			this.UsingDirectives = new ArrayList<UsingDirectiveNode>();
-			this.GlobalAnnotations = new ArrayList<AnnotationSectionNode>();
 			this.Members = new ArrayList<IPackageMember>();
 		}
 		
 		public List<UsingDirectiveNode> UsingDirectives {
-			get;
-			private set;
-		}
-		
-		public List<AnnotationSectionNode> GlobalAnnotations {
 			get;
 			private set;
 		}

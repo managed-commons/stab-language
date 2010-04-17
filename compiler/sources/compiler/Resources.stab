@@ -164,7 +164,8 @@ package stab.compiler {
         IncludeFileInvalid,
         IncludePathInvalid,
         NoDisposeMethod,
-        UsingVariableUninitialized
+        UsingVariableUninitialized,
+        PackageAnnotatedExternally
 	}
 
 	class Resources {
