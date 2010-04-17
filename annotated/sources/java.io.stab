@@ -14,50 +14,11 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-using java.lang;
 using stab.lang;
 
-package stab.annotated.java.util {
-	public interface List<E> {
-		[IndexerGet]
-		E get(int index);
-		
-		[IndexerSet]
-		E set(int index, E element);
-	}
-	
-	public interface ArrayList<E> {
-		[IndexerGet]
-		E get(int index);
-		
-		[IndexerSet]
-		E set(int index, E element);
-	}
-	
-	public abstract class Map<K, V> {
-		[IndexerGet]
-		public abstract V get(Object key);
-		
-		[IndexerSet]
-		public abstract V put(K key, V value);
-		
-		public interface Entry<K, V> {
-			[PropertyGet]
-			K getKey();
-			
-			[PropertyGet]
-			V getValue();
-			
-			[PropertySet]
-			V setValue(V value);
-		}
-	}
-	
-	public interface HashMap<K, V> {
-		[IndexerGet]
-		V get(Object key);
-		
-		[IndexerSet]
-		V put(K key, V value);
+package stab.annotated.java.io {
+	public interface Closeable {
+		[Dispose]
+        void close();
 	}
 }

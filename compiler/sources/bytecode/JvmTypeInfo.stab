@@ -22,819 +22,819 @@ using stab.query;
 
 package stab.bytecode {
 
-	public enum TypeKind {
-		Array,
-		Boolean,
-		Byte,
-		Char,
-		Double,
-		Float,
-		GenericParameter,
-		Int,
-		Long,
-		LowerBoundedWildcard,
-		Reference,
-		Short,
-		UnboundedWildcard,
-		UpperBoundedWildcard,
-		Void
-	}
+    public enum TypeKind {
+        Array,
+        Boolean,
+        Byte,
+        Char,
+        Double,
+        Float,
+        GenericParameter,
+        Int,
+        Long,
+        LowerBoundedWildcard,
+        Reference,
+        Short,
+        UnboundedWildcard,
+        UpperBoundedWildcard,
+        Void
+    }
 
-	public enum NumericTypeKind {
-		None,
-		Byte,
-		Char,
-		Double,
-		Float,
-		Int,
-		Long,
-		Short
-	}
+    public enum NumericTypeKind {
+        None,
+        Byte,
+        Char,
+        Double,
+        Float,
+        Int,
+        Long,
+        Short
+    }
 
-	public abstract class JvmTypeInfo : UserDataContainer {
-		public final static JvmTypeInfo VOID = new PrimitiveType(TypeKind.Void, NumericTypeKind.None, "V");
-		public final static JvmTypeInfo BOOLEAN = new PrimitiveType(TypeKind.Boolean, NumericTypeKind.None, "Z");
-		public final static JvmTypeInfo BYTE = new PrimitiveType(TypeKind.Byte, NumericTypeKind.Byte, "B");
-		public final static JvmTypeInfo CHAR = new PrimitiveType(TypeKind.Char, NumericTypeKind.Char, "C");
-		public final static JvmTypeInfo SHORT = new PrimitiveType(TypeKind.Short, NumericTypeKind.Short, "S");
-		public final static JvmTypeInfo INT = new PrimitiveType(TypeKind.Int, NumericTypeKind.Int, "I");
-		public final static JvmTypeInfo LONG = new PrimitiveType(TypeKind.Long, NumericTypeKind.Long, "J");
-		public final static JvmTypeInfo FLOAT = new PrimitiveType(TypeKind.Float, NumericTypeKind.Float, "F");
-		public final static JvmTypeInfo DOUBLE = new PrimitiveType(TypeKind.Double, NumericTypeKind.Double, "D");
-	
-		public final static JvmTypeInfo UNBOUNDED_WILDCARD = new WildcardType(TypeKind.UnboundedWildcard, null);
-	
-		private String packageName;
-		private String name;
-		private JvmTypeInfo lowerBoundedWildcard;
-		private JvmTypeInfo upperBoundedWildcard;
-		private JvmTypeInfo rawGenericType;
-		private ArrayList<JvmTypeInfo> constructedGenericTypes;
-		private JvmTypeInfo arrayType;
-		
-		protected JvmTypeInfo(TypeKind typeKind, String fullName) {
-			this.TypeKind = typeKind;
-			this.FullName = fullName;
-		}
-		
-		public TypeKind TypeKind {
-			get;
-			private set;
-		}
-		
-		public String FullName {
-			get;
-			private set;
-		}
-		
-		public virtual NumericTypeKind NumericTypeKind {
-			get {
-				return NumericTypeKind.None;
-			}
-		}
-		
-		public boolean IsAbstract {
-			get {
-				return (this.Modifiers & Opcodes.ACC_ABSTRACT) != 0;
-			}
-		}
-		
-		public boolean IsAnnotation {
-			get {
-				return (this.Modifiers & Opcodes.ACC_ANNOTATION) != 0;
-			}
-		}
-		
-		public boolean IsEnum {
-			get {
-				return (this.Modifiers & Opcodes.ACC_ENUM) != 0;
-			}
-		}
-		
-		public boolean IsFinal {
-			get {
-				return (this.Modifiers & Opcodes.ACC_FINAL) != 0;
-			}
-		}
-		
-		public boolean IsInterface {
-			get {
-				return (this.Modifiers & Opcodes.ACC_INTERFACE) != 0;
-			}
-		}
-		
-		public boolean IsPublic {
-			get {
-				return (this.Modifiers & Opcodes.ACC_PUBLIC) != 0;
-			}
-		}
-		
-		public boolean IsSynthetic {
-			get {
-				return (this.Modifiers & Opcodes.ACC_SYNTHETIC) != 0;
-			}
-		}
-		
-		public boolean IsNestedAbstract {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_ABSTRACT) != 0;
-			}
-		}
+    public abstract class JvmTypeInfo : UserDataContainer {
+        public final static JvmTypeInfo VOID = new PrimitiveType(TypeKind.Void, NumericTypeKind.None, "V");
+        public final static JvmTypeInfo BOOLEAN = new PrimitiveType(TypeKind.Boolean, NumericTypeKind.None, "Z");
+        public final static JvmTypeInfo BYTE = new PrimitiveType(TypeKind.Byte, NumericTypeKind.Byte, "B");
+        public final static JvmTypeInfo CHAR = new PrimitiveType(TypeKind.Char, NumericTypeKind.Char, "C");
+        public final static JvmTypeInfo SHORT = new PrimitiveType(TypeKind.Short, NumericTypeKind.Short, "S");
+        public final static JvmTypeInfo INT = new PrimitiveType(TypeKind.Int, NumericTypeKind.Int, "I");
+        public final static JvmTypeInfo LONG = new PrimitiveType(TypeKind.Long, NumericTypeKind.Long, "J");
+        public final static JvmTypeInfo FLOAT = new PrimitiveType(TypeKind.Float, NumericTypeKind.Float, "F");
+        public final static JvmTypeInfo DOUBLE = new PrimitiveType(TypeKind.Double, NumericTypeKind.Double, "D");
+    
+        public final static JvmTypeInfo UNBOUNDED_WILDCARD = new WildcardType(TypeKind.UnboundedWildcard, null);
+    
+        private String packageName;
+        private String name;
+        private JvmTypeInfo lowerBoundedWildcard;
+        private JvmTypeInfo upperBoundedWildcard;
+        private JvmTypeInfo rawGenericType;
+        private ArrayList<JvmTypeInfo> constructedGenericTypes;
+        private JvmTypeInfo arrayType;
+        
+        protected JvmTypeInfo(TypeKind typeKind, String fullName) {
+            this.TypeKind = typeKind;
+            this.FullName = fullName;
+        }
+        
+        public TypeKind TypeKind {
+            get;
+            private set;
+        }
+        
+        public String FullName {
+            get;
+            private set;
+        }
+        
+        public virtual NumericTypeKind NumericTypeKind {
+            get {
+                return NumericTypeKind.None;
+            }
+        }
+        
+        public boolean IsAbstract {
+            get {
+                return (this.Modifiers & Opcodes.ACC_ABSTRACT) != 0;
+            }
+        }
+        
+        public boolean IsAnnotation {
+            get {
+                return (this.Modifiers & Opcodes.ACC_ANNOTATION) != 0;
+            }
+        }
+        
+        public boolean IsEnum {
+            get {
+                return (this.Modifiers & Opcodes.ACC_ENUM) != 0;
+            }
+        }
+        
+        public boolean IsFinal {
+            get {
+                return (this.Modifiers & Opcodes.ACC_FINAL) != 0;
+            }
+        }
+        
+        public boolean IsInterface {
+            get {
+                return (this.Modifiers & Opcodes.ACC_INTERFACE) != 0;
+            }
+        }
+        
+        public boolean IsPublic {
+            get {
+                return (this.Modifiers & Opcodes.ACC_PUBLIC) != 0;
+            }
+        }
+        
+        public boolean IsSynthetic {
+            get {
+                return (this.Modifiers & Opcodes.ACC_SYNTHETIC) != 0;
+            }
+        }
+        
+        public boolean IsNestedAbstract {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_ABSTRACT) != 0;
+            }
+        }
 
-		public boolean IsNestedAnnotation {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_ANNOTATION) != 0;
-			}
-		}
+        public boolean IsNestedAnnotation {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_ANNOTATION) != 0;
+            }
+        }
 
-		public boolean IsNestedEnum {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_ENUM) != 0;
-			}
-		}
+        public boolean IsNestedEnum {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_ENUM) != 0;
+            }
+        }
 
-		public boolean IsNestedFinal {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_FINAL) != 0;
-			}
-		}
+        public boolean IsNestedFinal {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_FINAL) != 0;
+            }
+        }
 
-		public boolean IsNestedInterface {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_INTERFACE) != 0;
-			}
-		}
+        public boolean IsNestedInterface {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_INTERFACE) != 0;
+            }
+        }
 
-		public boolean IsNestedPrivate {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_PRIVATE) != 0;
-			}
-		}
+        public boolean IsNestedPrivate {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_PRIVATE) != 0;
+            }
+        }
 
-		public boolean IsNestedProtected {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_PROTECTED) != 0;
-			}
-		}
+        public boolean IsNestedProtected {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_PROTECTED) != 0;
+            }
+        }
 
-		public boolean IsNestedPublic {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_PUBLIC) != 0;
-			}
-		}
+        public boolean IsNestedPublic {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_PUBLIC) != 0;
+            }
+        }
 
-		public boolean IsNestedStatic {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_STATIC) != 0;
-			}
-		}
+        public boolean IsNestedStatic {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_STATIC) != 0;
+            }
+        }
 
-		public boolean IsNestedSynthetic {
-			get {
-				return (this.NestedModifiers & Opcodes.ACC_SYNTHETIC) != 0;
-			}
-		}
+        public boolean IsNestedSynthetic {
+            get {
+                return (this.NestedModifiers & Opcodes.ACC_SYNTHETIC) != 0;
+            }
+        }
 
-		public virtual JvmTypeInfo DeclaringType {
-			get {
-				return null;
-			}
-		}
-		
-		public String PackageName {
-			get {
-				if (packageName == null) {
-					packageName = this.FullName.substring(0, this.FullName.lastIndexOf('/') + 1);
-				}
-				return packageName;
-			}
-		}
+        public virtual JvmTypeInfo DeclaringType {
+            get {
+                return null;
+            }
+        }
+        
+        public String PackageName {
+            get {
+                if (packageName == null) {
+                    packageName = this.FullName.substring(0, this.FullName.lastIndexOf('/') + 1);
+                }
+                return packageName;
+            }
+        }
 
-		public String Name {
-			get {
-				if (name == null) {
-					int idx = this.FullName.lastIndexOf('$');
-					if (idx > 0) {
-						name = this.FullName.substring(idx + 1);
-					} else {
-						name = this.FullName.substring(this.FullName.lastIndexOf('/') + 1);
-					}
-				}
-				return name;
-			}
-		}
+        public String Name {
+            get {
+                if (name == null) {
+                    int idx = this.FullName.lastIndexOf('$');
+                    if (idx > 0) {
+                        name = this.FullName.substring(idx + 1);
+                    } else {
+                        name = this.FullName.substring(this.FullName.lastIndexOf('/') + 1);
+                    }
+                }
+                return name;
+            }
+        }
 
-		public virtual JvmTypeInfo GenericTypeDefinition {
-			get {
-				return null;
-			}
-		}
-		
-		public virtual Iterable<JvmTypeInfo> GenericArguments {
-			get {
-				return Query.empty();
-			}
-		}
-		
-		public virtual JvmTypeInfo BaseType {
-			get {
-				return null;
-			}
-		}
+        public virtual JvmTypeInfo GenericTypeDefinition {
+            get {
+                return null;
+            }
+        }
+        
+        public virtual Iterable<JvmTypeInfo> GenericArguments {
+            get {
+                return Query.empty();
+            }
+        }
+        
+        public virtual JvmTypeInfo BaseType {
+            get {
+                return null;
+            }
+        }
 
-		public virtual Iterable<JvmTypeInfo> Interfaces {
-			get {
-				return Query.empty();
-			}
-		}
+        public virtual Iterable<JvmTypeInfo> Interfaces {
+            get {
+                return Query.empty();
+            }
+        }
 
-		public virtual String Descriptor {
-			get {
-				return this.FullName;
-			}
-		}
-		
-		public virtual Iterable<JvmFieldInfo> Fields {
-			get {
-				return Query.empty();
-			}
-		}
-		
-		public virtual Iterable<JvmMethodInfo> Methods {
-			get {
-				return Query.empty();
-			}
-		}
-		
-		public virtual Iterable<JvmTypeInfo> NestedTypes {
-			get {
-				return Query.empty();
-			}
-		}
-		
-		public virtual Iterable<JvmAnnotationValue> Annotations {
-			get {
-				return Query.empty();
-			}
-		}
-		
-		public virtual JvmTypeInfo ElementType {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual Iterable<JvmTypeInfo> GenericParameterBounds {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual JvmTypeInfo WildcardBound {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public JvmTypeInfo LowerBoundedWildcard {
-			get {
-				if (lowerBoundedWildcard == null) {
-					lowerBoundedWildcard = new WildcardType(TypeKind.LowerBoundedWildcard, this);
-				}
-				return lowerBoundedWildcard;
-			}
-		}
+        public virtual String Descriptor {
+            get {
+                return this.FullName;
+            }
+        }
+        
+        public virtual Iterable<JvmFieldInfo> Fields {
+            get {
+                return Query.empty();
+            }
+        }
+        
+        public virtual Iterable<JvmMethodInfo> Methods {
+            get {
+                return Query.empty();
+            }
+        }
+        
+        public virtual Iterable<JvmTypeInfo> NestedTypes {
+            get {
+                return Query.empty();
+            }
+        }
+        
+        public virtual Iterable<JvmAnnotationValue> Annotations {
+            get {
+                return Query.empty();
+            }
+        }
+        
+        public virtual JvmTypeInfo ElementType {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual Iterable<JvmTypeInfo> GenericParameterBounds {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual JvmTypeInfo WildcardBound {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public JvmTypeInfo LowerBoundedWildcard {
+            get {
+                if (lowerBoundedWildcard == null) {
+                    lowerBoundedWildcard = new WildcardType(TypeKind.LowerBoundedWildcard, this);
+                }
+                return lowerBoundedWildcard;
+            }
+        }
 
-		public JvmTypeInfo UpperBoundedWildcard {
-			get {
-				if (upperBoundedWildcard == null) {
-					upperBoundedWildcard = new WildcardType(TypeKind.UpperBoundedWildcard, this);
-				}
-				return upperBoundedWildcard;
-			}
-		}
-		
-		public JvmTypeInfo ArrayType {
-			get {
-				if (arrayType == null) {
-					arrayType = new ArrayType(this);
-				}
-				return arrayType;
-			}
-		}
-		
-		public JvmTypeInfo RawGenericType {
-			get {
-				if (rawGenericType != null) {
-					return rawGenericType;
-				}
-				if (!this.GenericArguments.any()) {
-					throw new IllegalStateException();
-				}
-				if (this.DeclaringType == null && !this.IsGenericTypeDefinition) {
-					return rawGenericType = this.OriginalTypeDefinition.RawGenericType;
-				}
-				if (rawGenericType == null) {
-					rawGenericType = new RawGenericType(this.DeclaringType, this);
-				}
-				return rawGenericType;
-			}
-		}
-		
-		public boolean IsRaw {
-			get {
-				return !this.GenericArguments.any() && this.GenericTypeDefinition != null;
-			}
-		}
+        public JvmTypeInfo UpperBoundedWildcard {
+            get {
+                if (upperBoundedWildcard == null) {
+                    upperBoundedWildcard = new WildcardType(TypeKind.UpperBoundedWildcard, this);
+                }
+                return upperBoundedWildcard;
+            }
+        }
+        
+        public JvmTypeInfo ArrayType {
+            get {
+                if (arrayType == null) {
+                    arrayType = new ArrayType(this);
+                }
+                return arrayType;
+            }
+        }
+        
+        public JvmTypeInfo RawGenericType {
+            get {
+                if (rawGenericType != null) {
+                    return rawGenericType;
+                }
+                if (!this.GenericArguments.any()) {
+                    throw new IllegalStateException();
+                }
+                if (this.DeclaringType == null && !this.IsGenericTypeDefinition) {
+                    return rawGenericType = this.OriginalTypeDefinition.RawGenericType;
+                }
+                if (rawGenericType == null) {
+                    rawGenericType = new RawGenericType(this.DeclaringType, this);
+                }
+                return rawGenericType;
+            }
+        }
+        
+        public boolean IsRaw {
+            get {
+                return !this.GenericArguments.any() && this.GenericTypeDefinition != null;
+            }
+        }
 
-		public JvmTypeInfo getGenericType(Iterable<JvmTypeInfo> typeArguments) {
-			return getGenericType(typeArguments, null);
-		}
-		
-		JvmTypeInfo getGenericType(Iterable<JvmTypeInfo> typeArguments, GenericParameterBindings scope) {
-			if (this.IsClosed) {
-				throw new IllegalStateException();
-			}
-			if (typeArguments.sequenceEqual(this.GenericArguments)) {
-				return this;
-			}
-			if (this.DeclaringType == null && !this.IsGenericTypeDefinition) {
-				return this.OriginalTypeDefinition.getGenericType(typeArguments);
-			}
-			if (constructedGenericTypes == null) {
-				constructedGenericTypes = new ArrayList<JvmTypeInfo>();
-			} else {
-				foreach (var t in constructedGenericTypes) {
-					if (typeArguments.sequenceEqual(t.GenericArguments)) {
-						return t;
-					}
-				}
-			}
-			var t = new ConstructedGenericType(this.DeclaringType, this, typeArguments, scope);
-			constructedGenericTypes.add(t);
-			return t;
-		}
-		
-		public boolean IsGenericTypeDefinition {
-			get {
-				return this.GenericArguments.any() && this.GenericTypeDefinition == null;
-			}
-		}
+        public JvmTypeInfo getGenericType(Iterable<JvmTypeInfo> typeArguments) {
+            return getGenericType(typeArguments, null);
+        }
+        
+        JvmTypeInfo getGenericType(Iterable<JvmTypeInfo> typeArguments, GenericParameterBindings scope) {
+            if (this.IsClosed) {
+                throw new IllegalStateException();
+            }
+            if (typeArguments.sequenceEqual(this.GenericArguments)) {
+                return this;
+            }
+            if (this.DeclaringType == null && !this.IsGenericTypeDefinition) {
+                return this.OriginalTypeDefinition.getGenericType(typeArguments);
+            }
+            if (constructedGenericTypes == null) {
+                constructedGenericTypes = new ArrayList<JvmTypeInfo>();
+            } else {
+                foreach (var t in constructedGenericTypes) {
+                    if (typeArguments.sequenceEqual(t.GenericArguments)) {
+                        return t;
+                    }
+                }
+            }
+            var t = new ConstructedGenericType(this.DeclaringType, this, typeArguments, scope);
+            constructedGenericTypes.add(t);
+            return t;
+        }
+        
+        public boolean IsGenericTypeDefinition {
+            get {
+                return this.GenericArguments.any() && this.GenericTypeDefinition == null;
+            }
+        }
 
-		public JvmTypeInfo OriginalTypeDefinition {
-			get {
-				var result = this;
-				while (result.GenericTypeDefinition != null) {
-					result = result.GenericTypeDefinition;
-				}
-				return result;
-			}
-		}
-		
-		public boolean IsPrimitive {
-			get {
-				switch (this.TypeKind) {
-				case Boolean:
-				case Byte:
-				case Char:
-				case Double:
-				case Float:
-				case Int:
-				case Long:
-				case Short:
-				case Void:
-					return true;
-				default:
-					return false;
-				}
-			}
-		}
-		
-		public boolean IsCategory2 {
-			get {
-				return this.TypeKind == TypeKind.Long || this.TypeKind == TypeKind.Double;
-			}
-		}
-		
-		public boolean IsNumeric {
-			get {
-				return this.NumericTypeKind != NumericTypeKind.None;
-			}
-		}
-		
-		public boolean IsArray {
-			get {
-				return this.TypeKind == TypeKind.Array;
-			}
-		}
-		
-		public boolean IsGenericParameter {
-			get {
-				return this.TypeKind == TypeKind.GenericParameter;
-			}
-		}
-		
-		public JvmFieldInfo getField(String name) {
-			return this.Fields.where(p => p.Name.equals(name)).firstOrDefault();
-		}
-		
-		public JvmMethodInfo getMethod(String name, Iterable<JvmTypeInfo> parameters) {
-			var pcount = parameters.count();
-			return this.Methods.where(m => m.Name.equals(name)
-				&& pcount == m.Parameters.count()
-				&& parameters.sequenceEqual(m.Parameters.select(p => p.Type))).firstOrDefault();
-		}
-		
-		public JvmTypeInfo getNestedType(String name) {
-			return this.NestedTypes.where(p => p.Name.equals(name)).firstOrDefault();
-		}
-		
-		public boolean isAssignableFrom(JvmTypeInfo type) {
-			if (this == type || this.IsObject) {
-				return true;
-			}
-			if (this.IsNumeric) {
-				if (!type.IsNumeric) {
-					return false;
-				}
-				switch (this.NumericTypeKind) {
-				case Byte:
-					return type.NumericTypeKind == NumericTypeKind.Byte;
-					
-				case Short:
-					return type.NumericTypeKind == NumericTypeKind.Byte || type.NumericTypeKind == NumericTypeKind.Short;
-					
-				case Char:
-					return type.NumericTypeKind == NumericTypeKind.Char;
-					
-				case Int:
-					switch (type.NumericTypeKind) {
-					case Long:
-					case Float:
-					case Double:
-						return false;
-					default:
-						return true;
-					}
-					
-				case Long:
-					return type.NumericTypeKind != NumericTypeKind.Double && type.NumericTypeKind != NumericTypeKind.Float;
-					
-				case Float:
-					return type.NumericTypeKind != NumericTypeKind.Double;
+        public JvmTypeInfo OriginalTypeDefinition {
+            get {
+                var result = this;
+                while (result.GenericTypeDefinition != null) {
+                    result = result.GenericTypeDefinition;
+                }
+                return result;
+            }
+        }
+        
+        public boolean IsPrimitive {
+            get {
+                switch (this.TypeKind) {
+                case Boolean:
+                case Byte:
+                case Char:
+                case Double:
+                case Float:
+                case Int:
+                case Long:
+                case Short:
+                case Void:
+                    return true;
+                default:
+                    return false;
+                }
+            }
+        }
+        
+        public boolean IsCategory2 {
+            get {
+                return this.TypeKind == TypeKind.Long || this.TypeKind == TypeKind.Double;
+            }
+        }
+        
+        public boolean IsNumeric {
+            get {
+                return this.NumericTypeKind != NumericTypeKind.None;
+            }
+        }
+        
+        public boolean IsArray {
+            get {
+                return this.TypeKind == TypeKind.Array;
+            }
+        }
+        
+        public boolean IsGenericParameter {
+            get {
+                return this.TypeKind == TypeKind.GenericParameter;
+            }
+        }
+        
+        public JvmFieldInfo getField(String name) {
+            return this.Fields.where(p => p.Name.equals(name)).firstOrDefault();
+        }
+        
+        public JvmMethodInfo getMethod(String name, Iterable<JvmTypeInfo> parameters) {
+            var pcount = parameters.count();
+            return this.Methods.where(m => m.Name.equals(name)
+                && pcount == m.Parameters.count()
+                && parameters.sequenceEqual(m.Parameters.select(p => p.Type))).firstOrDefault();
+        }
+        
+        public JvmTypeInfo getNestedType(String name) {
+            return this.NestedTypes.where(p => p.Name.equals(name)).firstOrDefault();
+        }
+        
+        public boolean isAssignableFrom(JvmTypeInfo type) {
+            if (this == type || this.IsObject) {
+                return true;
+            }
+            if (this.IsNumeric) {
+                if (!type.IsNumeric) {
+                    return false;
+                }
+                switch (this.NumericTypeKind) {
+                case Byte:
+                    return type.NumericTypeKind == NumericTypeKind.Byte;
+                    
+                case Short:
+                    return type.NumericTypeKind == NumericTypeKind.Byte || type.NumericTypeKind == NumericTypeKind.Short;
+                    
+                case Char:
+                    return type.NumericTypeKind == NumericTypeKind.Char;
+                    
+                case Int:
+                    switch (type.NumericTypeKind) {
+                    case Long:
+                    case Float:
+                    case Double:
+                        return false;
+                    default:
+                        return true;
+                    }
+                    
+                case Long:
+                    return type.NumericTypeKind != NumericTypeKind.Double && type.NumericTypeKind != NumericTypeKind.Float;
+                    
+                case Float:
+                    return type.NumericTypeKind != NumericTypeKind.Double;
 
-				default:
-					return true;
-				}
-			}
-			if (this.TypeKind == TypeKind.Boolean) {
-				return type.FullName.equals("java/lang/Boolean");
-			}
-			if (type.TypeKind == TypeKind.Boolean) {
-				return this.FullName.equals("java/lang/Boolean");
-			}
-			if (type.TypeKind == TypeKind.Array) {
-				if (this.FullName.equals("java/lang/Cloneable") || this.FullName.equals("java/io/Serializable")) {
-					return true;
-				} else if (this.IsArray) {
-					if (this.ElementType.IsPrimitive) {
-						return this.ElementType == type.ElementType;
-					} else {
-						return this.ElementType.isAssignableFrom(type.ElementType);
-					}
-				}
-			}
-			int typeArgs = this.GenericArguments.count();
-			if (type.GenericArguments.count() != typeArgs) {
-				if (typeArgs == 0 && this.OriginalTypeDefinition == type.OriginalTypeDefinition) {
-					return true;
-				}
-			}
-			var t = type;
-			do {
-				if (t == this) {
-					return true;
-				}
-				if (typeArgs > 0 && this.OriginalTypeDefinition == t.OriginalTypeDefinition && typeArgs == t.GenericArguments.count()) {
-					var it1 = this.GenericArguments.iterator();
-					var it2 = t.GenericArguments.iterator();
-					var isCompatible = true;
-					while (it1.hasNext()) {
-						var t1 = it1.next();
-						var t2 = it2.next();
-						if (t1 == t2) {
-							continue;
-						}
-						switch (t1.TypeKind) {
-						case UnboundedWildcard:
-							break;
-						case UpperBoundedWildcard:
-							if (!t1.WildcardBound.isAssignableFrom(t2)) {
-								isCompatible = false;
-							}
-							break;
-						case LowerBoundedWildcard:
-							if (!t2.isAssignableFrom(t1.WildcardBound)) {
-								isCompatible = false;
-							}
-							break;
-						default:
-							isCompatible = false;
-							break;
-						}
-					}
-					if (isCompatible) {
-						return true;
-					}
-				}
-				if (t.Interfaces.any(p => this.isAssignableFrom(p))) {
-					return true;
-				}
-			} while ((t = t.BaseType) != null);
-			return false;
-		}
-		
-		public boolean canAccessMembers(JvmTypeInfo declaringType, boolean isPublic, boolean isProtected, boolean isPrivate) {
-			if (this.OriginalTypeDefinition == declaringType.OriginalTypeDefinition) {
-				return true;
-			}
-			var s = this;
-			if (!declaringType.IsPublic && !declaringType.PackageName.equals(s.PackageName)) {
-				return false;
-			}
-			if (!declaringType.isAssignableFrom(s)) {
-				while ((s = s.DeclaringType) != null) {
-					if (declaringType.isAssignableFrom(s)) {
-						break;
-					}
-				}
-				if (s == null) {
-					return !isPrivate;
-				}
-			}
-			if (s == declaringType) {
-				return true;
-			}
-			if (isPrivate) {
-				return false;
-			}
-			if (isPublic || isProtected) {
-				return true;
-			}
-			return declaringType.PackageName.equals(s.PackageName);
-		}
-		
-		public Iterable<JvmTypeInfo> getBaseClasses() {
-			var t = this;
-			while (t.BaseType != null) {
-				yield return t.BaseType;
-				t = t.BaseType;
-			}
-		}
-		
-		public Iterable<JvmTypeInfo> getBaseTypes() {
-			FunctionTT<JvmTypeInfo, Iterable<JvmTypeInfo>> f = null;
-			f = p => Collections.singletonList(p).concat(p.Interfaces.selectMany(f));
-			return this.Interfaces.selectMany(f).concat(this.getBaseClasses().selectMany(f)).distinct();
-		}
-		
-		public boolean IsObject {
-			get {
-				return this.TypeKind == TypeKind.Reference && this.BaseType == null;
-			}
-		}
-		
-		public boolean IsBoolean {
-			get {
-				return this == JvmTypeInfo.BOOLEAN || this.FullName.equals("java/lang/Boolean");
-			}
-		}
-		
-		public boolean IsClosed {
-			get {
-				switch (this.TypeKind) {
-				case GenericParameter:
-				case LowerBoundedWildcard:
-				case UpperBoundedWildcard:
-				case UnboundedWildcard:
-					return false;
-				case Array:
-					return this.ElementType.IsClosed;
-				}
-				foreach (var t in this.GenericArguments) {
-					if (!t.IsClosed) {
-						return false;
-					}
-				}
-				return true;
-			}
-		}
+                default:
+                    return true;
+                }
+            }
+            if (this.TypeKind == TypeKind.Boolean) {
+                return type.FullName.equals("java/lang/Boolean");
+            }
+            if (type.TypeKind == TypeKind.Boolean) {
+                return this.FullName.equals("java/lang/Boolean");
+            }
+            if (type.TypeKind == TypeKind.Array) {
+                if (this.FullName.equals("java/lang/Cloneable") || this.FullName.equals("java/io/Serializable")) {
+                    return true;
+                } else if (this.IsArray) {
+                    if (this.ElementType.IsPrimitive) {
+                        return this.ElementType == type.ElementType;
+                    } else {
+                        return this.ElementType.isAssignableFrom(type.ElementType);
+                    }
+                }
+            }
+            int typeArgs = this.GenericArguments.count();
+            if (type.GenericArguments.count() != typeArgs) {
+                if (typeArgs == 0 && this.OriginalTypeDefinition == type.OriginalTypeDefinition) {
+                    return true;
+                }
+            }
+            var t = type;
+            do {
+                if (t == this) {
+                    return true;
+                }
+                if (typeArgs > 0 && this.OriginalTypeDefinition == t.OriginalTypeDefinition && typeArgs == t.GenericArguments.count()) {
+                    var it1 = this.GenericArguments.iterator();
+                    var it2 = t.GenericArguments.iterator();
+                    var isCompatible = true;
+                    while (it1.hasNext()) {
+                        var t1 = it1.next();
+                        var t2 = it2.next();
+                        if (t1 == t2) {
+                            continue;
+                        }
+                        switch (t1.TypeKind) {
+                        case UnboundedWildcard:
+                            break;
+                        case UpperBoundedWildcard:
+                            if (!t1.WildcardBound.isAssignableFrom(t2)) {
+                                isCompatible = false;
+                            }
+                            break;
+                        case LowerBoundedWildcard:
+                            if (!t2.isAssignableFrom(t1.WildcardBound)) {
+                                isCompatible = false;
+                            }
+                            break;
+                        default:
+                            isCompatible = false;
+                            break;
+                        }
+                    }
+                    if (isCompatible) {
+                        return true;
+                    }
+                }
+                if (t.Interfaces.any(p => this.isAssignableFrom(p))) {
+                    return true;
+                }
+            } while ((t = t.BaseType) != null);
+            return false;
+        }
+        
+        public boolean canAccessMembers(JvmTypeInfo declaringType, boolean isPublic, boolean isProtected, boolean isPrivate) {
+            if (this.OriginalTypeDefinition == declaringType.OriginalTypeDefinition) {
+                return true;
+            }
+            var s = this;
+            if (!declaringType.IsPublic && !declaringType.PackageName.equals(s.PackageName)) {
+                return false;
+            }
+            if (!declaringType.isAssignableFrom(s)) {
+                while ((s = s.DeclaringType) != null) {
+                    if (declaringType.isAssignableFrom(s)) {
+                        break;
+                    }
+                }
+                if (s == null) {
+                    return !isPrivate;
+                }
+            }
+            if (s == declaringType) {
+                return true;
+            }
+            if (isPrivate) {
+                return false;
+            }
+            if (isPublic || isProtected) {
+                return true;
+            }
+            return declaringType.PackageName.equals(s.PackageName);
+        }
+        
+        public Iterable<JvmTypeInfo> getBaseClasses() {
+            var t = this;
+            while (t.BaseType != null) {
+                yield return t.BaseType;
+                t = t.BaseType;
+            }
+        }
+        
+        public Iterable<JvmTypeInfo> getBaseTypes() {
+            FunctionTT<JvmTypeInfo, Iterable<JvmTypeInfo>> f = null;
+            f = p => Collections.singletonList(p).concat(p.Interfaces.selectMany(f));
+            return this.Interfaces.selectMany(f).concat(this.getBaseClasses().selectMany(f)).distinct();
+        }
+        
+        public boolean IsObject {
+            get {
+                return this.TypeKind == TypeKind.Reference && this.BaseType == null;
+            }
+        }
+        
+        public boolean IsBoolean {
+            get {
+                return this == JvmTypeInfo.BOOLEAN || this.FullName.equals("java/lang/Boolean");
+            }
+        }
+        
+        public boolean IsClosed {
+            get {
+                switch (this.TypeKind) {
+                case GenericParameter:
+                case LowerBoundedWildcard:
+                case UpperBoundedWildcard:
+                case UnboundedWildcard:
+                    return false;
+                case Array:
+                    return this.ElementType.IsClosed;
+                }
+                foreach (var t in this.GenericArguments) {
+                    if (!t.IsClosed) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
 
-		public static boolean hasImplicitConversion(JvmTypeInfo fromType, JvmTypeInfo toType) {
-			if (fromType == null) {
-				return !toType.IsPrimitive;
-			}
-			return fromType.getImplicitConversion(toType) != null;
-		}
-		
-		public JvmTypeInfo getImplicitConversion(JvmTypeInfo toType) {
-			if (toType.IsClosed && toType.isAssignableFrom(this)) {
-				return this;
-			}
-			if (toType.OriginalTypeDefinition == this.OriginalTypeDefinition) {
-				var it1 = toType.GenericArguments.iterator();
-				var it2 = this.GenericArguments.iterator();
-				while (it1.hasNext()) {
-					var t1 = it1.next();
-					var t2 = it2.next();
-					switch (t1.TypeKind) {
-					case GenericParameter:
-					case UnboundedWildcard:
-					case LowerBoundedWildcard:
-						break;
-					case UpperBoundedWildcard:
-						if (!hasImplicitConversion(t2, t1.WildcardBound)) {
-							return null;
-						}
-						break;
-					default:
-						if (!hasImplicitConversion(t2, t1)) {
-							return null;
-						}
-						break;
-					}
-				}
-				return this;
-			}
-			foreach (var it in this.Interfaces) {
-				var t = it.getImplicitConversion(toType);
-				if (t != null) {
-					return t;
-				}
-			}
-			if (this.BaseType == null) {
-				return null;
-			}
-			return this.BaseType.getImplicitConversion(toType);
-		}
-		
-		public abstract String Signature { get; }
-		
-		protected virtual int Modifiers {
-			get {
-				return Opcodes.ACC_PUBLIC;
-			}
-		}
-		
-		protected virtual int NestedModifiers {
-			get {
-				return Opcodes.ACC_PUBLIC;
-			}
-		}
-	}
-	
-	class PrimitiveType : JvmTypeInfo {
-		private NumericTypeKind numericTypeKind;
-		
-		PrimitiveType(TypeKind typeKind, NumericTypeKind numericTypeKind, String name)
-			: super(typeKind, name) {
-			this.numericTypeKind = numericTypeKind;
-		}
-		
-		public override NumericTypeKind NumericTypeKind {
-			get {
-				return numericTypeKind;
-			}
-		}
-		
-		public override String Signature {
-			get {
-				return this.FullName;
-			}
-		}
-	}
-	
-	class WildcardType : JvmTypeInfo {
-		private JvmTypeInfo bound;
-		private String signature;
-		
-		WildcardType(TypeKind typeKind, JvmTypeInfo bound)
-			: super(typeKind, "?") {
-			this.bound = bound;
-		}
-		
-		public override JvmTypeInfo WildcardBound {
-			get {
-				if (this.TypeKind == TypeKind.UnboundedWildcard) {
-					throw new IllegalStateException();
-				}
-				return bound;
-			}
-		}
-		
-		public override String Descriptor {
-			get {
-				if (this.TypeKind == TypeKind.UpperBoundedWildcard) {
-					return bound.getDescriptor();
-				} else {
-					return "Ljava/lang/Object;";
-				}
-			}
-		}
-		
-		public override String Signature {
-			get {
-				if (signature == null) {
-					var sb = new StringBuilder();
-					switch (this.TypeKind) {
-					case UnboundedWildcard:
-						sb.append("*");
-						break;
-					case LowerBoundedWildcard:
-						sb.append("-").append(bound.Signature);
-						break;
-					default:
-						sb.append("+").append(bound.Signature);
-						break;
-					}
-					signature = sb.toString();
-				}
-				return signature;
-			}
-		}
-	}
-	
-	class ArrayType : JvmTypeInfo {
-		private JvmTypeInfo elementType;
-		private String signature;
-		
-		ArrayType(JvmTypeInfo elementType)
-			: super(TypeKind.Array, "[" + elementType.Descriptor) {
-			this.elementType = elementType;
-		}
-		
-		public override JvmTypeInfo ElementType {
-			get {
-				return elementType;
-			}
-		}
+        public static boolean hasImplicitConversion(JvmTypeInfo fromType, JvmTypeInfo toType) {
+            if (fromType == null) {
+                return !toType.IsPrimitive;
+            }
+            return fromType.getImplicitConversion(toType) != null;
+        }
+        
+        public JvmTypeInfo getImplicitConversion(JvmTypeInfo toType) {
+            if (toType.IsClosed && toType.isAssignableFrom(this)) {
+                return this;
+            }
+            if (toType.OriginalTypeDefinition == this.OriginalTypeDefinition) {
+                var it1 = toType.GenericArguments.iterator();
+                var it2 = this.GenericArguments.iterator();
+                while (it1.hasNext()) {
+                    var t1 = it1.next();
+                    var t2 = it2.next();
+                    switch (t1.TypeKind) {
+                    case GenericParameter:
+                    case UnboundedWildcard:
+                    case LowerBoundedWildcard:
+                        break;
+                    case UpperBoundedWildcard:
+                        if (!hasImplicitConversion(t2, t1.WildcardBound)) {
+                            return null;
+                        }
+                        break;
+                    default:
+                        if (!hasImplicitConversion(t2, t1)) {
+                            return null;
+                        }
+                        break;
+                    }
+                }
+                return this;
+            }
+            foreach (var it in this.Interfaces) {
+                var t = it.getImplicitConversion(toType);
+                if (t != null) {
+                    return t;
+                }
+            }
+            if (this.BaseType == null) {
+                return null;
+            }
+            return this.BaseType.getImplicitConversion(toType);
+        }
+        
+        public abstract String Signature { get; }
+        
+        protected virtual int Modifiers {
+            get {
+                return Opcodes.ACC_PUBLIC;
+            }
+        }
+        
+        protected virtual int NestedModifiers {
+            get {
+                return Opcodes.ACC_PUBLIC;
+            }
+        }
+    }
+    
+    class PrimitiveType : JvmTypeInfo {
+        private NumericTypeKind numericTypeKind;
+        
+        PrimitiveType(TypeKind typeKind, NumericTypeKind numericTypeKind, String name)
+            : super(typeKind, name) {
+            this.numericTypeKind = numericTypeKind;
+        }
+        
+        public override NumericTypeKind NumericTypeKind {
+            get {
+                return numericTypeKind;
+            }
+        }
+        
+        public override String Signature {
+            get {
+                return this.FullName;
+            }
+        }
+    }
+    
+    class WildcardType : JvmTypeInfo {
+        private JvmTypeInfo bound;
+        private String signature;
+        
+        WildcardType(TypeKind typeKind, JvmTypeInfo bound)
+            : super(typeKind, "?") {
+            this.bound = bound;
+        }
+        
+        public override JvmTypeInfo WildcardBound {
+            get {
+                if (this.TypeKind == TypeKind.UnboundedWildcard) {
+                    throw new IllegalStateException();
+                }
+                return bound;
+            }
+        }
+        
+        public override String Descriptor {
+            get {
+                if (this.TypeKind == TypeKind.UpperBoundedWildcard) {
+                    return bound.getDescriptor();
+                } else {
+                    return "Ljava/lang/Object;";
+                }
+            }
+        }
+        
+        public override String Signature {
+            get {
+                if (signature == null) {
+                    var sb = new StringBuilder();
+                    switch (this.TypeKind) {
+                    case UnboundedWildcard:
+                        sb.append("*");
+                        break;
+                    case LowerBoundedWildcard:
+                        sb.append("-").append(bound.Signature);
+                        break;
+                    default:
+                        sb.append("+").append(bound.Signature);
+                        break;
+                    }
+                    signature = sb.toString();
+                }
+                return signature;
+            }
+        }
+    }
+    
+    class ArrayType : JvmTypeInfo {
+        private JvmTypeInfo elementType;
+        private String signature;
+        
+        ArrayType(JvmTypeInfo elementType)
+            : super(TypeKind.Array, "[" + elementType.Descriptor) {
+            this.elementType = elementType;
+        }
+        
+        public override JvmTypeInfo ElementType {
+            get {
+                return elementType;
+            }
+        }
 
-		public override String Signature {
-			get {
-				if (signature == null) {
-					signature = "[" + elementType.Signature;
-				}
-				return signature;
-			}
-		}
-		
-		protected override int Modifiers {
-			get {
-				return elementType.Modifiers;
-			}
-		}
-	}
-	
-	class GenericParameterType : JvmTypeInfo {
-		ArrayList<JvmTypeInfo> genericParameterBounds;
-		private String signature;
-		private JvmTypeInfo genericTypeDefinition;
-		
-		GenericParameterType(String name, JvmTypeInfo genericTypeDefinition)
-			: super(TypeKind.GenericParameter, name) {
-			this.genericParameterBounds = new ArrayList<JvmTypeInfo>();
-			this.genericTypeDefinition = genericTypeDefinition;
-		}
-		
-		public override Iterable<JvmTypeInfo> GenericParameterBounds {
-			get {
-				return genericParameterBounds;
-			}
-		}
-		
-		public override String Descriptor {
-			get {
-				if (genericParameterBounds.size() == 1) {
-					return genericParameterBounds.get(0).Descriptor;
-				} else {
-					return "Ljava/lang/Object;";
-				}
-			}
-		}
-		
-		public override String Signature {
-			get {
-				if (signature == null) {
-					signature = "T" + this.FullName + ";";
-				}
-				return signature;
-			}
-		}
-		
-		public override JvmTypeInfo GenericTypeDefinition {
-			get {
-				return genericTypeDefinition;
-			}
-		}
-	}
+        public override String Signature {
+            get {
+                if (signature == null) {
+                    signature = "[" + elementType.Signature;
+                }
+                return signature;
+            }
+        }
+        
+        protected override int Modifiers {
+            get {
+                return elementType.Modifiers;
+            }
+        }
+    }
+    
+    class GenericParameterType : JvmTypeInfo {
+        ArrayList<JvmTypeInfo> genericParameterBounds;
+        private String signature;
+        private JvmTypeInfo genericTypeDefinition;
+        
+        GenericParameterType(String name, JvmTypeInfo genericTypeDefinition)
+            : super(TypeKind.GenericParameter, name) {
+            this.genericParameterBounds = new ArrayList<JvmTypeInfo>();
+            this.genericTypeDefinition = genericTypeDefinition;
+        }
+        
+        public override Iterable<JvmTypeInfo> GenericParameterBounds {
+            get {
+                return genericParameterBounds;
+            }
+        }
+        
+        public override String Descriptor {
+            get {
+                if (genericParameterBounds.size() == 1) {
+                    return genericParameterBounds.get(0).Descriptor;
+                } else {
+                    return "Ljava/lang/Object;";
+                }
+            }
+        }
+        
+        public override String Signature {
+            get {
+                if (signature == null) {
+                    signature = "T" + this.FullName + ";";
+                }
+                return signature;
+            }
+        }
+        
+        public override JvmTypeInfo GenericTypeDefinition {
+            get {
+                return genericTypeDefinition;
+            }
+        }
+    }
 }

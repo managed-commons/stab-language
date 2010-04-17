@@ -2741,6 +2741,19 @@ package stab.query {
 			}
 		}
 		
+		public static Iterable<TResult> selectMany<TSource, TCollection, TResult>(this Iterable<TSource> source,
+				FunctionTT<TSource, Iterable<TCollection>> collectionSelector, FunctionTTT<TSource, TCollection, TResult> resultSelector) {
+			if (source == null) throw new NullPointerException("source");
+			if (collectionSelector == null) throw new NullPointerException("collectionSelector");
+			if (resultSelector == null) throw new NullPointerException("resultSelector");
+
+			foreach (var s in source) {
+				foreach (var c in collectionSelector.invoke(s)) {
+					yield return resultSelector.invoke(s, c);
+				}
+			}
+		}
+		
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// sequenceEqual
 		//

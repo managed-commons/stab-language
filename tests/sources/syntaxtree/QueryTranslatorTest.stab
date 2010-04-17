@@ -110,6 +110,11 @@ package stab.syntaxtree.test {
 		public void joinJoinJoinSelect() {
 			doTest("JoinJoinJoinSelect");
 		}
+	
+		[Test]
+		public void testFromFromWhereSelect() {
+			doTest("FromFromWhereSelect");
+		}
 		
 		private void doTest(String test) {
 			var userDir = System.getProperty("user.dir");

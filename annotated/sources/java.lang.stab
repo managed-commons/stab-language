@@ -17,11 +17,11 @@
 using stab.lang;
 
 package stab.annotated.java.lang {
-	public abstract class String {
+	public interface String {
 		[IndexerGet]
-		public abstract char charAt(int index);
+		char charAt(int index);
 		
 		[PropertyGet(name = "Length")]
-		public abstract int length();
+		int length();
 	}
 }

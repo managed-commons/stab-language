@@ -163,6 +163,8 @@ package stab.compiler {
         IncludeFileNotFound,
         IncludeFileInvalid,
         IncludePathInvalid,
+        NoDisposeMethod,
+        UsingVariableUninitialized
 	}
 
 	class Resources {

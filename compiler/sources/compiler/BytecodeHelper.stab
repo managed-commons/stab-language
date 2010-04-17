@@ -22,629 +22,646 @@ using stab.query;
 
 package stab.compiler {
 
-	public static class BytecodeHelper {
-		private static HashMap<String, JvmTypeInfo> IterableOrIteratorElementTypes;
-		private static HashSet<String> IterableTypes;
-		static BytecodeHelper() {
-			IterableOrIteratorElementTypes = new HashMap<String, JvmTypeInfo>();
-			IterableOrIteratorElementTypes["stab/lang/BooleanIterable"] = JvmTypeInfo.BOOLEAN;
-			IterableOrIteratorElementTypes["stab/lang/BooleanIterator"] = JvmTypeInfo.BOOLEAN;
-			IterableOrIteratorElementTypes["stab/lang/ByteIterable"] = JvmTypeInfo.BYTE;
-			IterableOrIteratorElementTypes["stab/lang/ByteIterator"] = JvmTypeInfo.BYTE;
-			IterableOrIteratorElementTypes["stab/lang/ShortIterable"] = JvmTypeInfo.SHORT;
-			IterableOrIteratorElementTypes["stab/lang/ShortIterator"] = JvmTypeInfo.SHORT;
-			IterableOrIteratorElementTypes["stab/lang/CharIterable"] = JvmTypeInfo.CHAR;
-			IterableOrIteratorElementTypes["stab/lang/CharIterator"] = JvmTypeInfo.CHAR;
-			IterableOrIteratorElementTypes["stab/lang/IntIterable"] = JvmTypeInfo.INT;
-			IterableOrIteratorElementTypes["stab/lang/IntIterator"] = JvmTypeInfo.INT;
-			IterableOrIteratorElementTypes["stab/lang/LongIterable"] = JvmTypeInfo.LONG;
-			IterableOrIteratorElementTypes["stab/lang/LongIterator"] = JvmTypeInfo.LONG;
-			IterableOrIteratorElementTypes["stab/lang/FloatIterable"] = JvmTypeInfo.FLOAT;
-			IterableOrIteratorElementTypes["stab/lang/FloatIterator"] = JvmTypeInfo.FLOAT;
-			IterableOrIteratorElementTypes["stab/lang/DoubleIterable"] = JvmTypeInfo.DOUBLE;
-			IterableOrIteratorElementTypes["stab/lang/DoubleIterator"] = JvmTypeInfo.DOUBLE;
-			
-			IterableTypes = new HashSet<String>();
-			IterableTypes.add("stab/lang/BooleanIterable");
-			IterableTypes.add("stab/lang/ByteIterable");
-			IterableTypes.add("stab/lang/ShortIterable");
-			IterableTypes.add("stab/lang/CharIterable");
-			IterableTypes.add("stab/lang/IntIterable");
-			IterableTypes.add("stab/lang/LongIterable");
-			IterableTypes.add("stab/lang/FloatIterable");
-			IterableTypes.add("stab/lang/DoubleIterable");
-			IterableTypes.add("java/lang/Iterable");
-		}
-	
-		public static boolean isCompiledToObject(JvmTypeInfo type) {
-			if (type.IsObject) {
-				return true;
-			}
-			if (!type.IsGenericParameter) {
-				return false;
-			}
-			JvmTypeInfo result = null;
-			foreach (var t in type.GenericParameterBounds) {
-				if (result != null) {
-					if (t.isAssignableFrom(result)) {
-						result = t;
-					} else if (!result.isAssignableFrom(t)) {
-						return true;
-					}
-				} else {
-					result = t;
-				}
-			}
-			return result == null;
-		}
+    public static class BytecodeHelper {
+        private static HashMap<String, JvmTypeInfo> IterableOrIteratorElementTypes;
+        private static HashSet<String> IterableTypes;
+        static BytecodeHelper() {
+            IterableOrIteratorElementTypes = new HashMap<String, JvmTypeInfo>();
+            IterableOrIteratorElementTypes["stab/lang/BooleanIterable"] = JvmTypeInfo.BOOLEAN;
+            IterableOrIteratorElementTypes["stab/lang/BooleanIterator"] = JvmTypeInfo.BOOLEAN;
+            IterableOrIteratorElementTypes["stab/lang/ByteIterable"] = JvmTypeInfo.BYTE;
+            IterableOrIteratorElementTypes["stab/lang/ByteIterator"] = JvmTypeInfo.BYTE;
+            IterableOrIteratorElementTypes["stab/lang/ShortIterable"] = JvmTypeInfo.SHORT;
+            IterableOrIteratorElementTypes["stab/lang/ShortIterator"] = JvmTypeInfo.SHORT;
+            IterableOrIteratorElementTypes["stab/lang/CharIterable"] = JvmTypeInfo.CHAR;
+            IterableOrIteratorElementTypes["stab/lang/CharIterator"] = JvmTypeInfo.CHAR;
+            IterableOrIteratorElementTypes["stab/lang/IntIterable"] = JvmTypeInfo.INT;
+            IterableOrIteratorElementTypes["stab/lang/IntIterator"] = JvmTypeInfo.INT;
+            IterableOrIteratorElementTypes["stab/lang/LongIterable"] = JvmTypeInfo.LONG;
+            IterableOrIteratorElementTypes["stab/lang/LongIterator"] = JvmTypeInfo.LONG;
+            IterableOrIteratorElementTypes["stab/lang/FloatIterable"] = JvmTypeInfo.FLOAT;
+            IterableOrIteratorElementTypes["stab/lang/FloatIterator"] = JvmTypeInfo.FLOAT;
+            IterableOrIteratorElementTypes["stab/lang/DoubleIterable"] = JvmTypeInfo.DOUBLE;
+            IterableOrIteratorElementTypes["stab/lang/DoubleIterator"] = JvmTypeInfo.DOUBLE;
+            
+            IterableTypes = new HashSet<String>();
+            IterableTypes.add("stab/lang/BooleanIterable");
+            IterableTypes.add("stab/lang/ByteIterable");
+            IterableTypes.add("stab/lang/ShortIterable");
+            IterableTypes.add("stab/lang/CharIterable");
+            IterableTypes.add("stab/lang/IntIterable");
+            IterableTypes.add("stab/lang/LongIterable");
+            IterableTypes.add("stab/lang/FloatIterable");
+            IterableTypes.add("stab/lang/DoubleIterable");
+            IterableTypes.add("java/lang/Iterable");
+        }
+    
+        public static boolean isCompiledToObject(JvmTypeInfo type) {
+            if (type.IsObject) {
+                return true;
+            }
+            if (!type.IsGenericParameter) {
+                return false;
+            }
+            JvmTypeInfo result = null;
+            foreach (var t in type.GenericParameterBounds) {
+                if (result != null) {
+                    if (t.isAssignableFrom(result)) {
+                        result = t;
+                    } else if (!result.isAssignableFrom(t)) {
+                        return true;
+                    }
+                } else {
+                    result = t;
+                }
+            }
+            return result == null;
+        }
 
-		public static String getDisplayName(JvmTypeInfo type) {
-			if (type == null) {
-				return "<null>";
-			}
-			switch (type.TypeKind) {
-			case Boolean:
-				return "boolean";
-			case Byte:
-				return "byte";
-			case Char:
-				return "char";
-			case Double:
-				return "double";
-			case Float:
-				return "float";
-			case Int:
-				return "int";
-			case Long:
-				return "long";
-			case Short:
-				return "short";
-			case Void:
-				return "void";
-			case Array:
-				return getDisplayName(type.ElementType) + "[]";
-			default:
-				var result = type.FullName.replace('/', '.').replace('$', '.');
-				if (type.GenericArguments.any()) {
-					var sb = new StringBuilder();
-					sb.append(result).append('<');
-					var first = true;
-					foreach (var t in type.GenericArguments) {
-						if (first) {
-							first = false;
-						} else {
-							sb.append(", ");
-						}
-						sb.append(getDisplayName(t));
-					}
-					sb.append('>');
-					result = sb.toString();
-				}
-				return result;
-			}
-		}
-		
-		public static String getDisplayName(JvmMethodInfo method) {
-			var sb = new StringBuilder();
-			if (method.Name.equals("<init>")) {
-				sb.append(method.DeclaringType.Name);
-			} else {
-				sb.append(method.Name);
-			}
-			sb.append('(');
-			var first = true;
-			foreach (var t in method.Parameters.select(p => p.Type)) {
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				sb.append(getDisplayName(t));
-			}
-			return sb.append(')').toString();
-		}
-	
-		public static String getIndexerDisplayName(JvmMethodInfo method) {
-			var sb = new StringBuilder();
-			sb.append("this[");
-			var first = true;
-			foreach (var t in method.Parameters.select(p => p.Type)) {
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				sb.append(getDisplayName(t));
-			}
-			return sb.append(']').toString();
-		}
-	
-		public static String getPropertyDisplayName(JvmMethodInfo method, String name) {
-			var sb = new StringBuilder();
-			sb.append(name).append('[');
-			var first = true;
-			foreach (var t in method.Parameters.select(p => p.Type)) {
-				if (first) {
-					first = false;
-				} else {
-					sb.append(", ");
-				}
-				sb.append(getDisplayName(t));
-			}
-			return sb.append(']').toString();
-		}
-		
-		public static JvmTypeInfo getGenericParameterTypeErasure(JvmTypeSystem typeSystem, JvmTypeInfo type) {
-			JvmTypeInfo result = null;
-			foreach (var t in type.GenericParameterBounds) {
-				if (result != null) {
-					if (t.isAssignableFrom(result)) {
-						result = t;
-					} else if (!result.isAssignableFrom(t)) {
-						result = null;
-						break;
-					}
-				} else {
-					result = t;
-				}
-			}
-			if (result == null) {
-				return typeSystem.ObjectType;
-			} else {
-				return result;
-			}
-		}
-		
-		static boolean isDelegateType(JvmTypeInfo type) {
-			JvmTypeInfo baseType = type;
-			while ((baseType = baseType.BaseType) != null) {
-				if (baseType.FullName.equals("stab/lang/Delegate")) {
-					return true;
-				}
-			}
-			return false;
-		}
-	
-		static boolean isIterableType(JvmTypeInfo type) {
-			return IterableTypes.contains(type.FullName);
-		}
+        public static String getDisplayName(JvmTypeInfo type) {
+            if (type == null) {
+                return "<null>";
+            }
+            switch (type.TypeKind) {
+            case Boolean:
+                return "boolean";
+            case Byte:
+                return "byte";
+            case Char:
+                return "char";
+            case Double:
+                return "double";
+            case Float:
+                return "float";
+            case Int:
+                return "int";
+            case Long:
+                return "long";
+            case Short:
+                return "short";
+            case Void:
+                return "void";
+            case Array:
+                return getDisplayName(type.ElementType) + "[]";
+            default:
+                var result = type.FullName.replace('/', '.').replace('$', '.');
+                if (type.GenericArguments.any()) {
+                    var sb = new StringBuilder();
+                    sb.append(result).append('<');
+                    var first = true;
+                    foreach (var t in type.GenericArguments) {
+                        if (first) {
+                            first = false;
+                        } else {
+                            sb.append(", ");
+                        }
+                        sb.append(getDisplayName(t));
+                    }
+                    sb.append('>');
+                    result = sb.toString();
+                }
+                return result;
+            }
+        }
+        
+        public static String getDisplayName(JvmMethodInfo method) {
+            var sb = new StringBuilder();
+            if (method.Name.equals("<init>")) {
+                sb.append(method.DeclaringType.Name);
+            } else {
+                sb.append(method.Name);
+            }
+            sb.append('(');
+            var first = true;
+            foreach (var t in method.Parameters.select(p => p.Type)) {
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(", ");
+                }
+                sb.append(getDisplayName(t));
+            }
+            return sb.append(')').toString();
+        }
+    
+        public static String getIndexerDisplayName(JvmMethodInfo method) {
+            var sb = new StringBuilder();
+            sb.append("this[");
+            var first = true;
+            foreach (var t in method.Parameters.select(p => p.Type)) {
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(", ");
+                }
+                sb.append(getDisplayName(t));
+            }
+            return sb.append(']').toString();
+        }
+    
+        public static String getPropertyDisplayName(JvmMethodInfo method, String name) {
+            var sb = new StringBuilder();
+            sb.append(name).append('[');
+            var first = true;
+            foreach (var t in method.Parameters.select(p => p.Type)) {
+                if (first) {
+                    first = false;
+                } else {
+                    sb.append(", ");
+                }
+                sb.append(getDisplayName(t));
+            }
+            return sb.append(']').toString();
+        }
 
-		static JvmTypeInfo getIterableOrIteratorElementType(JvmTypeInfo type) {
-			var result = IterableOrIteratorElementTypes.get(type.FullName);
-			if (result == null) {
-				if (type.FullName.equals("java/lang/Iterable") || type.FullName.equals("java/util/Iterator")) {
-					result = type.GenericArguments.single();
-				}
-			}
-			return result;
-		}
+        public static JvmMethodInfo getDisposeMethod(JvmTypeSystem typeSystem, JvmTypeInfo type) {
+            foreach (var method in Collections.singletonList(type).concat(type.getBaseTypes()).selectMany(p => p.Methods)) {
+                if (!method.Parameters.any()) {
+                    foreach (var annotation in BytecodeHelper.getAnnotations(typeSystem, method)) {
+                        if (BytecodeHelper.isDispose(annotation)) {
+                            return method;
+                        }
+                    }
+                }
+            }
+            return null;
+        }
+        
+        public static JvmTypeInfo getGenericParameterTypeErasure(JvmTypeSystem typeSystem, JvmTypeInfo type) {
+            JvmTypeInfo result = null;
+            foreach (var t in type.GenericParameterBounds) {
+                if (result != null) {
+                    if (t.isAssignableFrom(result)) {
+                        result = t;
+                    } else if (!result.isAssignableFrom(t)) {
+                        result = null;
+                        break;
+                    }
+                } else {
+                    result = t;
+                }
+            }
+            if (result == null) {
+                return typeSystem.ObjectType;
+            } else {
+                return result;
+            }
+        }
+        
+        static boolean isDelegateType(JvmTypeInfo type) {
+            JvmTypeInfo baseType = type;
+            while ((baseType = baseType.BaseType) != null) {
+                if (baseType.FullName.equals("stab/lang/Delegate")) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    
+        static boolean isIterableType(JvmTypeInfo type) {
+            return IterableTypes.contains(type.FullName);
+        }
 
-		static JvmTypeInfo getImplementedIterable(JvmTypeInfo type) {
-			if (isIterableType(type)) {
-				return type;
-			}
-			var t = type;
-			do {
-				foreach (var it in t.Interfaces) {
-					var rt = getImplementedIterable(it);
-					if (rt != null) {
-						return rt;
-					}
-				}
-			} while ((t = t.BaseType) != null);
-			return null;
-		}
-		
-		//
-		// Bytecode
-		//
-		
-		static JvmOpcode getLoadOpcode(JvmTypeInfo type) {
-			switch (type.TypeKind) {
-			case Boolean:
-			case Byte:
-			case Char:
-			case Short:
-			case Int:
-				return JvmOpcode.Iload;
-			case Long:
-				return JvmOpcode.Lload;
-			case Float:
-				return JvmOpcode.Fload;
-			case Double:
-				return JvmOpcode.Dload;
-			default:
-				return JvmOpcode.Aload;
-			}
-		}
+        static JvmTypeInfo getIterableOrIteratorElementType(JvmTypeInfo type) {
+            var result = IterableOrIteratorElementTypes.get(type.FullName);
+            if (result == null) {
+                if (type.FullName.equals("java/lang/Iterable") || type.FullName.equals("java/util/Iterator")) {
+                    result = type.GenericArguments.single();
+                }
+            }
+            return result;
+        }
 
-		static JvmOpcode getStoreOpcode(JvmTypeInfo type) {
-			switch (type.TypeKind) {
-			case Boolean:
-			case Byte:
-			case Char:
-			case Short:
-			case Int:
-				return JvmOpcode.Istore;
-			case Long:
-				return JvmOpcode.Lstore;
-			case Float:
-				return JvmOpcode.Fstore;
-			case Double:
-				return JvmOpcode.Dstore;
-			default:
-				return JvmOpcode.Astore;
-			}
-		}
+        static JvmTypeInfo getImplementedIterable(JvmTypeInfo type) {
+            if (isIterableType(type)) {
+                return type;
+            }
+            var t = type;
+            do {
+                foreach (var it in t.Interfaces) {
+                    var rt = getImplementedIterable(it);
+                    if (rt != null) {
+                        return rt;
+                    }
+                }
+            } while ((t = t.BaseType) != null);
+            return null;
+        }
+        
+        //
+        // Bytecode
+        //
+        
+        static JvmOpcode getLoadOpcode(JvmTypeInfo type) {
+            switch (type.TypeKind) {
+            case Boolean:
+            case Byte:
+            case Char:
+            case Short:
+            case Int:
+                return JvmOpcode.Iload;
+            case Long:
+                return JvmOpcode.Lload;
+            case Float:
+                return JvmOpcode.Fload;
+            case Double:
+                return JvmOpcode.Dload;
+            default:
+                return JvmOpcode.Aload;
+            }
+        }
 
-		static JvmOpcode getAloadOpcode(JvmTypeInfo elementType) {
-			switch (elementType.TypeKind) {
-			case Boolean:
-			case Byte:
-				return JvmOpcode.Baload;
-			case Char:
-				return JvmOpcode.Caload;
-			case Float:
-				return JvmOpcode.Faload;
-			case Double:
-				return JvmOpcode.Daload;
-			case Int:
-				return JvmOpcode.Iaload;
-			case Long:
-				return JvmOpcode.Laload;
-			case Short:
-				return JvmOpcode.Saload;
-			default:
-				return JvmOpcode.Aaload;
-			}
-		}
+        static JvmOpcode getStoreOpcode(JvmTypeInfo type) {
+            switch (type.TypeKind) {
+            case Boolean:
+            case Byte:
+            case Char:
+            case Short:
+            case Int:
+                return JvmOpcode.Istore;
+            case Long:
+                return JvmOpcode.Lstore;
+            case Float:
+                return JvmOpcode.Fstore;
+            case Double:
+                return JvmOpcode.Dstore;
+            default:
+                return JvmOpcode.Astore;
+            }
+        }
 
-		static JvmOpcode getAstoreOpcode(JvmTypeInfo elementType) {
-			switch (elementType.TypeKind) {
-			case Boolean:
-			case Byte:
-				return JvmOpcode.Bastore;
-			case Char:
-				return JvmOpcode.Castore;
-			case Float:
-				return JvmOpcode.Fastore;
-			case Double:
-				return JvmOpcode.Dastore;
-			case Int:
-				return JvmOpcode.Iastore;
-			case Long:
-				return JvmOpcode.Lastore;
-			case Short:
-				return JvmOpcode.Sastore;
-			default:
-				return JvmOpcode.Aastore;
-			}
-		}
+        static JvmOpcode getAloadOpcode(JvmTypeInfo elementType) {
+            switch (elementType.TypeKind) {
+            case Boolean:
+            case Byte:
+                return JvmOpcode.Baload;
+            case Char:
+                return JvmOpcode.Caload;
+            case Float:
+                return JvmOpcode.Faload;
+            case Double:
+                return JvmOpcode.Daload;
+            case Int:
+                return JvmOpcode.Iaload;
+            case Long:
+                return JvmOpcode.Laload;
+            case Short:
+                return JvmOpcode.Saload;
+            default:
+                return JvmOpcode.Aaload;
+            }
+        }
 
-		static JvmOpcode getReturnOpcode(JvmTypeInfo type) {
-			switch (type.getTypeKind()) {
-			case Boolean:
-			case Byte:
-			case Char:
-			case Short:
-			case Int:
-				return JvmOpcode.Ireturn;
-			case Double:
-				return JvmOpcode.Dreturn;
-			case Float:
-				return JvmOpcode.Freturn;
-			case Long:
-				return JvmOpcode.Lreturn;
-			case Void:
-				return JvmOpcode.Return;
-			default:
-				return JvmOpcode.Areturn;
-			}
-		}
+        static JvmOpcode getAstoreOpcode(JvmTypeInfo elementType) {
+            switch (elementType.TypeKind) {
+            case Boolean:
+            case Byte:
+                return JvmOpcode.Bastore;
+            case Char:
+                return JvmOpcode.Castore;
+            case Float:
+                return JvmOpcode.Fastore;
+            case Double:
+                return JvmOpcode.Dastore;
+            case Int:
+                return JvmOpcode.Iastore;
+            case Long:
+                return JvmOpcode.Lastore;
+            case Short:
+                return JvmOpcode.Sastore;
+            default:
+                return JvmOpcode.Aastore;
+            }
+        }
 
-		static void emitTypeof(JvmCodeGenerator generator, JvmTypeSystem typeSystem, JvmTypeInfo type) {
-			switch (type.TypeKind) {
-			case Boolean:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Boolean").getField("TYPE"));
-				break;
-			case Byte:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Byte").getField("TYPE"));
-				break;
-			case Char:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Character").getField("TYPE"));
-				break;
-			case Double:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Double").getField("TYPE"));
-				break;
-			case Float:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Float").getField("TYPE"));
-				break;
-			case Int:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Integer").getField("TYPE"));
-				break;
-			case Long:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Long").getField("TYPE"));
-				break;
-			case Short:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Short").getField("TYPE"));
-				break;
-			case Void:
-				generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Void").getField("TYPE"));
-				break;
-			default:
-				generator.emit(JvmOpcode.Ldc, type);
-				break;
-			}
-		}
-	
-		static void emitIntConstant(JvmCodeGenerator generator, int i) {
-			switch (i) {
-			case -1:
-				generator.emit(JvmOpcode.Iconst_M1);
-				break;
-			case 0:
-				generator.emit(JvmOpcode.Iconst_0);
-				break;
-			case 1:
-				generator.emit(JvmOpcode.Iconst_1);
-				break;
-			case 2:
-				generator.emit(JvmOpcode.Iconst_2);
-				break;
-			case 3:
-				generator.emit(JvmOpcode.Iconst_3);
-				break;
-			case 4:
-				generator.emit(JvmOpcode.Iconst_4);
-				break;
-			case 5:
-				generator.emit(JvmOpcode.Iconst_5);
-				break;
-			default:
-				if (i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE) {
-					generator.emit(JvmOpcode.Bipush, i);
-				} else if (i >= Short.MIN_VALUE && i <= Short.MAX_VALUE) {
-					generator.emit(JvmOpcode.Sipush, i);
-				} else {
-					generator.emit(JvmOpcode.Ldc, (Object)i);
-				}
-				break;
-			}
-		}
-		
-		static void emitNewarray(JvmCodeGenerator generator, int dimensions, JvmTypeInfo elementType) {
-			if (dimensions <= 1) {
-				switch (elementType.TypeKind) {
-				case Boolean:
-					generator.emit(JvmOpcode.Newarray, 4);
-					break;
-				case Char:
-					generator.emit(JvmOpcode.Newarray, 5);
-					break;
-				case Float:
-					generator.emit(JvmOpcode.Newarray, 6);
-					break;
-				case Double:
-					generator.emit(JvmOpcode.Newarray, 7);
-					break;
-				case Byte:
-					generator.emit(JvmOpcode.Newarray, 8);
-					break;
-				case Short:
-					generator.emit(JvmOpcode.Newarray, 9);
-					break;
-				case Int:
-					generator.emit(JvmOpcode.Newarray, 10);
-					break;
-				case Long:
-					generator.emit(JvmOpcode.Newarray, 11);
-					break;
-				default:
-					generator.emit(JvmOpcode.Anewarray, elementType);
-					break;
-				}
-			} else {
-				generator.emit(JvmOpcode.Multianewarray, elementType.ArrayType, dimensions);
-			}
-		}
-		
-		static void emitNumericConversion(JvmCodeGenerator generator, JvmTypeInfo fromType, JvmTypeInfo toType) {
-			switch (fromType.NumericTypeKind) {
-			case Byte:
-			case Char:
-			case Short:
-			case Int:
-				switch (toType.NumericTypeKind) {
-				case Byte:
-					generator.emit(JvmOpcode.I2b);
-					break;
-				case Char:
-					generator.emit(JvmOpcode.I2c);
-					break;
-				case Short:
-					generator.emit(JvmOpcode.I2s);
-					break;
-				case Long:
-					generator.emit(JvmOpcode.I2l);
-					break;
-				case Float:
-					generator.emit(JvmOpcode.I2f);
-					break;
-				case Double:
-					generator.emit(JvmOpcode.I2d);
-					break;
-				}
-				break;
+        static JvmOpcode getReturnOpcode(JvmTypeInfo type) {
+            switch (type.getTypeKind()) {
+            case Boolean:
+            case Byte:
+            case Char:
+            case Short:
+            case Int:
+                return JvmOpcode.Ireturn;
+            case Double:
+                return JvmOpcode.Dreturn;
+            case Float:
+                return JvmOpcode.Freturn;
+            case Long:
+                return JvmOpcode.Lreturn;
+            case Void:
+                return JvmOpcode.Return;
+            default:
+                return JvmOpcode.Areturn;
+            }
+        }
 
-			case Long:
-				switch (toType.TypeKind) {
-				case Byte:
-					generator.emit(JvmOpcode.L2i);
-					generator.emit(JvmOpcode.I2b);
-					break;
-				case Char:
-					generator.emit(JvmOpcode.L2i);
-					generator.emit(JvmOpcode.I2c);
-					break;
-				case Short:
-					generator.emit(JvmOpcode.L2i);
-					generator.emit(JvmOpcode.I2s);
-					break;
-				case Int:
-					generator.emit(JvmOpcode.L2i);
-					break;
-				case Float:
-					generator.emit(JvmOpcode.L2f);
-					break;
-				case Double:
-					generator.emit(JvmOpcode.L2d);
-					break;
-				}
-				break;
+        static void emitTypeof(JvmCodeGenerator generator, JvmTypeSystem typeSystem, JvmTypeInfo type) {
+            switch (type.TypeKind) {
+            case Boolean:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Boolean").getField("TYPE"));
+                break;
+            case Byte:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Byte").getField("TYPE"));
+                break;
+            case Char:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Character").getField("TYPE"));
+                break;
+            case Double:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Double").getField("TYPE"));
+                break;
+            case Float:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Float").getField("TYPE"));
+                break;
+            case Int:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Integer").getField("TYPE"));
+                break;
+            case Long:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Long").getField("TYPE"));
+                break;
+            case Short:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Short").getField("TYPE"));
+                break;
+            case Void:
+                generator.emit(JvmOpcode.Getstatic, typeSystem.getType("java/lang/Void").getField("TYPE"));
+                break;
+            default:
+                generator.emit(JvmOpcode.Ldc, type);
+                break;
+            }
+        }
+    
+        static void emitIntConstant(JvmCodeGenerator generator, int i) {
+            switch (i) {
+            case -1:
+                generator.emit(JvmOpcode.Iconst_M1);
+                break;
+            case 0:
+                generator.emit(JvmOpcode.Iconst_0);
+                break;
+            case 1:
+                generator.emit(JvmOpcode.Iconst_1);
+                break;
+            case 2:
+                generator.emit(JvmOpcode.Iconst_2);
+                break;
+            case 3:
+                generator.emit(JvmOpcode.Iconst_3);
+                break;
+            case 4:
+                generator.emit(JvmOpcode.Iconst_4);
+                break;
+            case 5:
+                generator.emit(JvmOpcode.Iconst_5);
+                break;
+            default:
+                if (i >= Byte.MIN_VALUE && i <= Byte.MAX_VALUE) {
+                    generator.emit(JvmOpcode.Bipush, i);
+                } else if (i >= Short.MIN_VALUE && i <= Short.MAX_VALUE) {
+                    generator.emit(JvmOpcode.Sipush, i);
+                } else {
+                    generator.emit(JvmOpcode.Ldc, (Object)i);
+                }
+                break;
+            }
+        }
+        
+        static void emitNewarray(JvmCodeGenerator generator, int dimensions, JvmTypeInfo elementType) {
+            if (dimensions <= 1) {
+                switch (elementType.TypeKind) {
+                case Boolean:
+                    generator.emit(JvmOpcode.Newarray, 4);
+                    break;
+                case Char:
+                    generator.emit(JvmOpcode.Newarray, 5);
+                    break;
+                case Float:
+                    generator.emit(JvmOpcode.Newarray, 6);
+                    break;
+                case Double:
+                    generator.emit(JvmOpcode.Newarray, 7);
+                    break;
+                case Byte:
+                    generator.emit(JvmOpcode.Newarray, 8);
+                    break;
+                case Short:
+                    generator.emit(JvmOpcode.Newarray, 9);
+                    break;
+                case Int:
+                    generator.emit(JvmOpcode.Newarray, 10);
+                    break;
+                case Long:
+                    generator.emit(JvmOpcode.Newarray, 11);
+                    break;
+                default:
+                    generator.emit(JvmOpcode.Anewarray, elementType);
+                    break;
+                }
+            } else {
+                generator.emit(JvmOpcode.Multianewarray, elementType.ArrayType, dimensions);
+            }
+        }
+        
+        static void emitNumericConversion(JvmCodeGenerator generator, JvmTypeInfo fromType, JvmTypeInfo toType) {
+            switch (fromType.NumericTypeKind) {
+            case Byte:
+            case Char:
+            case Short:
+            case Int:
+                switch (toType.NumericTypeKind) {
+                case Byte:
+                    generator.emit(JvmOpcode.I2b);
+                    break;
+                case Char:
+                    generator.emit(JvmOpcode.I2c);
+                    break;
+                case Short:
+                    generator.emit(JvmOpcode.I2s);
+                    break;
+                case Long:
+                    generator.emit(JvmOpcode.I2l);
+                    break;
+                case Float:
+                    generator.emit(JvmOpcode.I2f);
+                    break;
+                case Double:
+                    generator.emit(JvmOpcode.I2d);
+                    break;
+                }
+                break;
 
-			case Float:
-				switch (toType.TypeKind) {
-				case Byte:
-					generator.emit(JvmOpcode.F2i);
-					generator.emit(JvmOpcode.I2b);
-					break;
-				case Char:
-					generator.emit(JvmOpcode.F2i);
-					generator.emit(JvmOpcode.I2c);
-					break;
-				case Short:
-					generator.emit(JvmOpcode.F2i);
-					generator.emit(JvmOpcode.I2s);
-					break;
-				case Int:
-					generator.emit(JvmOpcode.F2i);
-					break;
-				case Long:
-					generator.emit(JvmOpcode.F2l);
-					break;
-				case Double:
-					generator.emit(JvmOpcode.F2d);
-					break;
-				}
-				break;
+            case Long:
+                switch (toType.TypeKind) {
+                case Byte:
+                    generator.emit(JvmOpcode.L2i);
+                    generator.emit(JvmOpcode.I2b);
+                    break;
+                case Char:
+                    generator.emit(JvmOpcode.L2i);
+                    generator.emit(JvmOpcode.I2c);
+                    break;
+                case Short:
+                    generator.emit(JvmOpcode.L2i);
+                    generator.emit(JvmOpcode.I2s);
+                    break;
+                case Int:
+                    generator.emit(JvmOpcode.L2i);
+                    break;
+                case Float:
+                    generator.emit(JvmOpcode.L2f);
+                    break;
+                case Double:
+                    generator.emit(JvmOpcode.L2d);
+                    break;
+                }
+                break;
 
-			case Double:
-				switch (toType.TypeKind) {
-				case Byte:
-					generator.emit(JvmOpcode.D2i);
-					generator.emit(JvmOpcode.I2b);
-					break;
-				case Char:
-					generator.emit(JvmOpcode.D2i);
-					generator.emit(JvmOpcode.I2c);
-					break;
-				case Short:
-					generator.emit(JvmOpcode.D2i);
-					generator.emit(JvmOpcode.I2s);
-					break;
-				case Int:
-					generator.emit(JvmOpcode.D2i);
-					break;
-				case Long:
-					generator.emit(JvmOpcode.D2l);
-					break;
-				case Float:
-					generator.emit(JvmOpcode.D2f);
-					break;
-				}
-				break;
-			}
-		}
-	
-		//
-		// Annotations
-		//
-	
-		public static RetentionPolicy getRetentionPolicy(JvmTypeInfo annotationType) {
-			foreach (var annotation in annotationType.Annotations) {
-				if (annotation.Type.FullName.equals("java/lang/annotation/Retention")) {
-					var arg = annotation.getArgument("value");
-					if (arg.getName().equals("RUNTIME")) {
-						return RetentionPolicy.RUNTIME;
-					} else if (arg.getName().equals("CLASS")) {
-						return RetentionPolicy.CLASS;
-					} else {
-						return RetentionPolicy.SOURCE;
-					}
-				}
-			}
-			return RetentionPolicy.CLASS;
-		}
+            case Float:
+                switch (toType.TypeKind) {
+                case Byte:
+                    generator.emit(JvmOpcode.F2i);
+                    generator.emit(JvmOpcode.I2b);
+                    break;
+                case Char:
+                    generator.emit(JvmOpcode.F2i);
+                    generator.emit(JvmOpcode.I2c);
+                    break;
+                case Short:
+                    generator.emit(JvmOpcode.F2i);
+                    generator.emit(JvmOpcode.I2s);
+                    break;
+                case Int:
+                    generator.emit(JvmOpcode.F2i);
+                    break;
+                case Long:
+                    generator.emit(JvmOpcode.F2l);
+                    break;
+                case Double:
+                    generator.emit(JvmOpcode.F2d);
+                    break;
+                }
+                break;
 
-		public static Iterable<JvmAnnotationValue> getAnnotations(JvmTypeSystem typeSystem, JvmMethodInfo method) {
-			var annotatedTypeName = "stab/annotated/" + method.DeclaringType.FullName;
-			if (typeSystem.typeExists(annotatedTypeName)) {
-				var annotatedType = typeSystem.getType(annotatedTypeName);
-				if (method.DeclaringType.GenericArguments.any()) {
-					annotatedType = annotatedType.getGenericType(method.DeclaringType.GenericArguments);
-				}
-				foreach (var m in annotatedType.Methods) {
-					if (m.Name.equals(method.Name) && m.hasSameParameters(method)) {
-						return method.Annotations.concat(m.Annotations);
-					}
-				}
-			}
-			return method.Annotations;
-		}
+            case Double:
+                switch (toType.TypeKind) {
+                case Byte:
+                    generator.emit(JvmOpcode.D2i);
+                    generator.emit(JvmOpcode.I2b);
+                    break;
+                case Char:
+                    generator.emit(JvmOpcode.D2i);
+                    generator.emit(JvmOpcode.I2c);
+                    break;
+                case Short:
+                    generator.emit(JvmOpcode.D2i);
+                    generator.emit(JvmOpcode.I2s);
+                    break;
+                case Int:
+                    generator.emit(JvmOpcode.D2i);
+                    break;
+                case Long:
+                    generator.emit(JvmOpcode.D2l);
+                    break;
+                case Float:
+                    generator.emit(JvmOpcode.D2f);
+                    break;
+                }
+                break;
+            }
+        }
+    
+        //
+        // Annotations
+        //
+    
+        public static RetentionPolicy getRetentionPolicy(JvmTypeInfo annotationType) {
+            foreach (var annotation in annotationType.Annotations) {
+                if (annotation.Type.FullName.equals("java/lang/annotation/Retention")) {
+                    var arg = annotation.getArgument("value");
+                    if (arg.getName().equals("RUNTIME")) {
+                        return RetentionPolicy.RUNTIME;
+                    } else if (arg.getName().equals("CLASS")) {
+                        return RetentionPolicy.CLASS;
+                    } else {
+                        return RetentionPolicy.SOURCE;
+                    }
+                }
+            }
+            return RetentionPolicy.CLASS;
+        }
 
-		public static boolean isConditional(JvmAnnotationValue annotation) {
-			return annotation.Type.FullName.equals("stab/lang/Conditional");
-		}
+        public static Iterable<JvmAnnotationValue> getAnnotations(JvmTypeSystem typeSystem, JvmMethodInfo method) {
+            var annotatedTypeName = "stab/annotated/" + method.DeclaringType.FullName;
+            if (typeSystem.typeExists(annotatedTypeName)) {
+                var annotatedType = typeSystem.getType(annotatedTypeName);
+                if (method.DeclaringType.GenericArguments.any()) {
+                    annotatedType = annotatedType.getGenericType(method.DeclaringType.GenericArguments);
+                }
+                foreach (var m in annotatedType.Methods) {
+                    if (m.Name.equals(method.Name) && m.hasSameParameters(method)) {
+                        return method.Annotations.concat(m.Annotations);
+                    }
+                }
+            }
+            return method.Annotations;
+        }
 
-		public static boolean isExtensionMethod(JvmAnnotationValue annotation) {
-			return annotation.Type.FullName.equals("stab/lang/ExtensionMethod");
-		}
+        public static boolean isConditional(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/Conditional");
+        }
 
-		public static boolean isIndexerGet(JvmAnnotationValue annotation) {
-			return annotation.Type.FullName.equals("stab/lang/IndexerGet");
-		}
-		
-		public static boolean isIndexerSet(JvmAnnotationValue annotation) {
-			return annotation.Type.FullName.equals("stab/lang/IndexerSet");
-		}
-		
-		public static boolean isPropertyGet(JvmAnnotationValue annotation) {
-			return annotation.Type.FullName.equals("stab/lang/PropertyGet");
-		}
-		
-		public static String getPropertyGetName(JvmMethodInfo method, JvmAnnotationValue annotation) {
-			var nameArg = annotation.getArgument("name");
-			var result = "";
-			if (nameArg == null || nameArg.Value == null || nameArg.Value.equals("")) {
-				if (method.Name.startsWith("get")) {
-					result = method.Name.substring(3);
-				} else if (method.ReturnType.IsBoolean
-						&& method.Name.Length > 2
-					    && method.Name.startsWith("is")
-						&& Character.isUpperCase(method.Name[2])) {
-					result = Character.toUpperCase(method.Name[0]) + method.Name.substring(1);
-				}
-			} else {
-				result = (String)nameArg.Value;
-			}
-			return result;
-		}
-		
-		public static boolean isPropertySet(JvmAnnotationValue annotation) {
-			return annotation.Type.FullName.equals("stab/lang/PropertySet");
-		}
-		
-		public static String getPropertySetName(JvmMethodInfo method, JvmAnnotationValue annotation) {
-			var nameArg = annotation.getArgument("name");
-			var result = "";
-			if (nameArg == null || nameArg.Value == null || nameArg.Value.equals("")) {
-				if (method.Name.startsWith("set")) {
-					result = method.Name.substring(3);
-				}
-			} else {
-				result = (String)nameArg.Value;
-			}
-			return result;
-		}
-	}
+        public static boolean isDispose(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/Dispose");
+        }
+
+        public static boolean isExtensionMethod(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/ExtensionMethod");
+        }
+
+        public static boolean isIndexerGet(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/IndexerGet");
+        }
+        
+        public static boolean isIndexerSet(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/IndexerSet");
+        }
+        
+        public static boolean isPropertyGet(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/PropertyGet");
+        }
+        
+        public static String getPropertyGetName(JvmMethodInfo method, JvmAnnotationValue annotation) {
+            var nameArg = annotation.getArgument("name");
+            var result = "";
+            if (nameArg == null || nameArg.Value == null || nameArg.Value.equals("")) {
+                if (method.Name.startsWith("get")) {
+                    result = method.Name.substring(3);
+                } else if (method.ReturnType.IsBoolean
+                        && method.Name.Length > 2
+                        && method.Name.startsWith("is")
+                        && Character.isUpperCase(method.Name[2])) {
+                    result = Character.toUpperCase(method.Name[0]) + method.Name.substring(1);
+                }
+            } else {
+                result = (String)nameArg.Value;
+            }
+            return result;
+        }
+        
+        public static boolean isPropertySet(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/PropertySet");
+        }
+        
+        public static String getPropertySetName(JvmMethodInfo method, JvmAnnotationValue annotation) {
+            var nameArg = annotation.getArgument("name");
+            var result = "";
+            if (nameArg == null || nameArg.Value == null || nameArg.Value.equals("")) {
+                if (method.Name.startsWith("set")) {
+                    result = method.Name.substring(3);
+                }
+            } else {
+                result = (String)nameArg.Value;
+            }
+            return result;
+        }
+    }
 }

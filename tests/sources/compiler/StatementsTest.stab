@@ -440,5 +440,20 @@ package stab.compiler.test {
 		public void tryInFinally() {
 			doTest("TryInFinally", new Class<?>[] {}, new Object[] {}, 5);
 		}
+		
+		[Test]
+		public void using_0() {
+			doTest("Using", new Class<?>[] {}, new Object[] {}, 1);
+		}
+		
+		[Test]
+		public void using2() {
+			doTest("Using2", new Class<?>[] {}, new Object[] {}, 1);
+		}
+		
+		[Test]
+		public void using3() {
+			doTest("Using3", new Class<?>[] {}, new Object[] {}, 4);
+		}
 	}
 }

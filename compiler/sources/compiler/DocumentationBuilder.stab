@@ -51,7 +51,7 @@ package stab.compiler {
             appendDocumentation("N:" + packageName, comment);
         }
 
-		void buildTypeDocumentation(JvmTypeInfo type, TypeMemberNode typeDeclaration) {
+        void buildTypeDocumentation(JvmTypeInfo type, TypeMemberNode typeDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, typeDeclaration.DocumentationOffset,
                     typeDeclaration.DocumentationLength);
             memberKind = MemberKind.Type;
@@ -60,7 +60,7 @@ package stab.compiler {
             appendDocumentation(getIdString(type), comment);
         }
 
-		void buildFieldDocumentation(JvmFieldInfo field, TypeMemberNode fieldDeclaration) {
+        void buildFieldDocumentation(JvmFieldInfo field, TypeMemberNode fieldDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, fieldDeclaration.DocumentationOffset,
                     fieldDeclaration.DocumentationLength);
             memberKind = MemberKind.Field;
@@ -69,7 +69,7 @@ package stab.compiler {
             appendDocumentation(getIdString(field), comment);
         }
 
-		void buildMethodDocumentation(JvmMethodInfo method, TypeMemberNode methodDeclaration) {
+        void buildMethodDocumentation(JvmMethodInfo method, TypeMemberNode methodDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, methodDeclaration.DocumentationOffset,
                     methodDeclaration.DocumentationLength);
             memberKind = MemberKind.Method;
@@ -78,7 +78,7 @@ package stab.compiler {
             appendDocumentation(getIdString(method), comment);
         }
 
-		void buildIndexerDocumentation(JvmMethodInfo method, TypeMemberNode indexerDeclaration) {
+        void buildIndexerDocumentation(JvmMethodInfo method, TypeMemberNode indexerDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, indexerDeclaration.DocumentationOffset,
                     indexerDeclaration.DocumentationLength);
             memberKind = MemberKind.Indexer;
@@ -87,7 +87,7 @@ package stab.compiler {
             appendDocumentation(getIdString(method), comment);
         }
 
-		void buildPropertyDocumentation(JvmMethodInfo method, String name, TypeMemberNode propertyDeclaration) {
+        void buildPropertyDocumentation(JvmMethodInfo method, String name, TypeMemberNode propertyDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, propertyDeclaration.DocumentationOffset,
                     propertyDeclaration.DocumentationLength);
             memberKind = MemberKind.Property;
@@ -142,46 +142,46 @@ package stab.compiler {
         }
  
         private static String getIdName(JvmTypeInfo type) {
-			switch (type.TypeKind) {
-			case Boolean:
-				return "boolean";
-			case Byte:
-				return "byte";
-			case Char:
-				return "char";
-			case Double:
-				return "double";
-			case Float:
-				return "float";
-			case Int:
-				return "int";
-			case Long:
-				return "long";
-			case Short:
-				return "short";
-			case Void:
-				return "void";
-			case Array:
-				return getIdName(type.ElementType) + "[]";
-			default:
-				var result = type.FullName.replace('/', '.').replace('$', '.');
-				if (type.OriginalTypeDefinition != type && type.GenericArguments.any()) {
-					var sb = new StringBuilder();
-					sb.append(result).append('{');
-					var first = true;
-					foreach (var t in type.GenericArguments) {
-						if (first) {
-							first = false;
-						} else {
-							sb.append(", ");
-						}
-						sb.append(getIdName(t));
-					}
-					sb.append('}');
-					result = sb.toString();
-				}
-				return result;
-			}
+            switch (type.TypeKind) {
+            case Boolean:
+                return "boolean";
+            case Byte:
+                return "byte";
+            case Char:
+                return "char";
+            case Double:
+                return "double";
+            case Float:
+                return "float";
+            case Int:
+                return "int";
+            case Long:
+                return "long";
+            case Short:
+                return "short";
+            case Void:
+                return "void";
+            case Array:
+                return getIdName(type.ElementType) + "[]";
+            default:
+                var result = type.FullName.replace('/', '.').replace('$', '.');
+                if (type.OriginalTypeDefinition != type && type.GenericArguments.any()) {
+                    var sb = new StringBuilder();
+                    sb.append(result).append('{');
+                    var first = true;
+                    foreach (var t in type.GenericArguments) {
+                        if (first) {
+                            first = false;
+                        } else {
+                            sb.append(", ");
+                        }
+                        sb.append(getIdName(t));
+                    }
+                    sb.append('}');
+                    result = sb.toString();
+                }
+                return result;
+            }
         }
  
         private void appendDocumentation(String idString, String comment) {
@@ -207,6 +207,7 @@ package stab.compiler {
                 case "remarks":
                 case "value":
                 case "returns":
+                case "example":
                     parent.appendChild(copyContainer(e));
                     break;
                 case "include":
@@ -224,6 +225,7 @@ package stab.compiler {
                 case "seealso":
                     parent.appendChild(copySeealso(e));
                     break;
+                case "code":
                 default:
                     parent.appendChild((Element)document.importNode(e, true));
                     break;
@@ -387,7 +389,7 @@ package stab.compiler {
                     name = suffix.substring(0, idx);
                     suffix = suffix.substring(idx + 1);
                 }
-				var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, type, name, true);
+                var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, type, name, true);
                 replaceCref(element, exception, members, suffix, arguments);
             }
         }
@@ -656,8 +658,6 @@ package stab.compiler {
             if (nested.getNamespaceURI() == null) {
                 switch (nested.getLocalName()) {
                 case "c":
-                case "code":
-                case "example":
                 case "para":
                 case "list":
                 case "listheader":
