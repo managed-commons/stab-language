@@ -105,6 +105,7 @@ package stab.parser {
                 }
                 return LexicalUnit.NewLine;
 
+            case '\u0085':
             case '\u2028':
             case '\u2029':
             case '\n':

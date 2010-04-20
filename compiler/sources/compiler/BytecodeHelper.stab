@@ -589,6 +589,15 @@ package stab.compiler {
             return RetentionPolicy.CLASS;
         }
 
+        public static Iterable<JvmAnnotationValue> getAnnotations(JvmTypeSystem typeSystem, JvmTypeInfo type) {
+            var annotatedTypeName = "stab/annotated/" + type.FullName;
+            if (typeSystem.typeExists(annotatedTypeName)) {
+                var annotatedType = typeSystem.getType(annotatedTypeName);
+                return type.Annotations.concat(annotatedType.Annotations);
+            }
+            return type.Annotations;
+        }
+
         public static Iterable<JvmAnnotationValue> getAnnotations(JvmTypeSystem typeSystem, JvmMethodInfo method) {
             var annotatedTypeName = "stab/annotated/" + method.DeclaringType.FullName;
             if (typeSystem.typeExists(annotatedTypeName)) {
@@ -607,6 +616,10 @@ package stab.compiler {
 
         public static boolean isConditional(JvmAnnotationValue annotation) {
             return annotation.Type.FullName.equals("stab/lang/Conditional");
+        }
+
+        public static boolean isStaticClass(JvmAnnotationValue annotation) {
+            return annotation.Type.FullName.equals("stab/lang/StaticClass");
         }
 
         public static boolean isDispose(JvmAnnotationValue annotation) {

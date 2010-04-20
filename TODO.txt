@@ -17,6 +17,7 @@ Issues ================================
 - return t[] => stack trace
 - str1 + str2 + 1 => stack trace
 - test partial methods
+- check that #define/#undef is used before any lexical unit
 
 Errors ================================
 

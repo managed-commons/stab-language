@@ -164,9 +164,16 @@ package stab.compiler {
 		}
 
 		private void addExtensionMethods(JvmTypeInfo type) {
-			if (!type.IsFinal) {
-				return;
-			}
+            var isStatic = false;
+            foreach (var annotation in BytecodeHelper.getAnnotations(annotatedTypeSystem, type)) {
+                if (BytecodeHelper.isStaticClass(annotation)) {
+                    isStatic = true;
+                    break;
+                }
+            }
+            if (!isStatic) {
+                return;
+            }
 			var methods = scope.extensionMethods;
 			foreach (var m in type.Methods) {
 				if (!m.IsStatic || !m.Parameters.any()) {

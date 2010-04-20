@@ -58,6 +58,13 @@ package stab.lang {
     }
 
     /// <summary>
+    /// Indicates to the compiler that a class is an extension method container.
+    /// </summary>
+    [Target({ ElementType.TYPE })]
+    public interface StaticClass : Annotation {
+    }
+
+    /// <summary>
     /// Indicates to the compiler that a method is an extension method.
     /// </summary>
     [Target({ ElementType.METHOD })]

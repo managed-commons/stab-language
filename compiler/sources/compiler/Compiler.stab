@@ -134,6 +134,11 @@ package stab.compiler {
                     
                     var text = new char[sb.length()];
                     sb.getChars(0, sizeof(text), text, 0);
+                    if (sizeof(text) > 0) {
+                        if (text[sizeof(text) - 1] == '\u001a') {
+                            text[sizeof(text) - 1] = ' ';
+                        }
+                    }
                     var preprocessor = new Preprocessor(results.codeErrorManager, text);
                     preprocessor.Filename = file.getAbsolutePath();
                     foreach (var s in parameters.Symbols) {
@@ -2029,6 +2034,9 @@ package stab.compiler {
             if (!annotationTypesOnly) {
                 validateAnnotationSection(classDeclaration.Annotations, ElementType.TYPE);
                 bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
+                if (classDeclaration.Modifiers.contains(Modifier.Static)) {
+                    typeBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/StaticClass"), false);
+                }
             }
             
             context.CurrentType = typeBuilder;
