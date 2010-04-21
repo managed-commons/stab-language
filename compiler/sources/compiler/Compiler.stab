@@ -2416,8 +2416,6 @@ package stab.compiler {
         
         private void validateCode(PackageDeclarationNode packageDeclaration) {
             if (packageDeclaration.Body != null) {
-                // TODO: Annotations
-                
                 foreach (var identifier in packageDeclaration.Identifiers) {
                     context.MemberResolver.enterPackage(context.getIdentifier(identifier.Offset, identifier.Length));
                 }

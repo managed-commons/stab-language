@@ -113,5 +113,12 @@ package stab.compiler.test {
 				"MethodAsMember.stab (10, 11) error 137: Cannot apply invocation to any method, delegate or extension method" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void methodMemberAccess() {
+			doTest("MethodMemberAccess", new String[]{
+				"MethodMemberAccess.stab (4, 9) error 207: The expression does not give access to a member 'x'" },
+				new String[] {});
+		}
 	}
 }

@@ -166,7 +166,8 @@ package stab.compiler {
         NoDisposeMethod,
         UsingVariableUninitialized,
         PackageAnnotatedExternally,
-        ImplicitVariableWithArrayInitializer
+        ImplicitVariableWithArrayInitializer,
+        InvalidTargetForMemberAccess
 	}
 
 	class Resources {

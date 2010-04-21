@@ -1253,7 +1253,11 @@ package stab.compiler {
 					throw context.error(CompileErrorId.UnresolvedName, nameExpression, name);
 				}
 			} else {
-                // TODO: verify that members are not only methods
+                if (tinfo.Type == null && !tinfo.IsConstant && tinfo.Members != null) {
+                    if (tinfo.Members.all(p => p.MemberKind == MemberKind.Method)) {
+                        throw context.error(CompileErrorId.InvalidTargetForMemberAccess, memberAccess.TargetObject, name);
+                    }
+                }
 				var ttype = ValidationHelper.getType(context, memberAccess.TargetObject);
 				var staticOnly = false;
 				if (tinfo.Member != null && tinfo.Member.MemberKind == MemberKind.Type) {
