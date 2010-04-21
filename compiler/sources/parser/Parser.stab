@@ -2879,7 +2879,7 @@ package stab.parser {
                     var elementAccess = new ElementAccessExpressionNode { TargetObject = result };
                     copyScannerState(result, elementAccess);
                     result = elementAccess;
-                    parseExpressionList(elementAccess.Indexes, LexicalUnit.CloseBracket);
+                    parseExpressionList(elementAccess.Indexes);
                 }
                 break;
 
@@ -2929,7 +2929,7 @@ package stab.parser {
                 var elementAccess = new ElementAccessExpressionNode { TargetObject = superAccess };
                 copyScannerState(superAccess, elementAccess);
                 result = elementAccess;
-                parseExpressionList(elementAccess.Indexes, LexicalUnit.CloseBracket);
+                parseExpressionList(elementAccess.Indexes);
                 break;
 
             default:
@@ -3150,7 +3150,7 @@ package stab.parser {
                     first = false;
                 } else {
                     if (lexicalUnit != LexicalUnit.Comma) {
-                        throw error(ParseErrorId.CommaExpected);
+                        throw error(ParseErrorId.CloseParenthesisExpected);
                     }
                     nextLexicalUnit(true);
                 }
@@ -3159,17 +3159,13 @@ package stab.parser {
             nextLexicalUnit(false);
         }
 
-        private void parseExpressionList(List<ExpressionNode> expressions, LexicalUnit endLexicalUnit) {
-            var first = true;
-            while (lexicalUnit != endLexicalUnit) {
-                if (first) {
-                    first = false;
-                } else {
-                    if (lexicalUnit != LexicalUnit.Comma) {
-                        throw error(ParseErrorId.CommaExpected);
-                    }
-                    nextLexicalUnit(true);
+        private void parseExpressionList(List<ExpressionNode> expressions) {
+            expressions.add(parseExpression());
+            while (lexicalUnit != LexicalUnit.CloseBracket) {
+                if (lexicalUnit != LexicalUnit.Comma) {
+                    throw error(ParseErrorId.CloseBracketExpected);
                 }
+                nextLexicalUnit(true);
                 expressions.add(parseExpression());
             }
             nextLexicalUnit(false);

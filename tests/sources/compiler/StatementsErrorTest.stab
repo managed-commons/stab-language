@@ -89,5 +89,12 @@ package stab.compiler.test {
 				"DefiniteAssignment7.stab (7, 17) error 169: Use of unassigned local variable 'b'" },
 				new String[] {});
 		}
+        
+		[Test]
+		public void varArrayInitializer() {
+			doTest("VarArrayInitializer", new String[]{ 
+				"VarArrayInitializer.stab (3, 9) error 206: Cannot initialize implicitly-typed variable with an array initializer" },
+				new String[] {});
+		}
 	}
 }

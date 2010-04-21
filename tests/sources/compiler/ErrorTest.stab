@@ -80,6 +80,8 @@ package stab.compiler.test {
 					}
 				}
 			}
+            Assert.assertEquals(sizeof(errors), nerrors);
+            Assert.assertEquals(sizeof(warnings), nwarnings);
 			Assert.assertFalse(testFailed);
 		}
 	}

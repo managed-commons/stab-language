@@ -225,6 +225,9 @@ package stab.compiler {
                 if (decl.Value == null) {
                     throw context.error(CompileErrorId.MissingImplicitVariableInitializer, localDeclaration);
                 }
+                if (decl.Value.ExpressionKind == ExpressionKind.ArrayInitializer) {
+                    throw context.error(CompileErrorId.ImplicitVariableWithArrayInitializer, localDeclaration);
+                }
                 this.ExpressionValidator.handleExpression(decl.Value, null, true);
                 var info = decl.Value.getUserData(typeof(ExpressionInfo));
                 if (info == null) {

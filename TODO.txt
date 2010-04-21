@@ -9,13 +9,11 @@ Features ==============================
 Issues ================================
 
 - allow -runtimelib to be optional (for runtime compilation)
-- generate exception clauses for Java interop
+- generate exception clauses for Java interop using an annotation
 - validate generic constraints
 - test constant expressions with static final fields
 - generate bridge methods for public abstract methods implemented in private superclasses?
 - create an InternalErrorException class
-- return t[] => stack trace
-- str1 + str2 + 1 => stack trace
 - test partial methods
 - check that #define/#undef is used before any lexical unit
 
@@ -39,21 +37,3 @@ public class ArrayInitializerAutoboxing {
 	}
 }
 => Error: wrong array element type
-==============================
-public class VarArray {
-	public static void method() {
-		var t = { 1, 2 };
-	}
-}
-=> Error: cannot use array initializer with var
-===============================
-public class C {
-	public void m() {
-		finalize();
-	}
-	protected finalize() {
-		
-	}
-}
-=> Error: cannot call finalize()
-=> Error: cannot override finalize() : use destructor instead
