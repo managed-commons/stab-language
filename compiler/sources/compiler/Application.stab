@@ -271,15 +271,6 @@ package stab.compiler {
 				}
 				i++;
 			}
-			if (parameters.getRuntimeLibraryPath() == null) {
-				File file = new File("stabrt.jar");
-				if (file.exists()) {
-					parameters.setRuntimeLibraryPath(file.getAbsolutePath());
-				} else {
-					System.out.println("Error: Missing -runtimelib option");
-					return false;
-				}
-			}
 			while (i < sizeof(arguments)) {
 				File file = new File(arguments[i]);
 				if (!file.exists()) {

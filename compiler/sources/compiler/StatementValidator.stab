@@ -416,8 +416,7 @@ package stab.compiler {
                 if (einfo != null) {
                     if (!context.TypeSystem.getType("java/lang/Throwable").isAssignableFrom(ValidationHelper.getType(context, exception))) {
                         throw context.error(CompileErrorId.NoImplicitConversion, exception,
-                                BytecodeHelper.getDisplayName(einfo.Type),
-                                BytecodeHelper.getDisplayName(context.TypeSystem.getType("java/lang/Throwable")));
+                                BytecodeHelper.getDisplayName(einfo.Type), "java.lang.Throwable");
                     }
                 }
             }
@@ -434,8 +433,7 @@ package stab.compiler {
                         node.addOrReplaceUserData(etype);
                         if (!context.TypeSystem.getType("java/lang/Throwable").isAssignableFrom(etype)) {
                             throw context.error(CompileErrorId.NoImplicitConversion, node,
-                                    BytecodeHelper.getDisplayName(etype),
-                                    BytecodeHelper.getDisplayName(context.TypeSystem.getType("java/lang/Throwable")));
+                                    BytecodeHelper.getDisplayName(etype), "java.lang.Throwable");
                         }
                         if (node.NameLength > 0) {
                             var local = context.MemberResolver.defineLocal(context.getIdentifier(node.NameOffset, node.NameLength),

@@ -8,8 +8,6 @@ Features ==============================
 
 Issues ================================
 
-- allow -runtimelib to be optional (for runtime compilation)
-- generate exception clauses for Java interop using an annotation
 - validate generic constraints
 - test constant expressions with static final fields
 - generate bridge methods for public abstract methods implemented in private superclasses?

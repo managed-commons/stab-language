@@ -89,4 +89,15 @@ package stab.lang {
     [Target({ ElementType.METHOD })]
     public interface Dispose : Annotation {
     }
+    
+    /// <summary>
+    /// Indicates to the compiler the list of Java checked exceptions a method can throws.
+    /// </summary>
+    [Target({ ElementType.METHOD })]
+    public interface Throws : Annotation {
+        /// <summary>
+        /// Specifies a list of Java checked exceptions.
+        /// </summary>
+        java.lang.Class<?>[] value();
+    }
 }

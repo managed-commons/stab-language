@@ -167,7 +167,9 @@ package stab.compiler {
         UsingVariableUninitialized,
         PackageAnnotatedExternally,
         ImplicitVariableWithArrayInitializer,
-        InvalidTargetForMemberAccess
+        InvalidTargetForMemberAccess,
+        UnexpectedArrayArgument,
+        TypeExpressionNotAllowed
 	}
 
 	class Resources {

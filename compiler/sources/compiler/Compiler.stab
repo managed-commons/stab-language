@@ -179,9 +179,14 @@ package stab.compiler {
         }
         
         private void doCompile() {
-            int nPaths = context.Parameters.ClassPath.size() + 1;
+            int nPaths = context.Parameters.ClassPath.size();
+            if (context.Parameters.RuntimeLibraryPath != null) {
+                nPaths++;
+            }
             var classPath = context.Parameters.ClassPath.toArray(new String[nPaths]);
-            classPath[nPaths - 1] = context.Parameters.RuntimeLibraryPath;
+            if (context.Parameters.RuntimeLibraryPath != null) {
+                classPath[nPaths - 1] = context.Parameters.RuntimeLibraryPath;
+            }
             context.TypeSystem = new JvmTypeSystem(classPath, context.Parameters.BootClasses);
             
             nPaths = context.Parameters.AnnotatedLibraryPaths.size();
@@ -2136,6 +2141,7 @@ package stab.compiler {
             validateAnnotationSection(destructorDeclaration.Annotations, ElementType.METHOD);
             var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(destructorDeclaration.Annotations, methodBuilder);
+            setExceptions(methodBuilder, destructorDeclaration);
         }
 
         private void generateConstructorAnnotations(ConstructorDeclarationNode constructorDeclaration, boolean annotationTypesOnly) {
@@ -2145,6 +2151,7 @@ package stab.compiler {
             validateAnnotationSection(constructorDeclaration.Annotations, ElementType.METHOD);
             var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(constructorDeclaration.Annotations, methodBuilder);
+            setExceptions(methodBuilder, constructorDeclaration);
         }
 
         private void generateEnumConstantAnnotations(EnumConstantDeclarationNode enumConstant, boolean annotationTypesOnly) {
@@ -2169,8 +2176,14 @@ package stab.compiler {
             if (set != null) {
                 validateAnnotationSection(set.Annotations, ElementType.METHOD);
             }
-            bytecodeGenerator.emitAccessorAnnotations(indexerDeclaration.GetAccessor, indexerDeclaration.Annotations);
-            bytecodeGenerator.emitAccessorAnnotations(indexerDeclaration.SetAccessor, indexerDeclaration.Annotations);
+            bytecodeGenerator.emitAccessorAnnotations(get, indexerDeclaration.Annotations);
+            bytecodeGenerator.emitAccessorAnnotations(set, indexerDeclaration.Annotations);
+            if (get != null) {
+                setExceptions(get.getUserData(typeof(JvmMethodBuilder)), get);
+            }
+            if (set != null) {
+                setExceptions(set.getUserData(typeof(JvmMethodBuilder)), set);
+            }
         }
 
         private void generatePropertyAnnotations(PropertyDeclarationNode propertyDeclaration, boolean annotationTypesOnly) {
@@ -2186,8 +2199,14 @@ package stab.compiler {
             if (set != null) {
                 validateAnnotationSection(set.Annotations, ElementType.METHOD);
             }
-            bytecodeGenerator.emitAccessorAnnotations(propertyDeclaration.GetAccessor, propertyDeclaration.Annotations);
-            bytecodeGenerator.emitAccessorAnnotations(propertyDeclaration.SetAccessor, propertyDeclaration.Annotations);
+            bytecodeGenerator.emitAccessorAnnotations(get, propertyDeclaration.Annotations);
+            bytecodeGenerator.emitAccessorAnnotations(set, propertyDeclaration.Annotations);
+            if (get != null) {
+                setExceptions(get.getUserData(typeof(JvmMethodBuilder)), get);
+            }
+            if (set != null) {
+                setExceptions(set.getUserData(typeof(JvmMethodBuilder)), set);
+            }
         }
 
                 
@@ -2200,7 +2219,9 @@ package stab.compiler {
             if (methodDeclaration.DefaultValue != null) {
                 validateAnnotationArgument(method, methodDeclaration.DefaultValue);
             }
+            var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateInterfaceMethodAnnotations(methodDeclaration);
+            setExceptions(methodBuilder, methodDeclaration);
         }
 
         private void generateDelegateAnnotations(DelegateDeclarationNode delegateDeclaration, boolean annotationTypesOnly) {
@@ -2229,6 +2250,7 @@ package stab.compiler {
             }
             var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
+            setExceptions(methodBuilder, methodDeclaration);
         }
         
         private void generateFieldAnnotations(FieldDeclarationNode fieldDeclaration, boolean annotationTypesOnly) {
@@ -2247,8 +2269,7 @@ package stab.compiler {
                 foreach (var annotation in section.Annotations) {
                     var type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, annotation.Type);
                     if (!type.IsAnnotation) {
-                        context.addError(CompileErrorId.AnnotationTypeExpected, annotation, BytecodeHelper.getDisplayName(type));
-                        continue;
+                        throw context.error(CompileErrorId.AnnotationTypeExpected, annotation, BytecodeHelper.getDisplayName(type));
                     }
                     annotation.addUserData(type);
                     var init = annotation.Initializer;
@@ -2287,6 +2308,9 @@ package stab.compiler {
                 break;
             }
             case ArrayInitializer: {
+                if (!method.ReturnType.IsArray) {
+                    throw context.error(CompileErrorId.UnexpectedArrayArgument, expression);
+                }
                 var arrayInitializer = (ArrayInitializerExpressionNode)expression;
                 var info = new ExpressionInfo(method.ReturnType);
                 arrayInitializer.addOrReplaceUserData(info);
@@ -2298,18 +2322,27 @@ package stab.compiler {
             default:
                 expressionValidator.handleExpression(expression, method.ReturnType, true);
                 var info = expression.getUserData(typeof(ExpressionInfo));
+                ValidationHelper.getType(context, expression);
+                if (expression.ExpressionKind == ExpressionKind.MemberAccess && info.Members == null) {
+                    throw context.error(CompileErrorId.TypeExpressionNotAllowed, expression);
+                }
                 if (info == null) {
-                    context.addError(CompileErrorId.UnexpectedNull, expression);
-                } else if (!ValidationHelper.isAssignable(context, method.ReturnType, expression)) {
-                    context.addError(CompileErrorId.NoImplicitConversion, expression,
-                            BytecodeHelper.getDisplayName(info.Type),
-                            BytecodeHelper.getDisplayName(method.ReturnType));
+                    throw context.error(CompileErrorId.UnexpectedNull, expression);
+                } else {
+                    if (expression.ExpressionKind == ExpressionKind.MemberAccess && info.Members == null) {
+                        throw context.error(CompileErrorId.TypeExpressionNotAllowed, expression);
+                    }
+                    if (!ValidationHelper.isAssignable(context, method.ReturnType, expression)) {
+                        throw context.error(CompileErrorId.NoImplicitConversion, expression,
+                                BytecodeHelper.getDisplayName(info.Type),
+                                BytecodeHelper.getDisplayName(method.ReturnType));
+                    }
                 }
                 if (info.IsConstant) {
                     ValidationHelper.getType(context, expression);
                     CompilerHelper.convertConstant(context, expression, info, method.ReturnType);
                 } else if (!ValidationHelper.getType(context, expression).IsEnum && !info.Type.FullName.equals("java/lang/Class")) {
-                    context.addError(CompileErrorId.NoImplicitConversion, expression,
+                    throw context.error(CompileErrorId.NoImplicitConversion, expression,
                             BytecodeHelper.getDisplayName(info.Type),
                             BytecodeHelper.getDisplayName(method.ReturnType));
                 }
@@ -2339,22 +2372,45 @@ package stab.compiler {
             default:
                 expressionValidator.handleExpression(expression, elementType, true);
                 var info = expression.getUserData(typeof(ExpressionInfo));
+                // TODO: detect only methods members
+                ValidationHelper.getType(context, expression);
                 if (info == null) {
                     context.addError(CompileErrorId.UnexpectedNull, expression);
-                } else if (!ValidationHelper.isAssignable(context, elementType, expression)) {
-                    context.addError(CompileErrorId.NoImplicitConversion, expression,
-                            BytecodeHelper.getDisplayName(info.Type),
-                            BytecodeHelper.getDisplayName(elementType));
+                } else {
+                    if (expression.ExpressionKind == ExpressionKind.MemberAccess && info.Members == null) {
+                        throw context.error(CompileErrorId.TypeExpressionNotAllowed, expression);
+                    }
+                    if (!ValidationHelper.isAssignable(context, elementType, expression)) {
+                        throw context.error(CompileErrorId.NoImplicitConversion, expression,
+                                BytecodeHelper.getDisplayName(info.Type),
+                                BytecodeHelper.getDisplayName(elementType));
+                    }
                 }
                 if (info.IsConstant) {
                     ValidationHelper.getType(context, expression);
                     CompilerHelper.convertConstant(context, expression, info, elementType);
                 } else if (!ValidationHelper.getType(context, expression).IsEnum && !info.Type.FullName.equals("java/lang/Class")) {
-                    context.addError(CompileErrorId.NoImplicitConversion, expression,
+                    throw context.error(CompileErrorId.NoImplicitConversion, expression,
                             BytecodeHelper.getDisplayName(info.Type),
                             BytecodeHelper.getDisplayName(elementType));
                 }
                 break;
+            }
+        }
+        
+        private void setExceptions(JvmMethodBuilder methodBuilder, SyntaxNode node) {
+            foreach (var av in methodBuilder.Annotations) {
+                if (av.Type.FullName.equals("stab/lang/Throws")) {
+                    foreach (var elt in av.getArgument("value").Elements) {
+                        var t = elt.Type;
+                        if (!context.TypeSystem.getType("java/lang/Throwable").isAssignableFrom(t)) {
+                            context.addError(CompileErrorId.NoImplicitConversion, node,
+                                BytecodeHelper.getDisplayName(t), "java.lang.Throwable");
+                        } else {
+                            methodBuilder.addException(t);
+                        }
+                    }
+                }
             }
         }
         
