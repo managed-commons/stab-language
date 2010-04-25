@@ -463,7 +463,11 @@ package stab.bytecode {
 		private JvmTypeInfo getTypeInfo(AsmType type) {
 			switch (type.getSort()) {
 			case AsmType.ARRAY:
-				return getTypeInfo(type.getElementType()).ArrayType;
+                var elt = getTypeInfo(type.getElementType());
+                for (int i = type.getDimensions(); i > 0; --i) {
+                    elt = elt.ArrayType;
+                }
+                return elt;
 				
 			case AsmType.BOOLEAN:
 				return JvmTypeInfo.BOOLEAN;
