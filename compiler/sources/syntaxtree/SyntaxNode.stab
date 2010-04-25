@@ -15,10 +15,10 @@
    limitations under the License.
  */
 using java.lang;
-using stab.helpers;
 using stab.lang;
+using stab.tools.helpers;
 
-package stab.syntaxtree {
+package stab.tools.syntaxtree {
 
 	public abstract class SyntaxNode : UserDataContainer {
 		protected SyntaxNode() {

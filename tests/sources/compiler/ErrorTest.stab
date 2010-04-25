@@ -18,9 +18,9 @@ using java.io;
 using java.lang;
 using java.util;
 using org.junit;
-using stab.helpers;
+using stab.tools.helpers;
 
-package stab.compiler.test {
+package stab.tools.compiler.test {
 
 	public abstract class ErrorTest {
 		protected CompilerParameters parameters;

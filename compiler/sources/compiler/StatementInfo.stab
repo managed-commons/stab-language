@@ -14,49 +14,49 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-using stab.bytecode;
-using stab.syntaxtree;
+using stab.tools.bytecode;
+using stab.tools.syntaxtree;
 
-package stab.compiler {
+package stab.tools.compiler {
 
-	class StatementInfo {
-	
-		StatementInfo() {
-		}
-		
-		boolean IsEndPointReachable {
-			get;
-			set;
-		}
-		
-		int YieldCount {
-			get;
-			set;
-		}
-		
-		boolean IsTargeted {
-			get;
-			set;
-		}
-		
-		JvmLabelMarker BeginLabel {
-			get;
-			set;
-		}
-		
-		JvmLabelMarker ContinueLabel {
-			get;
-			set;
-		}
-		
-		JvmLabelMarker EndLabel {
-			get;
-			set;
-		}
-		
-		StatementNode Target {
-			get;
-			set;
-		}
-	}
+    class StatementInfo {
+    
+        StatementInfo() {
+        }
+        
+        boolean IsEndPointReachable {
+            get;
+            set;
+        }
+        
+        int YieldCount {
+            get;
+            set;
+        }
+        
+        boolean IsTargeted {
+            get;
+            set;
+        }
+        
+        JvmLabelMarker BeginLabel {
+            get;
+            set;
+        }
+        
+        JvmLabelMarker ContinueLabel {
+            get;
+            set;
+        }
+        
+        JvmLabelMarker EndLabel {
+            get;
+            set;
+        }
+        
+        StatementNode Target {
+            get;
+            set;
+        }
+    }
 }

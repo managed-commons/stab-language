@@ -18,107 +18,107 @@ using java.lang;
 using java.util;
 using stab.query;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	class RawGenericType : ClassType {
-		private JvmTypeInfo genericTypeDefinition;
+    class RawGenericType : ClassType {
+        private JvmTypeInfo genericTypeDefinition;
 
-		RawGenericType(JvmTypeInfo declaringType, JvmTypeInfo genericTypeDefinition)
-			: super(genericTypeDefinition.FullName) {
-			this.declaringType = declaringType;
-			this.genericTypeDefinition = genericTypeDefinition;
-			this.genericArguments = Query.empty();
-		}
+        RawGenericType(JvmTypeInfo declaringType, JvmTypeInfo genericTypeDefinition)
+            : super(genericTypeDefinition.FullName) {
+            this.declaringType = declaringType;
+            this.genericTypeDefinition = genericTypeDefinition;
+            this.genericArguments = Query.empty();
+        }
 
-		public override JvmTypeInfo GenericTypeDefinition {
-			get {
-				return genericTypeDefinition;
-			}
-		}
+        public override JvmTypeInfo GenericTypeDefinition {
+            get {
+                return genericTypeDefinition;
+            }
+        }
 
-		public override String Descriptor {
-			get {
-				return genericTypeDefinition.Descriptor;
-			}
-		}
+        public override String Descriptor {
+            get {
+                return genericTypeDefinition.Descriptor;
+            }
+        }
 
-		public override Iterable<JvmAnnotationValue> Annotations {
-			get {
-				return genericTypeDefinition.Annotations;
-			}
-		}
-		
-		protected override int Modifiers {
-			get {
-				return genericTypeDefinition.Modifiers;
-			}
-		}
-		
-		protected override int NestedModifiers {
-			get {
-				return genericTypeDefinition.NestedModifiers;
-			}
-		}
+        public override Iterable<JvmAnnotationValue> Annotations {
+            get {
+                return genericTypeDefinition.Annotations;
+            }
+        }
+        
+        protected override int Modifiers {
+            get {
+                return genericTypeDefinition.Modifiers;
+            }
+        }
+        
+        protected override int NestedModifiers {
+            get {
+                return genericTypeDefinition.NestedModifiers;
+            }
+        }
 
-		protected override void initializeBaseTypes() {
-			if (baseType != null) {
-				return;
-			}
-			baseType = BytecodeHelper.getRawType(genericTypeDefinition, genericTypeDefinition.BaseType);
-			var interfaces = new ArrayList<JvmTypeInfo>();
-			this.interfaces = interfaces;
-			foreach (var t in genericTypeDefinition.Interfaces) {
-				interfaces.add(BytecodeHelper.getRawType(genericTypeDefinition, t));
-			}
-		}
-		
-		protected override void initializeFields() {
-			if (genericTypeDefinition.Fields.count() == fields.size()) {
-				return;
-			}
-			initializeBaseTypes();
-			
-			var it = genericTypeDefinition.Fields.iterator();
-			for (int i = fields.size(); i > 0; --i) {
-				it.next();
-			}
-			while (it.hasNext()) {
-				var f = it.next();
-				var t = BytecodeHelper.getRawType(genericTypeDefinition, f.Type);
-				var newf = new JvmFieldInfo(this, f.modifiers, f.Name, f.Value);
-				newf.type = t;
-				fields.add(newf);
-			}
-		}
-		
-		protected override void initializeMethods() {
-			if (genericTypeDefinition.Methods.count() == methods.size()) {
-				return;
-			}
-			initializeBaseTypes();
-			
-			var it = genericTypeDefinition.Methods.iterator();
-			for (int i = methods.size(); i > 0; --i) {
-				it.next();
-			}
-			while (it.hasNext()) {
-				methods.add(new RawGenericMethod(this, it.next()));
-			}
-		}
-		
-		protected override void initializeNestedTypes() {
-			if (genericTypeDefinition.NestedTypes.count() == nestedTypes.size()) {
-				return;
-			}
-			initializeBaseTypes();
-			
-			var it = genericTypeDefinition.NestedTypes.iterator();
-			for (int i = nestedTypes.size(); i > 0; --i) {
-				it.next();
-			}
-			while (it.hasNext()) {
-				nestedTypes.add(new RawGenericType(this, it.next()));
-			}
-		}
-	}
+        protected override void initializeBaseTypes() {
+            if (baseType != null) {
+                return;
+            }
+            baseType = BytecodeHelper.getRawType(genericTypeDefinition, genericTypeDefinition.BaseType);
+            var interfaces = new ArrayList<JvmTypeInfo>();
+            this.interfaces = interfaces;
+            foreach (var t in genericTypeDefinition.Interfaces) {
+                interfaces.add(BytecodeHelper.getRawType(genericTypeDefinition, t));
+            }
+        }
+        
+        protected override void initializeFields() {
+            if (genericTypeDefinition.Fields.count() == fields.size()) {
+                return;
+            }
+            initializeBaseTypes();
+            
+            var it = genericTypeDefinition.Fields.iterator();
+            for (int i = fields.size(); i > 0; --i) {
+                it.next();
+            }
+            while (it.hasNext()) {
+                var f = it.next();
+                var t = BytecodeHelper.getRawType(genericTypeDefinition, f.Type);
+                var newf = new JvmFieldInfo(this, f.modifiers, f.Name, f.Value);
+                newf.type = t;
+                fields.add(newf);
+            }
+        }
+        
+        protected override void initializeMethods() {
+            if (genericTypeDefinition.Methods.count() == methods.size()) {
+                return;
+            }
+            initializeBaseTypes();
+            
+            var it = genericTypeDefinition.Methods.iterator();
+            for (int i = methods.size(); i > 0; --i) {
+                it.next();
+            }
+            while (it.hasNext()) {
+                methods.add(new RawGenericMethod(this, it.next()));
+            }
+        }
+        
+        protected override void initializeNestedTypes() {
+            if (genericTypeDefinition.NestedTypes.count() == nestedTypes.size()) {
+                return;
+            }
+            initializeBaseTypes();
+            
+            var it = genericTypeDefinition.NestedTypes.iterator();
+            for (int i = nestedTypes.size(); i > 0; --i) {
+                it.next();
+            }
+            while (it.hasNext()) {
+                nestedTypes.add(new RawGenericType(this, it.next()));
+            }
+        }
+    }
 }

@@ -17,132 +17,132 @@
 using java.lang;
 using java.util;
 
-package stab.bytecode.signature {
+package stab.tools.bytecode.signature {
 
-	public enum TypeSignatureKind {
-		Boolean,
-		Byte,
-		Char,
-		Double,
-		Float,
-		Int,
-		Long,
-		Short,
-		Void,
-		ArrayType,
-		ClassType,
-		FormalTypeParameter,
-		TypeVariable,
-		LowerBoundedWildcardType,
-		UpperBoundedWildcardType,
-		UnboundedWildcardType
-	}
+    public enum TypeSignatureKind {
+        Boolean,
+        Byte,
+        Char,
+        Double,
+        Float,
+        Int,
+        Long,
+        Short,
+        Void,
+        ArrayType,
+        ClassType,
+        FormalTypeParameter,
+        TypeVariable,
+        LowerBoundedWildcardType,
+        UpperBoundedWildcardType,
+        UnboundedWildcardType
+    }
 
-	public abstract class TypeSignature {
-		protected TypeSignature(TypeSignatureKind typeSignatureKind, String name) {
-			this.TypeSignatureKind = typeSignatureKind;
-			this.Name = name;
-		}
-		
-		public TypeSignatureKind TypeSignatureKind {
-			get;
-			private set;
-		}
-		
-		public String Name {
-			get;
-			private set;
-		}
-		
-		public virtual Iterable<TypeSignature> FormalTypeParameterBounds {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual Iterable<TypeSignature> TypeArguments {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual TypeSignature ElementType {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual TypeSignature WildcardBound {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-	}
-	
-	class ArrayTypeSignature : TypeSignature {
-		private TypeSignature elementType;
-		
-		ArrayTypeSignature(TypeSignature elementType)
-			: super(TypeSignatureKind.ArrayType, "[" + elementType.Name) {
-			this.elementType = elementType;
-		}
-		
-		public override TypeSignature ElementType {
-			get {
-				return elementType;
-			}
-		}
-	}
-	
-	public class ClassTypeSignature : TypeSignature {
-		private ArrayList<TypeSignature> typeArguments;
-		
-		ClassTypeSignature(TypeSignatureKind typeSignatureKind, String name)
-			: super(typeSignatureKind, name) {
-			this.typeArguments = new ArrayList<TypeSignature>();
-		}
-		
-		public override Iterable<TypeSignature> TypeArguments {
-			get {
-				return typeArguments;
-			}
-		}
-	}
-	
-	public class FormalTypeParameterSignature : TypeSignature {
-		ArrayList<TypeSignature> formalTypeParameterBounds;
-		
-		FormalTypeParameterSignature(String name)
-			: super(TypeSignatureKind.FormalTypeParameter, name) {
-			formalTypeParameterBounds = new ArrayList<TypeSignature>();
-		}
-		
-		public override Iterable<TypeSignature> FormalTypeParameterBounds {
-			get {
-				return formalTypeParameterBounds;
-			}
-		}
-	}
-	
-	class TypeVariableSignature : TypeSignature {
-		TypeVariableSignature(String name)
-			: super(TypeSignatureKind.TypeVariable, name) {
-		}
-	}
-	
-	class WildcardTypeSignature : TypeSignature {
-		private TypeSignature bound;
-		
-		WildcardTypeSignature(TypeSignatureKind typeSignatureKind, TypeSignature bound)
-			: super(typeSignatureKind, "*") {
-			this.bound = bound;
-		}
-		
-		public override TypeSignature WildcardBound {
-			get {
-				return bound;
-			}
-		}
-	}
-	
+    public abstract class TypeSignature {
+        protected TypeSignature(TypeSignatureKind typeSignatureKind, String name) {
+            this.TypeSignatureKind = typeSignatureKind;
+            this.Name = name;
+        }
+        
+        public TypeSignatureKind TypeSignatureKind {
+            get;
+            private set;
+        }
+        
+        public String Name {
+            get;
+            private set;
+        }
+        
+        public virtual Iterable<TypeSignature> FormalTypeParameterBounds {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual Iterable<TypeSignature> TypeArguments {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual TypeSignature ElementType {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual TypeSignature WildcardBound {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+    }
+    
+    class ArrayTypeSignature : TypeSignature {
+        private TypeSignature elementType;
+        
+        ArrayTypeSignature(TypeSignature elementType)
+            : super(TypeSignatureKind.ArrayType, "[" + elementType.Name) {
+            this.elementType = elementType;
+        }
+        
+        public override TypeSignature ElementType {
+            get {
+                return elementType;
+            }
+        }
+    }
+    
+    public class ClassTypeSignature : TypeSignature {
+        private ArrayList<TypeSignature> typeArguments;
+        
+        ClassTypeSignature(TypeSignatureKind typeSignatureKind, String name)
+            : super(typeSignatureKind, name) {
+            this.typeArguments = new ArrayList<TypeSignature>();
+        }
+        
+        public override Iterable<TypeSignature> TypeArguments {
+            get {
+                return typeArguments;
+            }
+        }
+    }
+    
+    public class FormalTypeParameterSignature : TypeSignature {
+        ArrayList<TypeSignature> formalTypeParameterBounds;
+        
+        FormalTypeParameterSignature(String name)
+            : super(TypeSignatureKind.FormalTypeParameter, name) {
+            formalTypeParameterBounds = new ArrayList<TypeSignature>();
+        }
+        
+        public override Iterable<TypeSignature> FormalTypeParameterBounds {
+            get {
+                return formalTypeParameterBounds;
+            }
+        }
+    }
+    
+    class TypeVariableSignature : TypeSignature {
+        TypeVariableSignature(String name)
+            : super(TypeSignatureKind.TypeVariable, name) {
+        }
+    }
+    
+    class WildcardTypeSignature : TypeSignature {
+        private TypeSignature bound;
+        
+        WildcardTypeSignature(TypeSignatureKind typeSignatureKind, TypeSignature bound)
+            : super(typeSignatureKind, "*") {
+            this.bound = bound;
+        }
+        
+        public override TypeSignature WildcardBound {
+            get {
+                return bound;
+            }
+        }
+    }
+    
 }

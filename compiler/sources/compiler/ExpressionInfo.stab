@@ -15,93 +15,93 @@
    limitations under the License.
  */
 using java.lang;
-using stab.bytecode;
+using stab.tools.bytecode;
 
-package stab.compiler {
+package stab.tools.compiler {
 
-	class ExpressionInfo {
-		ExpressionInfo(JvmTypeInfo type) {
-			this.Type = type;
-			this.BoxingKind = BoxingKind.None;
-			this.Negate = true;
-		}
-	
-		ExpressionInfo(JvmTypeInfo type, Object value) {
-			this.Type = type;
-			this.Value = value;
-			this.IsConstant = true;
-			this.BoxingKind = BoxingKind.None;
-			this.Negate = true;
-		}
-		
-		JvmTypeInfo Type {
-			get;
-			set;
-		}
-		
-		Object Value {
-			get;
-			set;
-		}
-		
-		boolean IsConstant {
-			get;
-			set;
-		}
-		
-		BoxingKind BoxingKind {
-			get;
-			set;
-		}
-		
-		JvmMethodInfo BoxingMethod {
-			get;
-			set;
-		}
-		
-		JvmTypeInfo OriginalType {
-			get;
-			set;
-		}
-		
-		Iterable<MemberInfo> Members {
-			get;
-			set;
-		}
-		
-		MemberInfo Member {
-			get;
-			set;
-		}
-		
-		Iterable<JvmMethodInfo> ExtensionMethods {
-			get;
-			set;
-		}
-		
-		JvmMethodInfo Method {
-			get;
-			set;
-		}
-		
-		String PackageName {
-			get;
-			set;
-		}
-		
-		boolean IsSuperCall {
-			get;
-			set;
-		}
-		
-		boolean Negate {
-			get;
-			set;
-		}
-		
-		boolean IsExtension {
-			get;
-			set;
-		}
-	}
+    class ExpressionInfo {
+        ExpressionInfo(JvmTypeInfo type) {
+            this.Type = type;
+            this.BoxingKind = BoxingKind.None;
+            this.Negate = true;
+        }
+    
+        ExpressionInfo(JvmTypeInfo type, Object value) {
+            this.Type = type;
+            this.Value = value;
+            this.IsConstant = true;
+            this.BoxingKind = BoxingKind.None;
+            this.Negate = true;
+        }
+        
+        JvmTypeInfo Type {
+            get;
+            set;
+        }
+        
+        Object Value {
+            get;
+            set;
+        }
+        
+        boolean IsConstant {
+            get;
+            set;
+        }
+        
+        BoxingKind BoxingKind {
+            get;
+            set;
+        }
+        
+        JvmMethodInfo BoxingMethod {
+            get;
+            set;
+        }
+        
+        JvmTypeInfo OriginalType {
+            get;
+            set;
+        }
+        
+        Iterable<MemberInfo> Members {
+            get;
+            set;
+        }
+        
+        MemberInfo Member {
+            get;
+            set;
+        }
+        
+        Iterable<JvmMethodInfo> ExtensionMethods {
+            get;
+            set;
+        }
+        
+        JvmMethodInfo Method {
+            get;
+            set;
+        }
+        
+        String PackageName {
+            get;
+            set;
+        }
+        
+        boolean IsSuperCall {
+            get;
+            set;
+        }
+        
+        boolean Negate {
+            get;
+            set;
+        }
+        
+        boolean IsExtension {
+            get;
+            set;
+        }
+    }
 }

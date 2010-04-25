@@ -17,12 +17,12 @@
 using java.lang;
 using java.lang.annotation;
 using java.util;
-using stab.bytecode;
-using stab.helpers;
 using stab.query;
-using stab.syntaxtree;
+using stab.tools.bytecode;
+using stab.tools.helpers;
+using stab.tools.syntaxtree;
 
-package stab.compiler {
+package stab.tools.compiler {
 
     class BytecodeGenerator : StatementHandler<Void, Void> {
         private CompilerContext context;

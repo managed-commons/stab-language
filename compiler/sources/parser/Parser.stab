@@ -15,12 +15,12 @@
    limitations under the License.
  */
 using java.lang;
-using stab.helpers;
 using java.util;
 using stab.lang;
-using stab.syntaxtree;
+using stab.tools.helpers;
+using stab.tools.syntaxtree;
 
-package stab.parser {
+package stab.tools.parser {
 
     public class Parser {
         private IScanner scanner;

@@ -17,10 +17,10 @@
 using java.lang;
 using java.lang.annotation;
 using java.util;
-using stab.bytecode;
 using stab.query;
+using stab.tools.bytecode;
 
-package stab.compiler {
+package stab.tools.compiler {
 
     public static class BytecodeHelper {
         private static HashMap<String, JvmTypeInfo> IterableOrIteratorElementTypes;

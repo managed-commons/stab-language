@@ -19,36 +19,36 @@ using java.util;
 using org.objectweb.asm;
 using stab.query;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	public class JvmTypeBuilder : JvmTypeInfo {
-		boolean created;
-		private int modifiers;
-		private int nestedModifiers;
-		private ArrayList<JvmTypeInfo> genericArguments;
-		private JvmTypeInfo baseType;
-		private ArrayList<JvmTypeInfo> interfaces;
-		private String descriptor;
-		private String signature;
-		private ArrayList<JvmFieldInfo> fields;
-		private ArrayList<JvmMethodInfo> methods;
-		private ArrayList<JvmAnnotationValue> annotations;
-		private JvmTypeInfo declaringType;
-		private ArrayList<JvmTypeInfo> nestedTypes;
+    public class JvmTypeBuilder : JvmTypeInfo {
+        boolean created;
+        private int modifiers;
+        private int nestedModifiers;
+        private ArrayList<JvmTypeInfo> genericArguments;
+        private JvmTypeInfo baseType;
+        private ArrayList<JvmTypeInfo> interfaces;
+        private String descriptor;
+        private String signature;
+        private ArrayList<JvmFieldInfo> fields;
+        private ArrayList<JvmMethodInfo> methods;
+        private ArrayList<JvmAnnotationValue> annotations;
+        private JvmTypeInfo declaringType;
+        private ArrayList<JvmTypeInfo> nestedTypes;
         private String sourceFile;
         private String sourceDebugExtension;
-		
-		JvmTypeBuilder(JvmTypeInfo declaringType, String name)
-			: super(TypeKind.Reference, name) {
-			this.declaringType = declaringType;
-			this.genericArguments = new ArrayList<JvmTypeInfo>();
-			this.interfaces = new ArrayList<JvmTypeInfo>();
-			this.descriptor = "L" + name + ";";
-			this.fields = new ArrayList<JvmFieldInfo>();
-			this.methods = new ArrayList<JvmMethodInfo>();
-			this.annotations = new ArrayList<JvmAnnotationValue>();
-			this.nestedTypes = new ArrayList<JvmTypeInfo>();
-		}
+        
+        JvmTypeBuilder(JvmTypeInfo declaringType, String name)
+            : super(TypeKind.Reference, name) {
+            this.declaringType = declaringType;
+            this.genericArguments = new ArrayList<JvmTypeInfo>();
+            this.interfaces = new ArrayList<JvmTypeInfo>();
+            this.descriptor = "L" + name + ";";
+            this.fields = new ArrayList<JvmFieldInfo>();
+            this.methods = new ArrayList<JvmMethodInfo>();
+            this.annotations = new ArrayList<JvmAnnotationValue>();
+            this.nestedTypes = new ArrayList<JvmTypeInfo>();
+        }
 
         public String SourceFile {
             get {
@@ -69,339 +69,339 @@ package stab.bytecode {
         public void setSourceDebugExtension(String sourceDebugExtension) {
             this.sourceDebugExtension = sourceDebugExtension;
         }
-		
-		public override JvmTypeInfo DeclaringType {
-			get {
-				return declaringType;
-			}
-		}
+        
+        public override JvmTypeInfo DeclaringType {
+            get {
+                return declaringType;
+            }
+        }
 
-		public override JvmTypeInfo BaseType {
-			get {
-				return baseType;
-			}
-		}
+        public override JvmTypeInfo BaseType {
+            get {
+                return baseType;
+            }
+        }
 
-		public void setBaseType(JvmTypeInfo baseType) {
-			checkCreated();
-			this.baseType = baseType;
-		}
-		
-		public override Iterable<JvmTypeInfo> GenericArguments {
-			get {
-				return genericArguments;
-			}
-		}
+        public void setBaseType(JvmTypeInfo baseType) {
+            checkCreated();
+            this.baseType = baseType;
+        }
+        
+        public override Iterable<JvmTypeInfo> GenericArguments {
+            get {
+                return genericArguments;
+            }
+        }
 
-		public JvmTypeInfo addGenericArgument(String name) {
-			checkCreated();
-			var type = new GenericParameterType(name, null);
-			genericArguments.add(type);
-			return type;
-		}
+        public JvmTypeInfo addGenericArgument(String name) {
+            checkCreated();
+            var type = new GenericParameterType(name, null);
+            genericArguments.add(type);
+            return type;
+        }
 
-		public void addGenericConstraint(String name, JvmTypeInfo bound) {
-			checkCreated();
-			foreach (var arg in genericArguments) {
-				if (arg.FullName.equals(name)) {
-					((GenericParameterType)arg).genericParameterBounds.add(bound);
-					return;
-				}
-			}
-			throw new IllegalStateException("Generic parameter " + name+  " not found");
-		}
-		
-		public override Iterable<JvmTypeInfo> Interfaces {
-			get {
-				return interfaces;
-			}
-		}
+        public void addGenericConstraint(String name, JvmTypeInfo bound) {
+            checkCreated();
+            foreach (var arg in genericArguments) {
+                if (arg.FullName.equals(name)) {
+                    ((GenericParameterType)arg).genericParameterBounds.add(bound);
+                    return;
+                }
+            }
+            throw new IllegalStateException("Generic parameter " + name+  " not found");
+        }
+        
+        public override Iterable<JvmTypeInfo> Interfaces {
+            get {
+                return interfaces;
+            }
+        }
 
-		public void addInterface(JvmTypeInfo type) {
-			checkCreated();
-			interfaces.add(type);
-		}
-		
-		public override String Descriptor {
-			get {
-				return descriptor;
-			}
-		}
-		
-		public override String Signature {
-			get {
-				var result = signature;
-				if (!created || signature == null) {
-					result = BytecodeHelper.getClassTypeSignature(this, this.GenericArguments);
-				}
-				if (created && signature == null) {
-					signature = result;
-				}
-				return result;
-			}
-		}
-		
-		public override Iterable<JvmAnnotationValue> Annotations {
-			get {
-				return annotations;
-			}
-		}
+        public void addInterface(JvmTypeInfo type) {
+            checkCreated();
+            interfaces.add(type);
+        }
+        
+        public override String Descriptor {
+            get {
+                return descriptor;
+            }
+        }
+        
+        public override String Signature {
+            get {
+                var result = signature;
+                if (!created || signature == null) {
+                    result = BytecodeHelper.getClassTypeSignature(this, this.GenericArguments);
+                }
+                if (created && signature == null) {
+                    signature = result;
+                }
+                return result;
+            }
+        }
+        
+        public override Iterable<JvmAnnotationValue> Annotations {
+            get {
+                return annotations;
+            }
+        }
 
-		public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
-			checkCreated();
-			var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
-			annotations.add(result);
-			return result;
-		}
-		
-		public override Iterable<JvmFieldInfo> Fields {
-			get {
-				return fields;
-			}
-		}
-		
-		public JvmFieldBuilder defineField(String name, JvmTypeInfo type) {
-			checkCreated();
-			var field = new JvmFieldBuilder(this, name, type);
-			fields.add(field);
-			return field;
-		}
+        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+            checkCreated();
+            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            annotations.add(result);
+            return result;
+        }
+        
+        public override Iterable<JvmFieldInfo> Fields {
+            get {
+                return fields;
+            }
+        }
+        
+        public JvmFieldBuilder defineField(String name, JvmTypeInfo type) {
+            checkCreated();
+            var field = new JvmFieldBuilder(this, name, type);
+            fields.add(field);
+            return field;
+        }
 
-		public override Iterable<JvmMethodInfo> Methods {
-			get {
-				return methods;
-			}
-		}
-		
-		public JvmMethodBuilder defineMethod(String name) {
-			checkCreated();
-			var method = new JvmMethodBuilder(this, name);
-			methods.add(method);
-			return method;
-		}
-		
-		public void undefineMethod(JvmMethodBuilder method) {
-			checkCreated();
-			methods.remove(method);
-		}
-		
-		public override Iterable<JvmTypeInfo> NestedTypes {
-			get {
-				return nestedTypes;
-			}
-		}
+        public override Iterable<JvmMethodInfo> Methods {
+            get {
+                return methods;
+            }
+        }
+        
+        public JvmMethodBuilder defineMethod(String name) {
+            checkCreated();
+            var method = new JvmMethodBuilder(this, name);
+            methods.add(method);
+            return method;
+        }
+        
+        public void undefineMethod(JvmMethodBuilder method) {
+            checkCreated();
+            methods.remove(method);
+        }
+        
+        public override Iterable<JvmTypeInfo> NestedTypes {
+            get {
+                return nestedTypes;
+            }
+        }
 
-		public JvmTypeBuilder defineNestedType(String name) {
-			checkCreated();
-			var nestedType = new JvmTypeBuilder(this, this.FullName + "$" + name);
-			nestedTypes.add(nestedType);
-			return nestedType;
-		}
+        public JvmTypeBuilder defineNestedType(String name) {
+            checkCreated();
+            var nestedType = new JvmTypeBuilder(this, this.FullName + "$" + name);
+            nestedTypes.add(nestedType);
+            return nestedType;
+        }
 
-		public boolean IsCreated {
-			get {
-				return created;
-			}
-		}
+        public boolean IsCreated {
+            get {
+                return created;
+            }
+        }
 
-		public byte[] createType(JvmTypeSystem typeSystem) {
-			checkCreated();
-			this.created = true;
-			var classWriter = new ClassWriterNoReflection(typeSystem, ClassWriter.COMPUTE_FRAMES);
-			classWriter.visit(Opcodes.V1_6, modifiers, getFullName(), BytecodeHelper.getClassSignature(this),
-				baseType.getFullName(), getTypeNames(interfaces));
+        public byte[] createType(JvmTypeSystem typeSystem) {
+            checkCreated();
+            this.created = true;
+            var classWriter = new ClassWriterNoReflection(typeSystem, ClassWriter.COMPUTE_FRAMES);
+            classWriter.visit(Opcodes.V1_6, modifiers, getFullName(), BytecodeHelper.getClassSignature(this),
+                baseType.getFullName(), getTypeNames(interfaces));
             if (sourceFile != null || sourceDebugExtension != null) {
                 classWriter.visitSource(sourceFile, sourceDebugExtension);
             }
-			foreach (var a in annotations) {
-				a.accept(classWriter.visitAnnotation(a.Type.Descriptor, a.IsRuntimeVisible));
-			}
+            foreach (var a in annotations) {
+                a.accept(classWriter.visitAnnotation(a.Type.Descriptor, a.IsRuntimeVisible));
+            }
 
-			if (declaringType != null) {
-				classWriter.visitInnerClass(FullName, declaringType.FullName, FullName.substring(FullName.lastIndexOf('$') + 1), modifiers);
-			}
-			
-			foreach (var t in nestedTypes) {
-				classWriter.visitInnerClass(t.FullName, FullName, t.FullName.substring(t.FullName.lastIndexOf('$') + 1), t.NestedModifiers);
-			}
-			
-			foreach (var f in fields) {
-				((JvmFieldBuilder)f).accept(classWriter.visitField(f.modifiers, f.Name, f.Descriptor, f.Signature, f.Value));
-			}
-			
-			foreach (var m in methods) {
-				if (!m.IsExcludedFromCompilation) {
-					((JvmMethodBuilder)m).accept(classWriter.visitMethod(m.Modifiers, m.Name, m.Descriptor,
-							m.Signature, getTypeNames(m.Exceptions)));
-				}
-			}
-			
-			classWriter.visitEnd();
-			return classWriter.toByteArray();
-		}
-		
-		private static String[] getTypeNames(Iterable<JvmTypeInfo> types) {
-			if (types.any()) {
-				String[] result = new String[types.count()];
-				int i = 0;
-				foreach (var t in types) {
-					result[i++] = t.FullName;
-				}
-				return result;
-			} else {
-				return null;
-			}
-		}
+            if (declaringType != null) {
+                classWriter.visitInnerClass(FullName, declaringType.FullName, FullName.substring(FullName.lastIndexOf('$') + 1), modifiers);
+            }
+            
+            foreach (var t in nestedTypes) {
+                classWriter.visitInnerClass(t.FullName, FullName, t.FullName.substring(t.FullName.lastIndexOf('$') + 1), t.NestedModifiers);
+            }
+            
+            foreach (var f in fields) {
+                ((JvmFieldBuilder)f).accept(classWriter.visitField(f.modifiers, f.Name, f.Descriptor, f.Signature, f.Value));
+            }
+            
+            foreach (var m in methods) {
+                if (!m.IsExcludedFromCompilation) {
+                    ((JvmMethodBuilder)m).accept(classWriter.visitMethod(m.Modifiers, m.Name, m.Descriptor,
+                            m.Signature, getTypeNames(m.Exceptions)));
+                }
+            }
+            
+            classWriter.visitEnd();
+            return classWriter.toByteArray();
+        }
+        
+        private static String[] getTypeNames(Iterable<JvmTypeInfo> types) {
+            if (types.any()) {
+                String[] result = new String[types.count()];
+                int i = 0;
+                foreach (var t in types) {
+                    result[i++] = t.FullName;
+                }
+                return result;
+            } else {
+                return null;
+            }
+        }
 
-		public void setAbstract(boolean value) {
-			setModifier(Opcodes.ACC_ABSTRACT, value);
-		}
-		
-		public void setAnnotation(boolean value) {
-			setModifier(Opcodes.ACC_ANNOTATION, value);
-		}
+        public void setAbstract(boolean value) {
+            setModifier(Opcodes.ACC_ABSTRACT, value);
+        }
+        
+        public void setAnnotation(boolean value) {
+            setModifier(Opcodes.ACC_ANNOTATION, value);
+        }
 
-		public void setEnum(boolean value) {
-			setModifier(Opcodes.ACC_ENUM, value);
-		}
+        public void setEnum(boolean value) {
+            setModifier(Opcodes.ACC_ENUM, value);
+        }
 
-		public void setFinal(boolean value) {
-			setModifier(Opcodes.ACC_FINAL, value);
-		}
+        public void setFinal(boolean value) {
+            setModifier(Opcodes.ACC_FINAL, value);
+        }
 
-		public void setInterface(boolean value) {
-			setModifier(Opcodes.ACC_INTERFACE, value);
-		}
+        public void setInterface(boolean value) {
+            setModifier(Opcodes.ACC_INTERFACE, value);
+        }
 
-		public void setPublic(boolean value) {
-			setModifier(Opcodes.ACC_PUBLIC, value);
-		}
+        public void setPublic(boolean value) {
+            setModifier(Opcodes.ACC_PUBLIC, value);
+        }
 
-		public void setSuper(boolean value) {
-			setModifier(Opcodes.ACC_SUPER, value);
-		}
+        public void setSuper(boolean value) {
+            setModifier(Opcodes.ACC_SUPER, value);
+        }
 
-		public void setSynthetic(boolean value) {
-			setModifier(Opcodes.ACC_SYNTHETIC, value);
-		}
-		
-		public void setNestedAbstract(boolean value) {
-			setNestedModifier(Opcodes.ACC_ABSTRACT, value);
-		}
-		
-		public void setNestedAnnotation(boolean value) {
-			setNestedModifier(Opcodes.ACC_ANNOTATION, value);
-		}
+        public void setSynthetic(boolean value) {
+            setModifier(Opcodes.ACC_SYNTHETIC, value);
+        }
+        
+        public void setNestedAbstract(boolean value) {
+            setNestedModifier(Opcodes.ACC_ABSTRACT, value);
+        }
+        
+        public void setNestedAnnotation(boolean value) {
+            setNestedModifier(Opcodes.ACC_ANNOTATION, value);
+        }
 
-		public void setNestedEnum(boolean value) {
-			setNestedModifier(Opcodes.ACC_ENUM, value);
-		}
+        public void setNestedEnum(boolean value) {
+            setNestedModifier(Opcodes.ACC_ENUM, value);
+        }
 
-		public void setNestedFinal(boolean value) {
-			setNestedModifier(Opcodes.ACC_FINAL, value);
-		}
+        public void setNestedFinal(boolean value) {
+            setNestedModifier(Opcodes.ACC_FINAL, value);
+        }
 
-		public void setNestedInterface(boolean value) {
-			setNestedModifier(Opcodes.ACC_INTERFACE, value);
-		}
+        public void setNestedInterface(boolean value) {
+            setNestedModifier(Opcodes.ACC_INTERFACE, value);
+        }
 
-		public void setNestedPrivate(boolean value) {
-			setNestedModifier(Opcodes.ACC_PRIVATE, value);
-		}
+        public void setNestedPrivate(boolean value) {
+            setNestedModifier(Opcodes.ACC_PRIVATE, value);
+        }
 
-		public void setNestedProtected(boolean value) {
-			setNestedModifier(Opcodes.ACC_PROTECTED, value);
-		}
+        public void setNestedProtected(boolean value) {
+            setNestedModifier(Opcodes.ACC_PROTECTED, value);
+        }
 
-		public void setNestedPublic(boolean value) {
-			setNestedModifier(Opcodes.ACC_PUBLIC, value);
-		}
+        public void setNestedPublic(boolean value) {
+            setNestedModifier(Opcodes.ACC_PUBLIC, value);
+        }
 
-		public void setNestedStatic(boolean value) {
-			setNestedModifier(Opcodes.ACC_STATIC, value);
-		}
+        public void setNestedStatic(boolean value) {
+            setNestedModifier(Opcodes.ACC_STATIC, value);
+        }
 
-		public void setNestedSynthetic(boolean value) {
-			setNestedModifier(Opcodes.ACC_SYNTHETIC, value);
-		}
+        public void setNestedSynthetic(boolean value) {
+            setNestedModifier(Opcodes.ACC_SYNTHETIC, value);
+        }
 
-		protected override int Modifiers {
-			get {
-				return modifiers;
-			}
-		}
-		
-		protected override int NestedModifiers {
-			get {
-				return nestedModifiers;
-			}
-		}
-		
-		private void setModifier(int modifier, boolean value) {
-			checkCreated();
-			if (value) {
-				modifiers |= modifier;
-			} else {
-				modifiers &= ~modifier;
-			}
-		}
+        protected override int Modifiers {
+            get {
+                return modifiers;
+            }
+        }
+        
+        protected override int NestedModifiers {
+            get {
+                return nestedModifiers;
+            }
+        }
+        
+        private void setModifier(int modifier, boolean value) {
+            checkCreated();
+            if (value) {
+                modifiers |= modifier;
+            } else {
+                modifiers &= ~modifier;
+            }
+        }
 
-		private void setNestedModifier(int modifier, boolean value) {
-			checkCreated();
-			if (value) {
-				nestedModifiers |= modifier;
-			} else {
-				nestedModifiers &= ~modifier;
-			}
-		}
+        private void setNestedModifier(int modifier, boolean value) {
+            checkCreated();
+            if (value) {
+                nestedModifiers |= modifier;
+            } else {
+                nestedModifiers &= ~modifier;
+            }
+        }
 
-		void checkCreated() {
-			if (this.created) {
-				throw new IllegalStateException(this.FullName + " already created");
-			}
-		}
-		
-		// ASM ClassWriter class has to be subclassed in order to avoid the use of Java reflection
-		private class ClassWriterNoReflection : ClassWriter {
-			private JvmTypeSystem typeSystem;
-			
-			public ClassWriterNoReflection(JvmTypeSystem typeSystem, int flags)
-				: super(flags) {
-				this.typeSystem = typeSystem;
-			}
-			
-			protected override String getCommonSuperClass(String type1, String type2) {
-				var t1 = getTypeInfo(type1);
-				var t2 = getTypeInfo(type2);
-				if (t1.isAssignableFrom(t2)) {
-					return type1;
-				}
-				if (t2.isAssignableFrom(t1)) {
-					return type2;
-				}
-				if (t1.IsInterface || t2.IsInterface) {
-					return "java/lang/Object";
-				} else {
-					do {
-						t1 = t1.BaseType;
-					} while (!t1.isAssignableFrom(t2));
-					return t1.FullName;
-				}
-			}
-			
-			private JvmTypeInfo getTypeInfo(String name) {
-				int idx = name.indexOf('$');
-				if (idx == -1) {
-					return typeSystem.getType(name);
-				}
-				var type = typeSystem.getType(name.substring(0, idx));
-				name = name.substring(idx + 1);
-				while ((idx = name.indexOf('$')) != -1) {
-					type = type.getNestedType(name.substring(0, idx));
-					name = name.substring(idx + 1);
-				}
-				return type;
-			}
-		}
-	}
+        void checkCreated() {
+            if (this.created) {
+                throw new IllegalStateException(this.FullName + " already created");
+            }
+        }
+        
+        // ASM ClassWriter class has to be subclassed in order to avoid the use of Java reflection
+        private class ClassWriterNoReflection : ClassWriter {
+            private JvmTypeSystem typeSystem;
+            
+            public ClassWriterNoReflection(JvmTypeSystem typeSystem, int flags)
+                : super(flags) {
+                this.typeSystem = typeSystem;
+            }
+            
+            protected override String getCommonSuperClass(String type1, String type2) {
+                var t1 = getTypeInfo(type1);
+                var t2 = getTypeInfo(type2);
+                if (t1.isAssignableFrom(t2)) {
+                    return type1;
+                }
+                if (t2.isAssignableFrom(t1)) {
+                    return type2;
+                }
+                if (t1.IsInterface || t2.IsInterface) {
+                    return "java/lang/Object";
+                } else {
+                    do {
+                        t1 = t1.BaseType;
+                    } while (!t1.isAssignableFrom(t2));
+                    return t1.FullName;
+                }
+            }
+            
+            private JvmTypeInfo getTypeInfo(String name) {
+                int idx = name.indexOf('$');
+                if (idx == -1) {
+                    return typeSystem.getType(name);
+                }
+                var type = typeSystem.getType(name.substring(0, idx));
+                name = name.substring(idx + 1);
+                while ((idx = name.indexOf('$')) != -1) {
+                    type = type.getNestedType(name.substring(0, idx));
+                    name = name.substring(idx + 1);
+                }
+                return type;
+            }
+        }
+    }
 }

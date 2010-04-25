@@ -15,9 +15,9 @@
    limitations under the License.
  */
 using java.lang;
-using stab.helpers;
+using stab.tools.helpers;
 
-package stab.parser {
+package stab.tools.parser {
 
     public class SourceCodeScanner : ScannerBase, IScanner {
 

@@ -18,262 +18,262 @@ using java.lang;
 using java.util;
 using org.objectweb.asm;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	public class JvmParameterBuilder : JvmParameterInfo {
-		private JvmMethodBuilder method;
-		
-		JvmParameterBuilder(JvmMethodBuilder method, int position, JvmTypeInfo type)
-			: super(position, type) {
-			this.method = method;
-			this.annotations = new ArrayList<JvmAnnotationValue>();
-		}
-		
-		public void setName(String name) {
-			method.checkCreated();
-			this.name = name;
-		}
-		
-		public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
-			method.checkCreated();
-			var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
-			annotations.add(result);
-			return result;
-		}
-	}
+    public class JvmParameterBuilder : JvmParameterInfo {
+        private JvmMethodBuilder method;
+        
+        JvmParameterBuilder(JvmMethodBuilder method, int position, JvmTypeInfo type)
+            : super(position, type) {
+            this.method = method;
+            this.annotations = new ArrayList<JvmAnnotationValue>();
+        }
+        
+        public void setName(String name) {
+            method.checkCreated();
+            this.name = name;
+        }
+        
+        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+            method.checkCreated();
+            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            annotations.add(result);
+            return result;
+        }
+    }
 
-	public class JvmMethodBuilder : JvmMethodInfo {
-		private int modifiers;
-		private JvmTypeInfo returnType;
-		private ArrayList<JvmParameterInfo> parameters;
-		private ArrayList<JvmTypeInfo> exceptions;
-		private ArrayList<JvmTypeInfo> genericArguments;
-		private String descriptor;
-		private ArrayList<JvmAnnotationValue> annotations;
-		private JvmCodeGenerator codeGenerator;
-		private JvmAnnotationValue defaultValue;
-		
-		JvmMethodBuilder(JvmTypeInfo declaringType, String name)
-			: super(declaringType, name) {
-			parameters = new ArrayList<JvmParameterInfo>();
-			exceptions = new ArrayList<JvmTypeInfo>();
-			genericArguments = new ArrayList<JvmTypeInfo>();
-			annotations = new ArrayList<JvmAnnotationValue>();
-			codeGenerator = new JvmCodeGenerator(this);
-		}
+    public class JvmMethodBuilder : JvmMethodInfo {
+        private int modifiers;
+        private JvmTypeInfo returnType;
+        private ArrayList<JvmParameterInfo> parameters;
+        private ArrayList<JvmTypeInfo> exceptions;
+        private ArrayList<JvmTypeInfo> genericArguments;
+        private String descriptor;
+        private ArrayList<JvmAnnotationValue> annotations;
+        private JvmCodeGenerator codeGenerator;
+        private JvmAnnotationValue defaultValue;
+        
+        JvmMethodBuilder(JvmTypeInfo declaringType, String name)
+            : super(declaringType, name) {
+            parameters = new ArrayList<JvmParameterInfo>();
+            exceptions = new ArrayList<JvmTypeInfo>();
+            genericArguments = new ArrayList<JvmTypeInfo>();
+            annotations = new ArrayList<JvmAnnotationValue>();
+            codeGenerator = new JvmCodeGenerator(this);
+        }
 
-		public JvmCodeGenerator CodeGenerator {
-			get {
-				checkCreated();
-				return codeGenerator;
-			}
-		}
-		
-		public override JvmTypeInfo ReturnType {
-			get {
-				return returnType;
-			}
-		}
+        public JvmCodeGenerator CodeGenerator {
+            get {
+                checkCreated();
+                return codeGenerator;
+            }
+        }
+        
+        public override JvmTypeInfo ReturnType {
+            get {
+                return returnType;
+            }
+        }
 
-		public void setReturnType(JvmTypeInfo returnType) {
-			checkCreated();
-			this.returnType = returnType;
-		}
-		
-		public override Iterable<JvmTypeInfo> GenericArguments {
-			get {
-				return genericArguments;
-			}
-		}
-		
-		public JvmTypeInfo addGenericArgument(String name) {
-			checkCreated();
-			var type = new GenericParameterType(name, null);
-			genericArguments.add(type);
-			return type;
-		}
-		
-		public JvmTypeInfo addGenericConstraint(String name, JvmTypeInfo bound) {
-			checkCreated();
-			foreach (var arg in genericArguments) {
-				if (arg.FullName.equals(name)) {
-					((GenericParameterType)arg).genericParameterBounds.add(bound);
-				}
-			}
-			throw new IllegalStateException("name = " + name);
-		}
-		
-		public override Iterable<JvmParameterInfo> Parameters {
-			get {
-				return parameters;
-			}
-		}
-		
-		public JvmParameterBuilder addParameter(JvmTypeInfo type) {
-			checkCreated();
-			var p = new JvmParameterBuilder(this, parameters.size(), type);
-			parameters.add(p);
-			return p;
-		}
-		
-		public override Iterable<JvmTypeInfo> Exceptions {
-			get {
-				return exceptions;
-			}
-		}
-		
-		public void addException(JvmTypeInfo exception) {
-			checkCreated();
-			exceptions.add(exception);
-		}
-		
-		public override Iterable<JvmAnnotationValue> Annotations {
-			get {
-				return annotations;
-			}
-		}
-		
-		public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
-			checkCreated();
-			var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
-			annotations.add(result);
-			return result;
-		}
-		
-		public override JvmAnnotationValue DefaultValue {
-			get {
-				return defaultValue;
-			}
-		}
-		
-		public void setDefaultValue(JvmAnnotationValue defaultValue) {
-			checkCreated();
-			this.defaultValue = defaultValue;
-		}
-		
-		public override String Descriptor {
-			get {
-				var result = descriptor;
-				if (this.IsCreated || descriptor == null) {
-					var sb = new StringBuilder();
-					sb.append("(");
-					foreach (var p in this.Parameters) {
-						sb.append(p.Type.Descriptor);
-					}
-					sb.append(")");
-					sb.append(returnType.Descriptor);
-					result = sb.toString();
-				}
-				if (this.IsCreated && descriptor == null) {
-					descriptor = result;
-				}
-				return result;
-			}
-		}
-		
-		public override String Signature {
-			get {
-				var result = signature;
-				if (this.IsCreated || signature == null) {
-					result = BytecodeHelper.getMethodTypeSignature(this);
-				}
-				if (this.IsCreated && signature == null) {
-					signature = result;
-				}
-				return result;
-			}
-		}
-		
-		public void setAbstract(boolean value) {
-			setModifiers(Opcodes.ACC_ABSTRACT, value);
-		}
-	
-		public void setBridge(boolean value) {
-			setModifiers(Opcodes.ACC_BRIDGE, value);
-		}
-	
-		public void setFinal(boolean value) {
-			setModifiers(Opcodes.ACC_FINAL, value);
-		}
-		
-		public void setNative(boolean value) {
-			setModifiers(Opcodes.ACC_NATIVE, value);
-		}
-	
-		public void setPrivate(boolean value) {
-			setModifiers(Opcodes.ACC_PRIVATE, value);
-		}
-	
-		public void setProtected(boolean value) {
-			setModifiers(Opcodes.ACC_PROTECTED, value);
-		}
-	
-		public void setPublic(boolean value) {
-			setModifiers(Opcodes.ACC_PUBLIC, value);
-		}
-	
-		public void setStatic(boolean value) {
-			setModifiers(Opcodes.ACC_STATIC, value);
-		}
-	
-		public void setStrict(boolean value) {
-			setModifiers(Opcodes.ACC_STRICT, value);
-		}
-	
-		public void setSynchronized(boolean value) {
-			setModifiers(Opcodes.ACC_SYNCHRONIZED, value);
-		}
-	
-		public void setSynthetic(boolean value) {
-			setModifiers(Opcodes.ACC_SYNTHETIC, value);
-		}
-	
-		public void setVarargs(boolean value) {
-			setModifiers(Opcodes.ACC_VARARGS, value);
-		}
+        public void setReturnType(JvmTypeInfo returnType) {
+            checkCreated();
+            this.returnType = returnType;
+        }
+        
+        public override Iterable<JvmTypeInfo> GenericArguments {
+            get {
+                return genericArguments;
+            }
+        }
+        
+        public JvmTypeInfo addGenericArgument(String name) {
+            checkCreated();
+            var type = new GenericParameterType(name, null);
+            genericArguments.add(type);
+            return type;
+        }
+        
+        public JvmTypeInfo addGenericConstraint(String name, JvmTypeInfo bound) {
+            checkCreated();
+            foreach (var arg in genericArguments) {
+                if (arg.FullName.equals(name)) {
+                    ((GenericParameterType)arg).genericParameterBounds.add(bound);
+                }
+            }
+            throw new IllegalStateException("name = " + name);
+        }
+        
+        public override Iterable<JvmParameterInfo> Parameters {
+            get {
+                return parameters;
+            }
+        }
+        
+        public JvmParameterBuilder addParameter(JvmTypeInfo type) {
+            checkCreated();
+            var p = new JvmParameterBuilder(this, parameters.size(), type);
+            parameters.add(p);
+            return p;
+        }
+        
+        public override Iterable<JvmTypeInfo> Exceptions {
+            get {
+                return exceptions;
+            }
+        }
+        
+        public void addException(JvmTypeInfo exception) {
+            checkCreated();
+            exceptions.add(exception);
+        }
+        
+        public override Iterable<JvmAnnotationValue> Annotations {
+            get {
+                return annotations;
+            }
+        }
+        
+        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+            checkCreated();
+            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            annotations.add(result);
+            return result;
+        }
+        
+        public override JvmAnnotationValue DefaultValue {
+            get {
+                return defaultValue;
+            }
+        }
+        
+        public void setDefaultValue(JvmAnnotationValue defaultValue) {
+            checkCreated();
+            this.defaultValue = defaultValue;
+        }
+        
+        public override String Descriptor {
+            get {
+                var result = descriptor;
+                if (this.IsCreated || descriptor == null) {
+                    var sb = new StringBuilder();
+                    sb.append("(");
+                    foreach (var p in this.Parameters) {
+                        sb.append(p.Type.Descriptor);
+                    }
+                    sb.append(")");
+                    sb.append(returnType.Descriptor);
+                    result = sb.toString();
+                }
+                if (this.IsCreated && descriptor == null) {
+                    descriptor = result;
+                }
+                return result;
+            }
+        }
+        
+        public override String Signature {
+            get {
+                var result = signature;
+                if (this.IsCreated || signature == null) {
+                    result = BytecodeHelper.getMethodTypeSignature(this);
+                }
+                if (this.IsCreated && signature == null) {
+                    signature = result;
+                }
+                return result;
+            }
+        }
+        
+        public void setAbstract(boolean value) {
+            setModifiers(Opcodes.ACC_ABSTRACT, value);
+        }
+    
+        public void setBridge(boolean value) {
+            setModifiers(Opcodes.ACC_BRIDGE, value);
+        }
+    
+        public void setFinal(boolean value) {
+            setModifiers(Opcodes.ACC_FINAL, value);
+        }
+        
+        public void setNative(boolean value) {
+            setModifiers(Opcodes.ACC_NATIVE, value);
+        }
+    
+        public void setPrivate(boolean value) {
+            setModifiers(Opcodes.ACC_PRIVATE, value);
+        }
+    
+        public void setProtected(boolean value) {
+            setModifiers(Opcodes.ACC_PROTECTED, value);
+        }
+    
+        public void setPublic(boolean value) {
+            setModifiers(Opcodes.ACC_PUBLIC, value);
+        }
+    
+        public void setStatic(boolean value) {
+            setModifiers(Opcodes.ACC_STATIC, value);
+        }
+    
+        public void setStrict(boolean value) {
+            setModifiers(Opcodes.ACC_STRICT, value);
+        }
+    
+        public void setSynchronized(boolean value) {
+            setModifiers(Opcodes.ACC_SYNCHRONIZED, value);
+        }
+    
+        public void setSynthetic(boolean value) {
+            setModifiers(Opcodes.ACC_SYNTHETIC, value);
+        }
+    
+        public void setVarargs(boolean value) {
+            setModifiers(Opcodes.ACC_VARARGS, value);
+        }
 
-		protected override int Modifiers {
-			get {
-				return modifiers;
-			}
-		}
+        protected override int Modifiers {
+            get {
+                return modifiers;
+            }
+        }
 
-		private void setModifiers(int modifiers, boolean value) {
-			checkCreated();
-			if (value) {
-				this.modifiers |= modifiers;
-			} else {
-				this.modifiers &= ~modifiers;
-			}
-		}
-		
-		void accept(MethodVisitor visitor) {
-			if (defaultValue != null) {
-				var v = visitor.visitAnnotationDefault();
-				defaultValue.accept(v);
-				v.visitEnd();
-			}
-			foreach (var p in parameters) {
-				foreach (var a in p.Annotations) {
-					a.accept(visitor.visitParameterAnnotation(p.Position, a.Type.Descriptor, a.IsRuntimeVisible));
-				}
-			}
-			foreach (var a in annotations) {
-				a.accept(visitor.visitAnnotation(a.Type.Descriptor, a.IsRuntimeVisible));
-			}
-			codeGenerator.accept(visitor);
-			visitor.visitEnd();
-			codeGenerator = null;
-		}
-		
-		void checkCreated() {
-			((JvmTypeBuilder)this.DeclaringType).checkCreated();
-		}
-		
-		boolean IsCreated {
-			get {
-				return ((JvmTypeBuilder)this.DeclaringType).created;
-			}
-		}
-	}
+        private void setModifiers(int modifiers, boolean value) {
+            checkCreated();
+            if (value) {
+                this.modifiers |= modifiers;
+            } else {
+                this.modifiers &= ~modifiers;
+            }
+        }
+        
+        void accept(MethodVisitor visitor) {
+            if (defaultValue != null) {
+                var v = visitor.visitAnnotationDefault();
+                defaultValue.accept(v);
+                v.visitEnd();
+            }
+            foreach (var p in parameters) {
+                foreach (var a in p.Annotations) {
+                    a.accept(visitor.visitParameterAnnotation(p.Position, a.Type.Descriptor, a.IsRuntimeVisible));
+                }
+            }
+            foreach (var a in annotations) {
+                a.accept(visitor.visitAnnotation(a.Type.Descriptor, a.IsRuntimeVisible));
+            }
+            codeGenerator.accept(visitor);
+            visitor.visitEnd();
+            codeGenerator = null;
+        }
+        
+        void checkCreated() {
+            ((JvmTypeBuilder)this.DeclaringType).checkCreated();
+        }
+        
+        boolean IsCreated {
+            get {
+                return ((JvmTypeBuilder)this.DeclaringType).created;
+            }
+        }
+    }
 }

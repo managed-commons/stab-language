@@ -17,70 +17,70 @@
 using java.lang;
 using java.util;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	class ClassFileMethod : JvmMethodInfo {
-		int modifiers;
-		JvmTypeInfo returnType;
-		ArrayList<JvmParameterInfo> parameters;
-		List<JvmTypeInfo> exceptions;
-		List<JvmTypeInfo> genericArguments;
-		private String descriptor;
-		List<JvmAnnotationValue> annotations;
-		JvmAnnotationArgument defaultValue;
+    class ClassFileMethod : JvmMethodInfo {
+        int modifiers;
+        JvmTypeInfo returnType;
+        ArrayList<JvmParameterInfo> parameters;
+        List<JvmTypeInfo> exceptions;
+        List<JvmTypeInfo> genericArguments;
+        private String descriptor;
+        List<JvmAnnotationValue> annotations;
+        JvmAnnotationArgument defaultValue;
 
-		ClassFileMethod(JvmTypeInfo declaringType, String name, String descriptor)
-			: super(declaringType, name) {
-			this.parameters = new ArrayList<JvmParameterInfo>();
-			this.descriptor = descriptor;
-		}
-		
-		public override JvmTypeInfo ReturnType {
-			get {
-				return returnType;
-			}
-		}
+        ClassFileMethod(JvmTypeInfo declaringType, String name, String descriptor)
+            : super(declaringType, name) {
+            this.parameters = new ArrayList<JvmParameterInfo>();
+            this.descriptor = descriptor;
+        }
+        
+        public override JvmTypeInfo ReturnType {
+            get {
+                return returnType;
+            }
+        }
 
-		public override Iterable<JvmParameterInfo> Parameters {
-			get {
-				return parameters;
-			}
-		}
-		
-		public override JvmAnnotationArgument DefaultValue {
-			get {
-				return defaultValue;
-			}
-		}
-		
-		public override Iterable<JvmTypeInfo> Exceptions {
-			get {
-				return exceptions;
-			}
-		}
-		
-		public override Iterable<JvmTypeInfo> GenericArguments {
-			get {
-				return genericArguments;
-			}
-		}
-		
-		public override Iterable<JvmAnnotationValue> Annotations {
-			get {
-				return annotations;
-			}
-		}
-		
-		public override String Descriptor {
-			get {
-				return descriptor;
-			}
-		}
-		
-		protected override int Modifiers {
-			get {
-				return modifiers;
-			}
-		}
-	}
+        public override Iterable<JvmParameterInfo> Parameters {
+            get {
+                return parameters;
+            }
+        }
+        
+        public override JvmAnnotationArgument DefaultValue {
+            get {
+                return defaultValue;
+            }
+        }
+        
+        public override Iterable<JvmTypeInfo> Exceptions {
+            get {
+                return exceptions;
+            }
+        }
+        
+        public override Iterable<JvmTypeInfo> GenericArguments {
+            get {
+                return genericArguments;
+            }
+        }
+        
+        public override Iterable<JvmAnnotationValue> Annotations {
+            get {
+                return annotations;
+            }
+        }
+        
+        public override String Descriptor {
+            get {
+                return descriptor;
+            }
+        }
+        
+        protected override int Modifiers {
+            get {
+                return modifiers;
+            }
+        }
+    }
 }

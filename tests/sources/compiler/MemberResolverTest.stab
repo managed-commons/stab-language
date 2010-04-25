@@ -17,11 +17,11 @@
 using java.lang;
 using java.util;
 using org.junit;
-using stab.bytecode;
-using stab.helpers;
 using stab.query;
+using stab.tools.bytecode;
+using stab.tools.helpers;
 
-package stab.compiler.test {
+package stab.tools.compiler.test {
 
 	public class MemberResolverTest {
 		

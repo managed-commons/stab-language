@@ -16,52 +16,52 @@
  */
 using stab.lang;
 
-package stab.parser {
-	
-	public class RestorePoint {
-		RestorePoint(int startPosition, int textLength, int part, int startLine, int startColumn, int errorCount, IntIterable disabledWarnings) {
-			this.StartPosition = startPosition;
-			this.TextLength = textLength;
-			this.Part = part;
-			this.StartLine = startLine;
-			this.StartColumn = startColumn;
-			this.ErrorCount = errorCount;
-			this.DisabledWarnings = disabledWarnings;
-		}
-		
-		public int StartPosition {
-			get;
-			private set;
-		}
-		
-		public int TextLength {
-			get;
-			private set;
-		}
-		
-		public int Part {
-			get;
-			private set;
-		}
-		
-		public int StartLine {
-			get;
-			private set;
-		}
-		
-		public int StartColumn {
-			get;
-			private set;
-		}
-		
-		public int ErrorCount {
-			get;
-			private set;
-		}
-		
-		public IntIterable DisabledWarnings {
-			get;
-			private set;
-		}
-	}
+package stab.tools.parser {
+    
+    public class RestorePoint {
+        RestorePoint(int startPosition, int textLength, int part, int startLine, int startColumn, int errorCount, IntIterable disabledWarnings) {
+            this.StartPosition = startPosition;
+            this.TextLength = textLength;
+            this.Part = part;
+            this.StartLine = startLine;
+            this.StartColumn = startColumn;
+            this.ErrorCount = errorCount;
+            this.DisabledWarnings = disabledWarnings;
+        }
+        
+        public int StartPosition {
+            get;
+            private set;
+        }
+        
+        public int TextLength {
+            get;
+            private set;
+        }
+        
+        public int Part {
+            get;
+            private set;
+        }
+        
+        public int StartLine {
+            get;
+            private set;
+        }
+        
+        public int StartColumn {
+            get;
+            private set;
+        }
+        
+        public int ErrorCount {
+            get;
+            private set;
+        }
+        
+        public IntIterable DisabledWarnings {
+            get;
+            private set;
+        }
+    }
 }

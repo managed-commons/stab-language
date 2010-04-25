@@ -16,10 +16,10 @@
  */
 using java.lang;
 using java.util;
-using stab.helpers;
 using stab.lang;
+using stab.tools.helpers;
 
-package stab.parser {
+package stab.tools.parser {
 
     public class ScannerBase {
         protected ScannerBase(CodeErrorManager codeErrorManager, char[] text, int position, int length, int line, int column) {

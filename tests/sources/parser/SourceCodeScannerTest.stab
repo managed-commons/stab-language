@@ -15,9 +15,9 @@
    limitations under the License.
  */
 using org.junit;
-using stab.helpers;
+using stab.tools.helpers;
 
-package stab.parser.test {
+package stab.tools.parser.test {
 	public class SourceCodeScannerTest {
 		[Test]
 		public void keywordTest() {

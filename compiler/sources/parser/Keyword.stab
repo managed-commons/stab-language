@@ -14,7 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-package stab.parser {
+package stab.tools.parser {
     public enum Keyword {
         None,
         Abstract,

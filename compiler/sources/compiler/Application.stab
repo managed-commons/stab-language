@@ -18,351 +18,351 @@ using java.io;
 using java.lang;
 using java.util;
 using java.util.jar;
-using stab.helpers;
+using stab.tools.helpers;
 
-package stab.compiler {
+package stab.tools.compiler {
 
-	public class Application {
-		public static void main(String[] args) {
-			System.out.println("Stab 1.0 beta");
-			System.out.println();
-			System.exit(new Application().run(args));
-		}
+    public class Application {
+        public static void main(String[] args) {
+            System.out.println("Stab 1.0 beta");
+            System.out.println();
+            System.exit(new Application().run(args));
+        }
 
-		private enum Option {
-			Annotatedlibs,
-			Classpath,
-			Define,
-			Doc,
-			Help,
-			Out,
-			Runtimelib
-		}
-		
-		private class OptionInfo {
-			Option Option {
-				get;
-				set;
-			}
-		
-			String Name {
-				get;
-				set;
-			}
+        private enum Option {
+            Annotatedlibs,
+            Classpath,
+            Define,
+            Doc,
+            Help,
+            Out,
+            Runtimelib
+        }
+        
+        private class OptionInfo {
+            Option Option {
+                get;
+                set;
+            }
+        
+            String Name {
+                get;
+                set;
+            }
 
-			String ShortForm {
-				get;
-				set;
-			}
-			
-			String Arguments {
-				get;
-				set;
-			}
-			
-			String Description {
-				get;
-				set;
-			}
-		}
+            String ShortForm {
+                get;
+                set;
+            }
+            
+            String Arguments {
+                get;
+                set;
+            }
+            
+            String Description {
+                get;
+                set;
+            }
+        }
 
-		private final static List<OptionInfo> OptionInfos;
-		private final static HashMap<String, Option> Options;
-		static Application() {
-			OptionInfos = new ArrayList<OptionInfo> {
-				new OptionInfo { Option = Option.Annotatedlibs, Name = "annotatedlibs", ShortForm = "al",
-						Arguments = "<class search path of directories and zip/jar files>",
-						Description = "specify annotated library paths" },
-				new OptionInfo { Option = Option.Classpath, Name = "classpath", ShortForm = "cp",
-						Arguments = "<class search path of directories and zip/jar files>",
-						Description = "a ; separated list of directories, JAR archives, and ZIP archives\n\tto search for class files" },
-				new OptionInfo { Option = Option.Define, Name = "define", ShortForm = "d",
-						Arguments = "<symbol list>",
-						Description = "a ; separated list of conditional compilation symbols" },
-				new OptionInfo { Option = Option.Doc, Name = "doc",
-						Arguments = "<file>",
-						Description = "Specify a file populated with the documentation comments in the\n\tinput files" },
-				new OptionInfo { Option = Option.Out, Name = "out",
-						Arguments = "<directory>",
-						Description = "specify output directory name (default: base name of the first\n\tinput file)" },
-				new OptionInfo { Option = Option.Runtimelib, Name = "runtimelib", ShortForm = "rt",
-						Arguments = "<directory or zip/jar file>",
-						Description = "specify runtime library path" }
-			};
-		
-			Options = new HashMap<String, Option>();
-			Options["help"] = Option.Help;
-			foreach (var opt in OptionInfos) {
-				Options[opt.Name] = opt.Option;
-				if (opt.ShortForm != null) {
-					Options[opt.ShortForm] = opt.Option;
-				}
-			}
-		}
-		
-		private ArrayList<File> sourceFiles;
-		private CompilerParameters parameters;
-		
-		Application() {
-			sourceFiles = new ArrayList<File>();
-		}
-		
-		int run(String[] arguments) {
-			sourceFiles.clear();
-			if (!handleArguments(arguments)) {
-				return 1;
-			}
-			setBootClasses();
-			
-			var t0 = System.nanoTime();
-			
-			var results = new Compiler().compileFromFiles(parameters, sourceFiles.toArray(new File[sourceFiles.size()]));
-			var hasErrors = false;
-			foreach (var error in results.Errors) {
-				var filename = error.Filename;
-				if (filename != null) {
-					System.out.print(new File(error.Filename).getAbsolutePath());
-				} else {
-					System.out.print("Unknown source");
-				}
-				if (error.Line > 0) {
-					System.out.print(" (");
-					System.out.print(error.Line);
-					if (error.Column > 0) {
-						System.out.print(", ");
-						System.out.print(error.Column);
-					}
-					System.out.print(")");
-				}
-				if (error.Level == 0) {
-					hasErrors = true;
-					System.out.print(" error ");
-				} else {
-					System.out.print(" warning ");
-				}
-				System.out.print(error.Id);
-				System.out.print(": ");
-				System.out.println(error.Message);
-			}
-			if (!hasErrors) {
-				var destination = parameters.OutputPath;
-				foreach (var e in results.ClassFiles.entrySet()) {
-					var file = PathHelper.combine(destination, e.Key.replace('.', '/') + ".class");
-					var dir = new File(PathHelper.getDirectoryName(file));
-					if (!dir.exists()) {
-						dir.mkdirs();
-					}
-					var output = new FileOutputStream(file);
-					output.write(e.Value);
-					output.close();
-				}
-				System.out.println(String.format("%d class(es) successfully generated in %.2fs",
-					results.classFiles.size(), (System.nanoTime() - t0) / 1e9));
-				return 0;
-			} else {
-				System.out.println("Compilation failed");
-				return 1;
-			}
-		}
-		
-		private boolean handleArguments(String[] arguments) {
-			parameters = new CompilerParameters();
-			int i = 0;
-			while (i < sizeof(arguments) && (arguments[i].startsWith("-"))) {
-				int idx = arguments[i].indexOf(':');
-				var argument = arguments[i].substring(1);
-				var parameter = "";
-				if (idx > 0) {
-					argument = arguments[i].substring(1, idx);
-					parameter = arguments[i].substring(idx + 1);
-				}
-				var option = Options[argument];
-				if (option == null) {
-					System.out.println("Error: Unknown option: " + argument);
-					return false;
-				}
-				switch (option) {
-				case Annotatedlibs: {
-					while (parameter.Length > 0) {
-						idx = parameter.indexOf(';');
-						String file;
-						if (idx >= 0) {
-							file = parameter.substring(0, idx);
-							parameter = parameter.substring(idx + 1);
-						} else {
-							file = parameter;
-							parameter = "";
-						}
-						if (!new File(file).exists()) {
-							System.out.println("Error: File not found: " + file);
-							return false;
-						}
-						parameters.AnnotatedLibraryPaths.add(file);
-					}
-					break;
-				}
-				case Classpath: {
-					while (parameter.Length > 0) {
-						idx = parameter.indexOf(';');
-						String file;
-						if (idx >= 0) {
-							file = parameter.substring(0, idx);
-							parameter = parameter.substring(idx + 1);
-						} else {
-							file = parameter;
-							parameter = "";
-						}
-						if (!new File(file).exists()) {
-							System.out.println("Error: File not found: " + file);
-							return false;
-						}
-						parameters.ClassPath.add(file);
-					}
-					break;
-				}
-				case Define: {
-					while (parameter.Length > 0) {
-						idx = parameter.indexOf(';');
-						if (idx >= 0) {
-							parameters.getSymbols().add(parameter.substring(0, idx));
-							parameter = parameter.substring(idx + 1);
-						} else {
-							parameters.getSymbols().add(parameter);
-							parameter = "";
-						}
-					}
-					break;
-				}
+        private final static List<OptionInfo> OptionInfos;
+        private final static HashMap<String, Option> Options;
+        static Application() {
+            OptionInfos = new ArrayList<OptionInfo> {
+                new OptionInfo { Option = Option.Annotatedlibs, Name = "annotatedlibs", ShortForm = "al",
+                        Arguments = "<class search path of directories and zip/jar files>",
+                        Description = "specify annotated library paths" },
+                new OptionInfo { Option = Option.Classpath, Name = "classpath", ShortForm = "cp",
+                        Arguments = "<class search path of directories and zip/jar files>",
+                        Description = "a ; separated list of directories, JAR archives, and ZIP archives\n\tto search for class files" },
+                new OptionInfo { Option = Option.Define, Name = "define", ShortForm = "d",
+                        Arguments = "<symbol list>",
+                        Description = "a ; separated list of conditional compilation symbols" },
+                new OptionInfo { Option = Option.Doc, Name = "doc",
+                        Arguments = "<file>",
+                        Description = "Specify a file populated with the documentation comments in the\n\tinput files" },
+                new OptionInfo { Option = Option.Out, Name = "out",
+                        Arguments = "<directory>",
+                        Description = "specify output directory name (default: base name of the first\n\tinput file)" },
+                new OptionInfo { Option = Option.Runtimelib, Name = "runtimelib", ShortForm = "rt",
+                        Arguments = "<directory or zip/jar file>",
+                        Description = "specify runtime library path" }
+            };
+        
+            Options = new HashMap<String, Option>();
+            Options["help"] = Option.Help;
+            foreach (var opt in OptionInfos) {
+                Options[opt.Name] = opt.Option;
+                if (opt.ShortForm != null) {
+                    Options[opt.ShortForm] = opt.Option;
+                }
+            }
+        }
+        
+        private ArrayList<File> sourceFiles;
+        private CompilerParameters parameters;
+        
+        Application() {
+            sourceFiles = new ArrayList<File>();
+        }
+        
+        int run(String[] arguments) {
+            sourceFiles.clear();
+            if (!handleArguments(arguments)) {
+                return 1;
+            }
+            setBootClasses();
+            
+            var t0 = System.nanoTime();
+            
+            var results = new Compiler().compileFromFiles(parameters, sourceFiles.toArray(new File[sourceFiles.size()]));
+            var hasErrors = false;
+            foreach (var error in results.Errors) {
+                var filename = error.Filename;
+                if (filename != null) {
+                    System.out.print(new File(error.Filename).getAbsolutePath());
+                } else {
+                    System.out.print("Unknown source");
+                }
+                if (error.Line > 0) {
+                    System.out.print(" (");
+                    System.out.print(error.Line);
+                    if (error.Column > 0) {
+                        System.out.print(", ");
+                        System.out.print(error.Column);
+                    }
+                    System.out.print(")");
+                }
+                if (error.Level == 0) {
+                    hasErrors = true;
+                    System.out.print(" error ");
+                } else {
+                    System.out.print(" warning ");
+                }
+                System.out.print(error.Id);
+                System.out.print(": ");
+                System.out.println(error.Message);
+            }
+            if (!hasErrors) {
+                var destination = parameters.OutputPath;
+                foreach (var e in results.ClassFiles.entrySet()) {
+                    var file = PathHelper.combine(destination, e.Key.replace('.', '/') + ".class");
+                    var dir = new File(PathHelper.getDirectoryName(file));
+                    if (!dir.exists()) {
+                        dir.mkdirs();
+                    }
+                    var output = new FileOutputStream(file);
+                    output.write(e.Value);
+                    output.close();
+                }
+                System.out.println(String.format("%d class(es) successfully generated in %.2fs",
+                    results.classFiles.size(), (System.nanoTime() - t0) / 1e9));
+                return 0;
+            } else {
+                System.out.println("Compilation failed");
+                return 1;
+            }
+        }
+        
+        private boolean handleArguments(String[] arguments) {
+            parameters = new CompilerParameters();
+            int i = 0;
+            while (i < sizeof(arguments) && (arguments[i].startsWith("-"))) {
+                int idx = arguments[i].indexOf(':');
+                var argument = arguments[i].substring(1);
+                var parameter = "";
+                if (idx > 0) {
+                    argument = arguments[i].substring(1, idx);
+                    parameter = arguments[i].substring(idx + 1);
+                }
+                var option = Options[argument];
+                if (option == null) {
+                    System.out.println("Error: Unknown option: " + argument);
+                    return false;
+                }
+                switch (option) {
+                case Annotatedlibs: {
+                    while (parameter.Length > 0) {
+                        idx = parameter.indexOf(';');
+                        String file;
+                        if (idx >= 0) {
+                            file = parameter.substring(0, idx);
+                            parameter = parameter.substring(idx + 1);
+                        } else {
+                            file = parameter;
+                            parameter = "";
+                        }
+                        if (!new File(file).exists()) {
+                            System.out.println("Error: File not found: " + file);
+                            return false;
+                        }
+                        parameters.AnnotatedLibraryPaths.add(file);
+                    }
+                    break;
+                }
+                case Classpath: {
+                    while (parameter.Length > 0) {
+                        idx = parameter.indexOf(';');
+                        String file;
+                        if (idx >= 0) {
+                            file = parameter.substring(0, idx);
+                            parameter = parameter.substring(idx + 1);
+                        } else {
+                            file = parameter;
+                            parameter = "";
+                        }
+                        if (!new File(file).exists()) {
+                            System.out.println("Error: File not found: " + file);
+                            return false;
+                        }
+                        parameters.ClassPath.add(file);
+                    }
+                    break;
+                }
+                case Define: {
+                    while (parameter.Length > 0) {
+                        idx = parameter.indexOf(';');
+                        if (idx >= 0) {
+                            parameters.getSymbols().add(parameter.substring(0, idx));
+                            parameter = parameter.substring(idx + 1);
+                        } else {
+                            parameters.getSymbols().add(parameter);
+                            parameter = "";
+                        }
+                    }
+                    break;
+                }
                 case Doc: {
                     parameters.DocumentationFile = parameter;
                     break;
                 }
-				case Out: {
-					parameters.OutputPath = parameter;
-					break;
-				}
-				case Runtimelib: {
-					parameters.RuntimeLibraryPath = parameter;
-					break;
-				}
-				case Help: {
-					System.out.println("    Stab Compiler Options");
-					System.out.println();
-					foreach (var opt in OptionInfos) {
-						System.out.print("-");
-						System.out.print(opt.Name);
-						if (opt.Arguments != null) {
-							System.out.print(":");
-							System.out.print(opt.Arguments);
-						}
-						System.out.println();
-						System.out.print("\t");
-						System.out.print(opt.Description);
-						if (opt.ShortForm != null) {
-							System.out.print(" (Short form: -");
-							System.out.print(opt.ShortForm);
-							System.out.print(")");
-						}
-						System.out.println();
-						System.out.println();
-					}
-					break;
-				}
-				}
-				i++;
-			}
-			while (i < sizeof(arguments)) {
-				File file = new File(arguments[i]);
-				if (!file.exists()) {
-					System.out.println("Error: File not found: " + arguments[i]);
-					return false;
-				}
-				if (file.isDirectory()) {
-					System.out.println("Error: Argument is a directory: " + arguments[i]);
-					return false;
-				}
-				sourceFiles.add(file);
-				i++;
-			}
-			if (sourceFiles.size() == 0) {
-				System.out.println("Error: No input file");
-				return false;
-			}
-			if (parameters.OutputPath == null) {
-				parameters.OutputPath = PathHelper.getDirectoryName(sourceFiles[0].getAbsolutePath());
-			}
-			return true;
-		}
-		
-		private void setBootClasses() {
-			var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
-			var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
-			var stabPath = PathHelper.combine(System.getProperty("user.home"), ".stab");
-			var stabDir = new File(stabPath);
-			if (!stabDir.exists()) {
-				stabDir.mkdir();
-			}
-			var rtClassesFile = new File(PathHelper.combine(stabPath, "rtClasses" + rtJarFile.length()));
-			var bootClasses = new ArrayList<String>();
-			if (!rtClassesFile.exists()) {
-				exploreJarFile(rtJarFile, bootClasses);
-				BufferedWriter writer = null;
-				try {
-					writer = new BufferedWriter(new FileWriter(rtClassesFile));
-					foreach (var s in bootClasses) {
-						writer.write(s);
-						writer.newLine();
-					}
-				} finally {
-					try {
-						if (writer != null) {
-							writer.close();
-						}
-					} catch (IOException e) {
-					}
-				}
-			} else {
-				BufferedReader reader = null;
-				try {
-					reader = new BufferedReader(new FileReader(rtClassesFile));
-					String line;
-					while ((line = reader.readLine()) != null) {
-						if (line.Length > 0) {
-							bootClasses.add(line);
-						}
-					}
-				} finally {
-					try {
-						if (reader != null) {
-							reader.close();
-						}
-					} catch (IOException e) {
-					}
-				}
-			}
-			parameters.BootClasses = bootClasses.toArray(new String[bootClasses.size()]);
-		}
+                case Out: {
+                    parameters.OutputPath = parameter;
+                    break;
+                }
+                case Runtimelib: {
+                    parameters.RuntimeLibraryPath = parameter;
+                    break;
+                }
+                case Help: {
+                    System.out.println("    Stab Compiler Options");
+                    System.out.println();
+                    foreach (var opt in OptionInfos) {
+                        System.out.print("-");
+                        System.out.print(opt.Name);
+                        if (opt.Arguments != null) {
+                            System.out.print(":");
+                            System.out.print(opt.Arguments);
+                        }
+                        System.out.println();
+                        System.out.print("\t");
+                        System.out.print(opt.Description);
+                        if (opt.ShortForm != null) {
+                            System.out.print(" (Short form: -");
+                            System.out.print(opt.ShortForm);
+                            System.out.print(")");
+                        }
+                        System.out.println();
+                        System.out.println();
+                    }
+                    break;
+                }
+                }
+                i++;
+            }
+            while (i < sizeof(arguments)) {
+                File file = new File(arguments[i]);
+                if (!file.exists()) {
+                    System.out.println("Error: File not found: " + arguments[i]);
+                    return false;
+                }
+                if (file.isDirectory()) {
+                    System.out.println("Error: Argument is a directory: " + arguments[i]);
+                    return false;
+                }
+                sourceFiles.add(file);
+                i++;
+            }
+            if (sourceFiles.size() == 0) {
+                System.out.println("Error: No input file");
+                return false;
+            }
+            if (parameters.OutputPath == null) {
+                parameters.OutputPath = PathHelper.getDirectoryName(sourceFiles[0].getAbsolutePath());
+            }
+            return true;
+        }
+        
+        private void setBootClasses() {
+            var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
+            var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
+            var stabPath = PathHelper.combine(System.getProperty("user.home"), ".stab");
+            var stabDir = new File(stabPath);
+            if (!stabDir.exists()) {
+                stabDir.mkdir();
+            }
+            var rtClassesFile = new File(PathHelper.combine(stabPath, "rtClasses" + rtJarFile.length()));
+            var bootClasses = new ArrayList<String>();
+            if (!rtClassesFile.exists()) {
+                exploreJarFile(rtJarFile, bootClasses);
+                BufferedWriter writer = null;
+                try {
+                    writer = new BufferedWriter(new FileWriter(rtClassesFile));
+                    foreach (var s in bootClasses) {
+                        writer.write(s);
+                        writer.newLine();
+                    }
+                } finally {
+                    try {
+                        if (writer != null) {
+                            writer.close();
+                        }
+                    } catch (IOException e) {
+                    }
+                }
+            } else {
+                BufferedReader reader = null;
+                try {
+                    reader = new BufferedReader(new FileReader(rtClassesFile));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.Length > 0) {
+                            bootClasses.add(line);
+                        }
+                    }
+                } finally {
+                    try {
+                        if (reader != null) {
+                            reader.close();
+                        }
+                    } catch (IOException e) {
+                    }
+                }
+            }
+            parameters.BootClasses = bootClasses.toArray(new String[bootClasses.size()]);
+        }
 
-		private void exploreJarFile(File jarFile, List<String> classes) {
-			JarInputStream jarStream = null;
-			try {
-				jarStream = new JarInputStream(new FileInputStream(jarFile));
-				JarEntry entry;
-				while ((entry = jarStream.getNextJarEntry()) != null) {
-					var name = entry.getName();
-					if (name.endsWith(".class")) {
-						String className = name.substring(0, name.length() - 6);
-						classes.add(className);
-					}
-				}
-			} finally {
-				try {
-					if (jarStream != null) {
-						jarStream.close();
-					}
-				} catch (IOException e) {
-				}
-			}
-		}
-	}
+        private void exploreJarFile(File jarFile, List<String> classes) {
+            JarInputStream jarStream = null;
+            try {
+                jarStream = new JarInputStream(new FileInputStream(jarFile));
+                JarEntry entry;
+                while ((entry = jarStream.getNextJarEntry()) != null) {
+                    var name = entry.getName();
+                    if (name.endsWith(".class")) {
+                        String className = name.substring(0, name.length() - 6);
+                        classes.add(className);
+                    }
+                }
+            } finally {
+                try {
+                    if (jarStream != null) {
+                        jarStream.close();
+                    }
+                } catch (IOException e) {
+                }
+            }
+        }
+    }
 }

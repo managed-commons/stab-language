@@ -18,10 +18,10 @@ using java.io;
 using java.lang;
 using java.lang.reflect;
 using org.junit;
-using stab.helpers;
 using stab.query;
+using stab.tools.helpers;
 
-package stab.bytecode.test {
+package stab.tools.bytecode.test {
 
 	public class TypeBuilderTest {
 		

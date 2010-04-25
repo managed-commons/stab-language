@@ -19,13 +19,13 @@ using java.io;
 using java.util;
 using javax.xml.xpath;
 using org.w3c.dom;
-using stab.bytecode;
-using stab.helpers;
-using stab.parser;
 using stab.query;
-using stab.syntaxtree;
+using stab.tools.bytecode;
+using stab.tools.helpers;
+using stab.tools.parser;
+using stab.tools.syntaxtree;
  
-package stab.compiler {
+package stab.tools.compiler {
 
     class DocumentationBuilder {
         private CompilerContext context;

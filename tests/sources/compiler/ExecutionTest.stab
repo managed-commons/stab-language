@@ -19,9 +19,9 @@ using java.lang;
 using java.lang.reflect;
 using java.util;
 using org.junit;
-using stab.helpers;
+using stab.tools.helpers;
 
-package stab.compiler.test {
+package stab.tools.compiler.test {
 
 	public abstract class ExecutionTest {
 		protected CompilerParameters parameters;

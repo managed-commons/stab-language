@@ -18,10 +18,10 @@ using java.io;
 using java.lang;
 using java.util;
 using java.util.jar;
-using stab.helpers;
 using stab.query;
+using stab.tools.helpers;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
     public class JvmTypeSystem {
         private static HashMap<String, File> computedBootClasses;

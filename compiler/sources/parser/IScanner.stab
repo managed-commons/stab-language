@@ -15,64 +15,64 @@
    limitations under the License.
  */
 using java.lang;
-using stab.helpers;
+using stab.tools.helpers;
 
-package stab.parser {
+package stab.tools.parser {
 
-	public interface IScanner {
-		CodeErrorManager CodeErrorManager {
-			get;
-		}
-	
-		String Filename {
-			get;
-			set;
-		}
-		
-		char[] Text {
-			get;
-		}
-		
-		int TabWidth {
-			get;
-			set;
-		}
+    public interface IScanner {
+        CodeErrorManager CodeErrorManager {
+            get;
+        }
+    
+        String Filename {
+            get;
+            set;
+        }
+        
+        char[] Text {
+            get;
+        }
+        
+        int TabWidth {
+            get;
+            set;
+        }
 
-		int StartLine {
-			get;
-		}
-		
-		int EndLine {
-			get;
-		}
-		
-		int StartColumn {
-			get;
-		}
+        int StartLine {
+            get;
+        }
+        
+        int EndLine {
+            get;
+        }
+        
+        int StartColumn {
+            get;
+        }
 
-		int EndColumn {
-			get;
-		}
-		
-		int StartPosition {
-			get;
-		}
+        int EndColumn {
+            get;
+        }
+        
+        int StartPosition {
+            get;
+        }
 
-		int EndPosition {
-			get;
-		}
-		
-		int Part {
-			get;
-		}
+        int EndPosition {
+            get;
+        }
+        
+        int Part {
+            get;
+        }
 
-		Keyword Keyword {
-			get;
-		}
+        Keyword Keyword {
+            get;
+        }
 
-		RestorePoint getRestorePoint();
-		void restore(RestorePoint restorePoint);
-		void addError(ParseErrorId errorId, int level, String message);
-		LexicalUnit nextLexicalUnit();
-	}
+        RestorePoint getRestorePoint();
+        void restore(RestorePoint restorePoint);
+        void addError(ParseErrorId errorId, int level, String message);
+        LexicalUnit nextLexicalUnit();
+    }
 }

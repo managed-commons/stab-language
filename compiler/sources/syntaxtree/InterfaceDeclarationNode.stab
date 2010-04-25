@@ -16,7 +16,7 @@
  */
 using java.util;
 
-package stab.syntaxtree {
+package stab.tools.syntaxtree {
 
 	public class InterfaceDeclarationNode : TypeMemberNode, IPackageMember {
 		public InterfaceDeclarationNode()

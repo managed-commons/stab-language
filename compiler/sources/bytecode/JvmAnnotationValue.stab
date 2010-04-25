@@ -18,55 +18,55 @@ using java.lang;
 using java.util;
 using org.objectweb.asm;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	public class JvmAnnotationValue : JvmAnnotationArgument {
-		private JvmTypeInfo type;
-		private boolean runtimeVisible;
-		HashMap<String, JvmAnnotationArgument> arguments;
-		
-		JvmAnnotationValue(JvmTypeInfo type, boolean runtimeVisible)
-			: super(AnnotationArgumentKind.Annotation) {
-			this.type = type;
-			this.runtimeVisible = runtimeVisible;
-			this.arguments = new HashMap<String, JvmAnnotationArgument>();
-		}
-		
-		public override JvmTypeInfo Type {
-			get {
-				return type;
-			}
-		}
-		
-		public override boolean IsRuntimeVisible {
-			get {
-				return runtimeVisible;
-			}
-		}
-		
-		public override JvmAnnotationArgument getArgument(String name) {
-			return arguments[name];
-		}
-		
-		public override Iterable<String> ArgumentNames {
-			get {
-				return arguments.keySet();
-			}
-		}
-		
-		override void accept(String name, AnnotationVisitor visitor) {
-			var v = visitor.visitAnnotation(name, type.Descriptor);
-			foreach (var e in arguments.entrySet()) {
-				e.Value.accept(e.Key, v);
-			}
-			v.visitEnd();
-		}
+    public class JvmAnnotationValue : JvmAnnotationArgument {
+        private JvmTypeInfo type;
+        private boolean runtimeVisible;
+        HashMap<String, JvmAnnotationArgument> arguments;
+        
+        JvmAnnotationValue(JvmTypeInfo type, boolean runtimeVisible)
+            : super(AnnotationArgumentKind.Annotation) {
+            this.type = type;
+            this.runtimeVisible = runtimeVisible;
+            this.arguments = new HashMap<String, JvmAnnotationArgument>();
+        }
+        
+        public override JvmTypeInfo Type {
+            get {
+                return type;
+            }
+        }
+        
+        public override boolean IsRuntimeVisible {
+            get {
+                return runtimeVisible;
+            }
+        }
+        
+        public override JvmAnnotationArgument getArgument(String name) {
+            return arguments[name];
+        }
+        
+        public override Iterable<String> ArgumentNames {
+            get {
+                return arguments.keySet();
+            }
+        }
+        
+        override void accept(String name, AnnotationVisitor visitor) {
+            var v = visitor.visitAnnotation(name, type.Descriptor);
+            foreach (var e in arguments.entrySet()) {
+                e.Value.accept(e.Key, v);
+            }
+            v.visitEnd();
+        }
 
-		void accept(AnnotationVisitor visitor) {
-			foreach (var e in arguments.entrySet()) {
-				e.Value.accept(e.Key, visitor);
-			}
-			visitor.visitEnd();
-		}
-	}
+        void accept(AnnotationVisitor visitor) {
+            foreach (var e in arguments.entrySet()) {
+                e.Value.accept(e.Key, visitor);
+            }
+            visitor.visitEnd();
+        }
+    }
 }

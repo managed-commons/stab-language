@@ -17,10 +17,10 @@
 using java.lang;
 using java.util;
 using org.objectweb.asm;
-using stab.helpers;
 using stab.query;
+using stab.tools.helpers;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
     public enum TypeKind {
         Array,

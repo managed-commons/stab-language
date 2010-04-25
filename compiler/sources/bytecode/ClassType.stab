@@ -17,87 +17,87 @@
 using java.lang;
 using java.util;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	abstract class ClassType : JvmTypeInfo {
-		protected Iterable<JvmTypeInfo> genericArguments;
-		protected JvmTypeInfo baseType;
-		JvmTypeInfo declaringType;
-		protected Iterable<JvmTypeInfo> interfaces;
-		protected ArrayList<JvmFieldInfo> fields;
-		protected ArrayList<JvmMethodInfo> methods;
-		protected ArrayList<JvmTypeInfo> nestedTypes;
-		private String signature;
+    abstract class ClassType : JvmTypeInfo {
+        protected Iterable<JvmTypeInfo> genericArguments;
+        protected JvmTypeInfo baseType;
+        JvmTypeInfo declaringType;
+        protected Iterable<JvmTypeInfo> interfaces;
+        protected ArrayList<JvmFieldInfo> fields;
+        protected ArrayList<JvmMethodInfo> methods;
+        protected ArrayList<JvmTypeInfo> nestedTypes;
+        private String signature;
 
-		protected ClassType(String name)
-			: super(TypeKind.Reference, name) {
-			this.fields = new ArrayList<JvmFieldInfo>();
-			this.methods = new ArrayList<JvmMethodInfo>();
-			this.nestedTypes = new ArrayList<JvmTypeInfo>();
-		}
-		
-		public override JvmTypeInfo DeclaringType {
-			get {
-				return declaringType;
-			}
-		}
-		
-		public override Iterable<JvmTypeInfo> GenericArguments {
-			get {
-				if (genericArguments == null) {
-					initializeBaseTypes();
-				}
-				return genericArguments;
-			}
-		}
-		
-		public override JvmTypeInfo BaseType {
-			get {
-				initializeBaseTypes();
-				return baseType;
-			}
-		}
-		
-		public override Iterable<JvmTypeInfo> Interfaces {
-			get {
-				initializeBaseTypes();
-				return interfaces;
-			}
-		}
-		
-		public override Iterable<JvmFieldInfo> Fields {
-			get {
-				initializeFields();
-				return fields;
-			}
-		}
-		
-		public override Iterable<JvmMethodInfo> Methods {
-			get {
-				initializeMethods();
-				return methods;
-			}
-		}
-		
-		public override Iterable<JvmTypeInfo> NestedTypes {
-			get {
-				initializeNestedTypes();
-				return nestedTypes;
-			}
-		}
+        protected ClassType(String name)
+            : super(TypeKind.Reference, name) {
+            this.fields = new ArrayList<JvmFieldInfo>();
+            this.methods = new ArrayList<JvmMethodInfo>();
+            this.nestedTypes = new ArrayList<JvmTypeInfo>();
+        }
+        
+        public override JvmTypeInfo DeclaringType {
+            get {
+                return declaringType;
+            }
+        }
+        
+        public override Iterable<JvmTypeInfo> GenericArguments {
+            get {
+                if (genericArguments == null) {
+                    initializeBaseTypes();
+                }
+                return genericArguments;
+            }
+        }
+        
+        public override JvmTypeInfo BaseType {
+            get {
+                initializeBaseTypes();
+                return baseType;
+            }
+        }
+        
+        public override Iterable<JvmTypeInfo> Interfaces {
+            get {
+                initializeBaseTypes();
+                return interfaces;
+            }
+        }
+        
+        public override Iterable<JvmFieldInfo> Fields {
+            get {
+                initializeFields();
+                return fields;
+            }
+        }
+        
+        public override Iterable<JvmMethodInfo> Methods {
+            get {
+                initializeMethods();
+                return methods;
+            }
+        }
+        
+        public override Iterable<JvmTypeInfo> NestedTypes {
+            get {
+                initializeNestedTypes();
+                return nestedTypes;
+            }
+        }
 
-		public override String Signature {
-			get {
-				if (signature == null) {
-					signature = BytecodeHelper.getClassTypeSignature(this, this.GenericArguments);
-				}
-				return signature;
-			}
-		}
-		
-		protected abstract void initializeBaseTypes();
-		protected abstract void initializeFields();
-		protected abstract void initializeMethods();
-		protected abstract void initializeNestedTypes();
-	}
+        public override String Signature {
+            get {
+                if (signature == null) {
+                    signature = BytecodeHelper.getClassTypeSignature(this, this.GenericArguments);
+                }
+                return signature;
+            }
+        }
+        
+        protected abstract void initializeBaseTypes();
+        protected abstract void initializeFields();
+        protected abstract void initializeMethods();
+        protected abstract void initializeNestedTypes();
+    }
 }

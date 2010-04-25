@@ -17,39 +17,39 @@
 using java.lang;
 using java.util;
 
-package stab.bytecode.signature {
-	
-	public class MethodTypeSignature {
-		List<FormalTypeParameterSignature> formalTypeParameters;
-		ArrayList<TypeSignature> parameters;
-		TypeSignature returnType;
-		ArrayList<TypeSignature> exceptions;
-	
-		MethodTypeSignature() {
-		}
-		
-		public Iterable<FormalTypeParameterSignature> FormalTypeParameters {
-			get {
-				return formalTypeParameters;
-			}
-		}
-		
-		public Iterable<TypeSignature> Parameters {
-			get {
-				return parameters;
-			}
-		}
-		
-		public TypeSignature ReturnType {
-			get {
-				return returnType;
-			}
-		}
-		
-		public Iterable<TypeSignature> Exceptions {
-			get {
-				return exceptions;
-			}
-		}
-	}
+package stab.tools.bytecode.signature {
+    
+    public class MethodTypeSignature {
+        List<FormalTypeParameterSignature> formalTypeParameters;
+        ArrayList<TypeSignature> parameters;
+        TypeSignature returnType;
+        ArrayList<TypeSignature> exceptions;
+    
+        MethodTypeSignature() {
+        }
+        
+        public Iterable<FormalTypeParameterSignature> FormalTypeParameters {
+            get {
+                return formalTypeParameters;
+            }
+        }
+        
+        public Iterable<TypeSignature> Parameters {
+            get {
+                return parameters;
+            }
+        }
+        
+        public TypeSignature ReturnType {
+            get {
+                return returnType;
+            }
+        }
+        
+        public Iterable<TypeSignature> Exceptions {
+            get {
+                return exceptions;
+            }
+        }
+    }
 }

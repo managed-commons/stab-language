@@ -14,37 +14,37 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-package stab.parser {
+package stab.tools.parser {
 
-	public enum PreprocessorLexicalUnit {
-		EndOfStream,
-		SourceCode,
-		NumberSign,
-		WhiteSpace,
-		Symbol,
-		If,
-		Define,
-		Undef,
-		Line,
-		Warning,
-		Region,
-		Elif,
-		Else,
-		Endif,
-		Endregion,
-		Error,
-		SingleLineComment,
-		Or,
-		And,
-		Equal,
-		NotEqual,
-		Pragma,
-		DecimalDigits,
-		Filename,
-		NewLine,
-		LeftParenthesis,
-		RightParenthesis,
-		Not,
-		Comma
-	}
+    public enum PreprocessorLexicalUnit {
+        EndOfStream,
+        SourceCode,
+        NumberSign,
+        WhiteSpace,
+        Symbol,
+        If,
+        Define,
+        Undef,
+        Line,
+        Warning,
+        Region,
+        Elif,
+        Else,
+        Endif,
+        Endregion,
+        Error,
+        SingleLineComment,
+        Or,
+        And,
+        Equal,
+        NotEqual,
+        Pragma,
+        DecimalDigits,
+        Filename,
+        NewLine,
+        LeftParenthesis,
+        RightParenthesis,
+        Not,
+        Comma
+    }
 }

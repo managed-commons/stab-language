@@ -16,7 +16,7 @@
  */
 using java.lang;
 
-package stab.syntaxtree {
+package stab.tools.syntaxtree {
 
     public abstract class StatementHandler<TSource, TResult> {
         private boolean failWhenUnhandled;

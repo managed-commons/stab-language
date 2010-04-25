@@ -16,1653 +16,1653 @@
  */
 using java.lang;
 using java.util;
-using stab.bytecode;
 using stab.query;
-using stab.syntaxtree;
+using stab.tools.bytecode;
+using stab.tools.syntaxtree;
 
-package stab.compiler {
+package stab.tools.compiler {
 
-	class AssignExpressionGenerator : ExpressionHandler<ExpressionNode, Void> {
-		private CompilerContext context;
-		private ExpressionGenerator expressionGenerator;
-		private boolean postAssign;
-		private AssignOperator operator;
-		private ExpressionInfo rightInfo;
-		private ExpressionNode rightExpression;
-		private BoxingKind boxingKind;
-	
-		AssignExpressionGenerator(CompilerContext context, ExpressionGenerator expressionGenerator)
-			: super(true) {
-			this.context = context;
-			this.expressionGenerator = expressionGenerator;
-			this.boxingKind = BoxingKind.None;
-		}
-		
-		private void initialize(ExpressionNode root) {
-			if (root.ExpressionKind == ExpressionKind.Assign) {
-				var assign = (AssignExpressionNode)root;
-				operator = assign.Operator;
-				rightExpression = assign.Right;
-				rightInfo = rightExpression.getUserData(typeof(ExpressionInfo));
-				if (rightInfo != null && rightInfo.BoxingKind == BoxingKind.Box) {
-					boxingKind = rightInfo.BoxingKind;
-					rightInfo.BoxingKind = BoxingKind.None;
-				}
-			} else {
-				var unary = (UnaryExpressionNode)root;
-				var oinfo = unary.Operand.getUserData(typeof(ExpressionInfo));
-				var otype = oinfo.Type;
-				if (oinfo.BoxingKind == BoxingKind.Unbox) {
-					boxingKind = BoxingKind.Box;
-					oinfo.BoxingKind = BoxingKind.None;
-				}
-				Object value;
-				switch (otype.NumericTypeKind) {
-				case Byte:
-					value = (byte)1;
-					break;
-				case Char:
-					value = (char)1;
-					break;
-				case Double:
-					value = 1d;
-					break;
-				case Float:
-					value = 1f;
-					break;
-				case Int:
-					value = 1;
-					break;
-				case Long:
-					value = 1l;
-					break;
-				case Short:
-					value = (short)1;
-					break;
-				default:
-					throw new IllegalStateException("Internal error");
-				}
-				rightInfo = new ExpressionInfo(otype, value);
-				switch (unary.Operator) {
-				case PreIncrement:
-					operator = AssignOperator.Add;
-					break;
-				case PreDecrement:
-					operator = AssignOperator.Subtract;
-					break;
-				case PostIncrement:
-					operator = AssignOperator.Add;
-					postAssign = true;
-					break;
-				case PostDecrement:
-					operator = AssignOperator.Subtract;
-					postAssign = true;
-					break;
-				}
-			}
-		}
-		
-		protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, ExpressionNode root, boolean nested) {
-			initialize(root);
-			if (operator == AssignOperator.Assign) {
-				handleElementAccessAssign(elementAccess, nested);
-			} else {
-				handleElementAccessOperationAssign(elementAccess, nested);
-			}
-			return null;
-		}
-		
-		protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, ExpressionNode root, boolean nested) {
-			initialize(root);
-			if (operator == AssignOperator.Assign) {
-				handleMemberAccessAssign(memberAccess, nested);
-			} else {
-				handleMemberAccessOperationAssign(memberAccess, nested);
-			}
-			return null;
-		}
+    class AssignExpressionGenerator : ExpressionHandler<ExpressionNode, Void> {
+        private CompilerContext context;
+        private ExpressionGenerator expressionGenerator;
+        private boolean postAssign;
+        private AssignOperator operator;
+        private ExpressionInfo rightInfo;
+        private ExpressionNode rightExpression;
+        private BoxingKind boxingKind;
+    
+        AssignExpressionGenerator(CompilerContext context, ExpressionGenerator expressionGenerator)
+            : super(true) {
+            this.context = context;
+            this.expressionGenerator = expressionGenerator;
+            this.boxingKind = BoxingKind.None;
+        }
+        
+        private void initialize(ExpressionNode root) {
+            if (root.ExpressionKind == ExpressionKind.Assign) {
+                var assign = (AssignExpressionNode)root;
+                operator = assign.Operator;
+                rightExpression = assign.Right;
+                rightInfo = rightExpression.getUserData(typeof(ExpressionInfo));
+                if (rightInfo != null && rightInfo.BoxingKind == BoxingKind.Box) {
+                    boxingKind = rightInfo.BoxingKind;
+                    rightInfo.BoxingKind = BoxingKind.None;
+                }
+            } else {
+                var unary = (UnaryExpressionNode)root;
+                var oinfo = unary.Operand.getUserData(typeof(ExpressionInfo));
+                var otype = oinfo.Type;
+                if (oinfo.BoxingKind == BoxingKind.Unbox) {
+                    boxingKind = BoxingKind.Box;
+                    oinfo.BoxingKind = BoxingKind.None;
+                }
+                Object value;
+                switch (otype.NumericTypeKind) {
+                case Byte:
+                    value = (byte)1;
+                    break;
+                case Char:
+                    value = (char)1;
+                    break;
+                case Double:
+                    value = 1d;
+                    break;
+                case Float:
+                    value = 1f;
+                    break;
+                case Int:
+                    value = 1;
+                    break;
+                case Long:
+                    value = 1l;
+                    break;
+                case Short:
+                    value = (short)1;
+                    break;
+                default:
+                    throw new IllegalStateException("Internal error");
+                }
+                rightInfo = new ExpressionInfo(otype, value);
+                switch (unary.Operator) {
+                case PreIncrement:
+                    operator = AssignOperator.Add;
+                    break;
+                case PreDecrement:
+                    operator = AssignOperator.Subtract;
+                    break;
+                case PostIncrement:
+                    operator = AssignOperator.Add;
+                    postAssign = true;
+                    break;
+                case PostDecrement:
+                    operator = AssignOperator.Subtract;
+                    postAssign = true;
+                    break;
+                }
+            }
+        }
+        
+        protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, ExpressionNode root, boolean nested) {
+            initialize(root);
+            if (operator == AssignOperator.Assign) {
+                handleElementAccessAssign(elementAccess, nested);
+            } else {
+                handleElementAccessOperationAssign(elementAccess, nested);
+            }
+            return null;
+        }
+        
+        protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, ExpressionNode root, boolean nested) {
+            initialize(root);
+            if (operator == AssignOperator.Assign) {
+                handleMemberAccessAssign(memberAccess, nested);
+            } else {
+                handleMemberAccessOperationAssign(memberAccess, nested);
+            }
+            return null;
+        }
 
-		protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, ExpressionNode root, boolean nested) {
-			initialize(root);
-			if (operator == AssignOperator.Assign) {
-				handleSimpleNameAssign(simpleName, nested);
-			} else {
-				handleSimpleNameOperationAssign(simpleName, nested);
-			}
-			return null;
-		}
-		
-		private void handleSimpleNameAssign(SimpleNameExpressionNode simpleName, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			var member = simpleName.getUserData(typeof(ExpressionInfo)).Member;
-			
-			switch (member.MemberKind) {
-			case Field: {
-				var field = member.Field;
-				var type = field.getType();
-				emitRightExpression(field.IsStatic, null, type, nested);
-				emitFieldModification(field);
-				return;
-			}
-			case Local: {
-				var local = (LocalInfo)member;
-				if (local.IsUsedFromLambda) {
-					var field = BytecodeGenerator.getLambdaScopeField(context, local);
-					emitRightExpression(false, local.Method, field.Type, nested);
-					emitFieldModification(field);
-				} else {
-					emitLocalAssign(simpleName, local.Type, generator.getLocal(local.Name), nested);
-				}
-				return;
-			}
-			case Property: {
-				var method = member.SetAccessor;
-				var type = member.Type;
-				emitRightExpression(method.IsStatic, null, type, nested);
-				emitPropertyOrIndexerModification(method);
-				return;
-			}
-			default:
-				throw new Exception("Internal error: Expression cannot be assigned " + member.MemberKind);
-			}
-		}
+        protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, ExpressionNode root, boolean nested) {
+            initialize(root);
+            if (operator == AssignOperator.Assign) {
+                handleSimpleNameAssign(simpleName, nested);
+            } else {
+                handleSimpleNameOperationAssign(simpleName, nested);
+            }
+            return null;
+        }
+        
+        private void handleSimpleNameAssign(SimpleNameExpressionNode simpleName, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            var member = simpleName.getUserData(typeof(ExpressionInfo)).Member;
+            
+            switch (member.MemberKind) {
+            case Field: {
+                var field = member.Field;
+                var type = field.getType();
+                emitRightExpression(field.IsStatic, null, type, nested);
+                emitFieldModification(field);
+                return;
+            }
+            case Local: {
+                var local = (LocalInfo)member;
+                if (local.IsUsedFromLambda) {
+                    var field = BytecodeGenerator.getLambdaScopeField(context, local);
+                    emitRightExpression(false, local.Method, field.Type, nested);
+                    emitFieldModification(field);
+                } else {
+                    emitLocalAssign(simpleName, local.Type, generator.getLocal(local.Name), nested);
+                }
+                return;
+            }
+            case Property: {
+                var method = member.SetAccessor;
+                var type = member.Type;
+                emitRightExpression(method.IsStatic, null, type, nested);
+                emitPropertyOrIndexerModification(method);
+                return;
+            }
+            default:
+                throw new Exception("Internal error: Expression cannot be assigned " + member.MemberKind);
+            }
+        }
 
-		private void emitRightExpression(boolean isStatic, JvmMethodInfo localMethod, JvmTypeInfo type, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			if (isStatic) {
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				BytecodeGenerator.emitConversion(context, type, rightExpression);
-				if (nested) {
-					generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-				}
-			} else {
-				if (localMethod != null) {
-					BytecodeGenerator.emitLoadLambdaScope(context, generator, localMethod);
-				} else {
-					BytecodeGenerator.emitThisAccess(context, generator);
-				}
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				BytecodeGenerator.emitConversion(context, type, rightExpression);
-				if (nested) {
-					generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
-				}
-			}
-		}
+        private void emitRightExpression(boolean isStatic, JvmMethodInfo localMethod, JvmTypeInfo type, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (isStatic) {
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                BytecodeGenerator.emitConversion(context, type, rightExpression);
+                if (nested) {
+                    generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                }
+            } else {
+                if (localMethod != null) {
+                    BytecodeGenerator.emitLoadLambdaScope(context, generator, localMethod);
+                } else {
+                    BytecodeGenerator.emitThisAccess(context, generator);
+                }
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                BytecodeGenerator.emitConversion(context, type, rightExpression);
+                if (nested) {
+                    generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                }
+            }
+        }
 
-		private void emitLocalAssign(SimpleNameExpressionNode simpleName, JvmTypeInfo type, JvmLocalInfo local, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			expressionGenerator.handleExpression(rightExpression, null, true);
-			BytecodeGenerator.emitConversion(context, local.Type, rightExpression);
-			if (nested) {
-				generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-			}
-			JvmOpcode opcode;
-			if (boxingKind == BoxingKind.Box) {
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
-				opcode = JvmOpcode.Astore;
-			} else {
-				switch (type.TypeKind) {
-				case Boolean:
-				case Byte:
-				case Char:
-				case Short:
-				case Int:
-					opcode = JvmOpcode.Istore;
-					break;
-				case Long:
-					opcode = JvmOpcode.Lstore;
-					break;
-				case Float:
-					opcode = JvmOpcode.Fstore;
-					break;
-				case Double:
-					opcode = JvmOpcode.Dstore;
-					break;
-				default:
-					opcode = JvmOpcode.Astore;
-					break;
-				}
-			}
-			generator.emit(opcode, local);
-		}
+        private void emitLocalAssign(SimpleNameExpressionNode simpleName, JvmTypeInfo type, JvmLocalInfo local, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            expressionGenerator.handleExpression(rightExpression, null, true);
+            BytecodeGenerator.emitConversion(context, local.Type, rightExpression);
+            if (nested) {
+                generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+            }
+            JvmOpcode opcode;
+            if (boxingKind == BoxingKind.Box) {
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+                opcode = JvmOpcode.Astore;
+            } else {
+                switch (type.TypeKind) {
+                case Boolean:
+                case Byte:
+                case Char:
+                case Short:
+                case Int:
+                    opcode = JvmOpcode.Istore;
+                    break;
+                case Long:
+                    opcode = JvmOpcode.Lstore;
+                    break;
+                case Float:
+                    opcode = JvmOpcode.Fstore;
+                    break;
+                case Double:
+                    opcode = JvmOpcode.Dstore;
+                    break;
+                default:
+                    opcode = JvmOpcode.Astore;
+                    break;
+                }
+            }
+            generator.emit(opcode, local);
+        }
 
-		private void handleSimpleNameOperationAssign(SimpleNameExpressionNode simpleName, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			var member = simpleName.getUserData(typeof(ExpressionInfo)).Member;
-			
-			switch (member.MemberKind) {
-			case Field: {
-				var field = member.Field;
-				if (!field.IsStatic) {
-					BytecodeGenerator.emitThisAccess(context, generator);
-					generator.emit(JvmOpcode.Dup);
-				}
-				emitFieldOperationAssign(field, nested);
-				break;
-			}
-			case Property: {
-				var method = member.GetAccessor;
-				if (!method.IsStatic) {
-					BytecodeGenerator.emitThisAccess(context, generator);
-					generator.emit(JvmOpcode.Dup);
-				}
-				emitPropertyOperationAssign(method, member.SetAccessor, nested);
-				break;
-			}				
-			case Local: {
-				var local = (LocalInfo)member;
-				if (local.IsUsedFromLambda) {
-					BytecodeGenerator.emitLoadLambdaScope(context, generator, local.Method);
-					generator.emit(JvmOpcode.Dup);
-					var field = BytecodeGenerator.getLambdaScopeField(context, local);
-					emitFieldOperationAssign(field, nested);
-				} else {
-					emitLocalOperationAssign(generator.getLocal(local.Name), nested);
-				}
-				break;
-			}				
-			default:
-				throw new Exception("Internal error");
-			}
-		}
+        private void handleSimpleNameOperationAssign(SimpleNameExpressionNode simpleName, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            var member = simpleName.getUserData(typeof(ExpressionInfo)).Member;
+            
+            switch (member.MemberKind) {
+            case Field: {
+                var field = member.Field;
+                if (!field.IsStatic) {
+                    BytecodeGenerator.emitThisAccess(context, generator);
+                    generator.emit(JvmOpcode.Dup);
+                }
+                emitFieldOperationAssign(field, nested);
+                break;
+            }
+            case Property: {
+                var method = member.GetAccessor;
+                if (!method.IsStatic) {
+                    BytecodeGenerator.emitThisAccess(context, generator);
+                    generator.emit(JvmOpcode.Dup);
+                }
+                emitPropertyOperationAssign(method, member.SetAccessor, nested);
+                break;
+            }				
+            case Local: {
+                var local = (LocalInfo)member;
+                if (local.IsUsedFromLambda) {
+                    BytecodeGenerator.emitLoadLambdaScope(context, generator, local.Method);
+                    generator.emit(JvmOpcode.Dup);
+                    var field = BytecodeGenerator.getLambdaScopeField(context, local);
+                    emitFieldOperationAssign(field, nested);
+                } else {
+                    emitLocalOperationAssign(generator.getLocal(local.Name), nested);
+                }
+                break;
+            }				
+            default:
+                throw new Exception("Internal error");
+            }
+        }
 
-		private void emitLocalOperationAssign(JvmLocalInfo local, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			if (local.Type.IsBoolean) {
-				emitLoad(nested, JvmOpcode.Iload, local, false);
-				if (rightExpression == null) {
-					generator.emit(JvmOpcode.Iconst_1);
-				} else {
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, local.Type);
-				}
-				emitIntOperator();
-				emitStore(nested, JvmOpcode.Istore, local, false);
-			} else if (local.Type.FullName.equals("java/lang/String")) {
-				emitLoad(nested, JvmOpcode.Aload, local, false);
-				var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
-				var stringType = context.getTypeSystem().getType("java/lang/String");
-				generator.emit(JvmOpcode.New, stringBuilderType);
-				generator.emit(JvmOpcode.Dup);
-				generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-				if (rightInfo.Type.IsCategory2) {
-					generator.emit(JvmOpcode.Dup_X2);
-					generator.emit(JvmOpcode.Pop);
-				} else {
-					generator.emit(JvmOpcode.Swap);
-				}
-				BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
-				var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
-					&& rightInfo != null && rightInfo.Type == stringType;
-				context.MethodGenerationContext.IsBuildingString = isStringAdd;
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				if (!isStringAdd) {
-					BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
-				}
-				context.MethodGenerationContext.IsBuildingString = false;
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
-				emitStore(nested, JvmOpcode.Astore, local, false);
-			} else if (BytecodeHelper.isDelegateType(local.Type)) {
-				emitLoad(nested, JvmOpcode.Aload, local, false);
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				var delegateType = context.getTypeSystem().getType("stab/lang/Delegate");
-				var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
-				if (operator == AssignOperator.Add) {
-					generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
-				} else {
-					generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
-				}
-				generator.emit(JvmOpcode.Checkcast, local.Type);
-				emitStore(nested, JvmOpcode.Astore, local, false);
-			} else {
-				JvmTypeInfo rightType;
-				switch (operator) {
-				case LeftShift:
-				case RightShift:
-				case UnsignedRightShift:
-					rightType = JvmTypeInfo.INT;
-					break;
-				default:
-					rightType = local.getType();
-					break;
-				}
-				switch (local.Type.NumericTypeKind) {
-				case Byte:
-					emitLoad(nested, JvmOpcode.Iload, local, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2b);
-					emitStore(nested, JvmOpcode.Istore, local, false);
-					break;
+        private void emitLocalOperationAssign(JvmLocalInfo local, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (local.Type.IsBoolean) {
+                emitLoad(nested, JvmOpcode.Iload, local, false);
+                if (rightExpression == null) {
+                    generator.emit(JvmOpcode.Iconst_1);
+                } else {
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, local.Type);
+                }
+                emitIntOperator();
+                emitStore(nested, JvmOpcode.Istore, local, false);
+            } else if (local.Type.FullName.equals("java/lang/String")) {
+                emitLoad(nested, JvmOpcode.Aload, local, false);
+                var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
+                var stringType = context.getTypeSystem().getType("java/lang/String");
+                generator.emit(JvmOpcode.New, stringBuilderType);
+                generator.emit(JvmOpcode.Dup);
+                generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                if (rightInfo.Type.IsCategory2) {
+                    generator.emit(JvmOpcode.Dup_X2);
+                    generator.emit(JvmOpcode.Pop);
+                } else {
+                    generator.emit(JvmOpcode.Swap);
+                }
+                BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
+                    && rightInfo != null && rightInfo.Type == stringType;
+                context.MethodGenerationContext.IsBuildingString = isStringAdd;
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                if (!isStringAdd) {
+                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                }
+                context.MethodGenerationContext.IsBuildingString = false;
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                emitStore(nested, JvmOpcode.Astore, local, false);
+            } else if (BytecodeHelper.isDelegateType(local.Type)) {
+                emitLoad(nested, JvmOpcode.Aload, local, false);
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                var delegateType = context.getTypeSystem().getType("stab/lang/Delegate");
+                var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                if (operator == AssignOperator.Add) {
+                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                } else {
+                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                }
+                generator.emit(JvmOpcode.Checkcast, local.Type);
+                emitStore(nested, JvmOpcode.Astore, local, false);
+            } else {
+                JvmTypeInfo rightType;
+                switch (operator) {
+                case LeftShift:
+                case RightShift:
+                case UnsignedRightShift:
+                    rightType = JvmTypeInfo.INT;
+                    break;
+                default:
+                    rightType = local.getType();
+                    break;
+                }
+                switch (local.Type.NumericTypeKind) {
+                case Byte:
+                    emitLoad(nested, JvmOpcode.Iload, local, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2b);
+                    emitStore(nested, JvmOpcode.Istore, local, false);
+                    break;
 
-				case Char:
-					emitLoad(nested, JvmOpcode.Iload, local, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2c);
-					emitStore(nested, JvmOpcode.Istore, local, false);
-					break;
+                case Char:
+                    emitLoad(nested, JvmOpcode.Iload, local, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2c);
+                    emitStore(nested, JvmOpcode.Istore, local, false);
+                    break;
 
-				case Short:
-					emitLoad(nested, JvmOpcode.Iload, local, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2s);
-					emitStore(nested, JvmOpcode.Istore, local, false);
-					break;
+                case Short:
+                    emitLoad(nested, JvmOpcode.Iload, local, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2s);
+                    emitStore(nested, JvmOpcode.Istore, local, false);
+                    break;
 
-				case Int:
-					if (boxingKind == BoxingKind.None
-					 && rightInfo.IsConstant
-					 && (operator == AssignOperator.Add || operator == AssignOperator.Subtract)) {
-						if (nested && postAssign) {
-							generator.emit(JvmOpcode.Iload, local);
-						}
-						if (operator == AssignOperator.Add) {
-							generator.emit(JvmOpcode.Iinc, local, ((Integer)rightInfo.Value).intValue());
-						} else {
-							generator.emit(JvmOpcode.Iinc, local, -((Integer)rightInfo.Value).intValue());
-						}
-						if (nested && !postAssign) {
-							generator.emit(JvmOpcode.Iload, local);
-						}
-					} else {
-						emitLoad(nested, JvmOpcode.Iload, local, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						emitStore(nested, JvmOpcode.Istore, local, false);
-					}
-					break;
+                case Int:
+                    if (boxingKind == BoxingKind.None
+                     && rightInfo.IsConstant
+                     && (operator == AssignOperator.Add || operator == AssignOperator.Subtract)) {
+                        if (nested && postAssign) {
+                            generator.emit(JvmOpcode.Iload, local);
+                        }
+                        if (operator == AssignOperator.Add) {
+                            generator.emit(JvmOpcode.Iinc, local, ((Integer)rightInfo.Value).intValue());
+                        } else {
+                            generator.emit(JvmOpcode.Iinc, local, -((Integer)rightInfo.Value).intValue());
+                        }
+                        if (nested && !postAssign) {
+                            generator.emit(JvmOpcode.Iload, local);
+                        }
+                    } else {
+                        emitLoad(nested, JvmOpcode.Iload, local, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        emitStore(nested, JvmOpcode.Istore, local, false);
+                    }
+                    break;
 
-				case Long:
-					emitLoad(nested, JvmOpcode.Lload, local, true);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Lconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitLongOperator();
-					emitStore(nested, JvmOpcode.Lstore, local, true);
-					break;
+                case Long:
+                    emitLoad(nested, JvmOpcode.Lload, local, true);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Lconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitLongOperator();
+                    emitStore(nested, JvmOpcode.Lstore, local, true);
+                    break;
 
-				case Float:
-					emitLoad(nested, JvmOpcode.Fload, local, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Fconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitFloatOperator();
-					emitStore(nested, JvmOpcode.Fstore, local, false);
-					break;
+                case Float:
+                    emitLoad(nested, JvmOpcode.Fload, local, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Fconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitFloatOperator();
+                    emitStore(nested, JvmOpcode.Fstore, local, false);
+                    break;
 
-				case Double:
-					emitLoad(nested, JvmOpcode.Dload, local, true);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Dconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitDoubleOperator();
-					emitStore(nested, JvmOpcode.Dstore, local, true);
-					break;
+                case Double:
+                    emitLoad(nested, JvmOpcode.Dload, local, true);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Dconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitDoubleOperator();
+                    emitStore(nested, JvmOpcode.Dstore, local, true);
+                    break;
 
-				default:
-					throw new IllegalStateException();
-				}
-			}
-		}
-		
-		private void handleMemberAccessAssign(MemberAccessExpressionNode memberAccess, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			var member = memberAccess.getUserData(typeof(ExpressionInfo)).Member;
-			
-			switch (member.MemberKind) {
-			case Field: {
-				var field = member.Field;
-				var type = field.Type;
-				if (field.IsStatic) {
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					BytecodeGenerator.emitConversion(context, type, rightExpression);
-					if (nested) {
-						generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-					}
-				} else {
-					expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					BytecodeGenerator.emitConversion(context, type, rightExpression);
-					if (nested) {
-						generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
-					}
-				}
-				emitFieldModification(field);
-				break;
-			}
-			case Property: {
-				var method = member.SetAccessor;
-				var type = member.Type;
-				if (method.IsStatic) {
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					BytecodeGenerator.emitConversion(context, type, rightExpression);
-					if (nested) {
-						generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-					}
-				} else {
-					expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					BytecodeGenerator.emitConversion(context, type, rightExpression);
-					if (nested) {
-						generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
-					}
-				}
-				emitPropertyOrIndexerModification(method);
-				break;
-			}
-			default:
-				throw new Exception("Internal error: member kind not supported: " + member.MemberKind);
-			}
-		}
-		
-		private void handleMemberAccessOperationAssign(MemberAccessExpressionNode memberAccess, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			var member = memberAccess.getUserData(typeof(ExpressionInfo)).Member;
+                default:
+                    throw new IllegalStateException();
+                }
+            }
+        }
+        
+        private void handleMemberAccessAssign(MemberAccessExpressionNode memberAccess, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            var member = memberAccess.getUserData(typeof(ExpressionInfo)).Member;
+            
+            switch (member.MemberKind) {
+            case Field: {
+                var field = member.Field;
+                var type = field.Type;
+                if (field.IsStatic) {
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    BytecodeGenerator.emitConversion(context, type, rightExpression);
+                    if (nested) {
+                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    }
+                } else {
+                    expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    BytecodeGenerator.emitConversion(context, type, rightExpression);
+                    if (nested) {
+                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                    }
+                }
+                emitFieldModification(field);
+                break;
+            }
+            case Property: {
+                var method = member.SetAccessor;
+                var type = member.Type;
+                if (method.IsStatic) {
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    BytecodeGenerator.emitConversion(context, type, rightExpression);
+                    if (nested) {
+                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    }
+                } else {
+                    expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    BytecodeGenerator.emitConversion(context, type, rightExpression);
+                    if (nested) {
+                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                    }
+                }
+                emitPropertyOrIndexerModification(method);
+                break;
+            }
+            default:
+                throw new Exception("Internal error: member kind not supported: " + member.MemberKind);
+            }
+        }
+        
+        private void handleMemberAccessOperationAssign(MemberAccessExpressionNode memberAccess, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            var member = memberAccess.getUserData(typeof(ExpressionInfo)).Member;
 
-			switch (member.MemberKind) {
-			case Field: {
-				var field = member.Field;
-				if (!field.IsStatic) {
-					expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
-					generator.emit(JvmOpcode.Dup);
-				}
-				emitFieldOperationAssign(field, nested);
-				break;
-			}
-			case Property: {
-				var method = member.GetAccessor;
-				if (!method.IsStatic) {
-					expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
-					generator.emit(JvmOpcode.Dup);
-				}
-				emitPropertyOperationAssign(method, member.SetAccessor, nested);
-				break;
-			}
-			default:
-				throw new Exception("Internal error: member kind not supported: " + member.MemberKind);
-			}
-		}
-		
-		private void emitFieldOperationAssign(JvmFieldInfo field, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			BytecodeGenerator.emitFieldAccess(context, field);
-			BytecodeGenerator.emitGenericCast(context, field.Type, field.DeclaringType.OriginalTypeDefinition.getField(field.Name).Type);
-			emitFieldOrPropertyOperation(generator, field.Type, nested, field.IsStatic);
-			emitFieldModification(field);
-		}
-		
-		private void emitPropertyOperationAssign(JvmMethodInfo getMethod, JvmMethodInfo setMethod, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			BytecodeGenerator.emitPropertyAccess(context, getMethod);
-			BytecodeGenerator.emitGenericCast(context, getMethod.ReturnType, getMethod.OriginalMethodDefinition.ReturnType);
-			emitFieldOrPropertyOperation(generator, getMethod.ReturnType, nested, getMethod.IsStatic);
-			emitPropertyOrIndexerModification(setMethod);
-		}
+            switch (member.MemberKind) {
+            case Field: {
+                var field = member.Field;
+                if (!field.IsStatic) {
+                    expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
+                    generator.emit(JvmOpcode.Dup);
+                }
+                emitFieldOperationAssign(field, nested);
+                break;
+            }
+            case Property: {
+                var method = member.GetAccessor;
+                if (!method.IsStatic) {
+                    expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
+                    generator.emit(JvmOpcode.Dup);
+                }
+                emitPropertyOperationAssign(method, member.SetAccessor, nested);
+                break;
+            }
+            default:
+                throw new Exception("Internal error: member kind not supported: " + member.MemberKind);
+            }
+        }
+        
+        private void emitFieldOperationAssign(JvmFieldInfo field, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            BytecodeGenerator.emitFieldAccess(context, field);
+            BytecodeGenerator.emitGenericCast(context, field.Type, field.DeclaringType.OriginalTypeDefinition.getField(field.Name).Type);
+            emitFieldOrPropertyOperation(generator, field.Type, nested, field.IsStatic);
+            emitFieldModification(field);
+        }
+        
+        private void emitPropertyOperationAssign(JvmMethodInfo getMethod, JvmMethodInfo setMethod, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            BytecodeGenerator.emitPropertyAccess(context, getMethod);
+            BytecodeGenerator.emitGenericCast(context, getMethod.ReturnType, getMethod.OriginalMethodDefinition.ReturnType);
+            emitFieldOrPropertyOperation(generator, getMethod.ReturnType, nested, getMethod.IsStatic);
+            emitPropertyOrIndexerModification(setMethod);
+        }
 
-		private void emitFieldOrPropertyOperation(JvmCodeGenerator generator, JvmTypeInfo type, boolean nested, boolean isStatic) {
-			if (type.IsBoolean) {
-				emitUnbox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
-				if (rightExpression == null) {
-					generator.emit(JvmOpcode.Iconst_1);
-				} else {
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, type);
-				}
-				emitIntOperator();
-				generator.emit(JvmOpcode.I2b);
-				emitBox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
-			} else if (type.FullName.equals("java/lang/String")) {
-				emitUnbox(nested, type, isStatic, false);
-				var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
-				var stringType = context.getTypeSystem().getType("java/lang/String");
-				generator.emit(JvmOpcode.New, stringBuilderType);
-				generator.emit(JvmOpcode.Dup);
-				generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-				if (rightInfo.Type.IsCategory2) {
-					generator.emit(JvmOpcode.Dup_X2);
-					generator.emit(JvmOpcode.Pop);
-				} else {
-					generator.emit(JvmOpcode.Swap);
-				}
-				BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
-				var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
-					&& rightInfo != null && rightInfo.Type == stringType;
-				context.MethodGenerationContext.IsBuildingString = isStringAdd;
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				if (!isStringAdd) {
-					BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
-				}
-				context.MethodGenerationContext.IsBuildingString = false;
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
-				emitBox(nested, type, isStatic, false);
-			} else if (BytecodeHelper.isDelegateType(type)) {
-				emitUnbox(nested, type, isStatic, false);
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-				var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
-				if (operator == AssignOperator.Add) {
-					generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
-				} else {
-					generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
-				}
-				generator.emit(JvmOpcode.Checkcast, type);
-				emitBox(nested, type, isStatic, false);
-			} else {
-				JvmTypeInfo rightType;
-				switch (operator) {
-				case LeftShift:
-				case RightShift:
-				case UnsignedRightShift:
-					rightType = JvmTypeInfo.INT;
-					break;
-				default:
-					rightType = type;
-					break;
-				}
-				switch (type.NumericTypeKind) {
-				case Byte:
-					emitUnbox(nested, JvmTypeInfo.BYTE, isStatic, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2b);
-					emitBox(nested, JvmTypeInfo.BYTE, isStatic, false);
-					break;
+        private void emitFieldOrPropertyOperation(JvmCodeGenerator generator, JvmTypeInfo type, boolean nested, boolean isStatic) {
+            if (type.IsBoolean) {
+                emitUnbox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
+                if (rightExpression == null) {
+                    generator.emit(JvmOpcode.Iconst_1);
+                } else {
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, type);
+                }
+                emitIntOperator();
+                generator.emit(JvmOpcode.I2b);
+                emitBox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
+            } else if (type.FullName.equals("java/lang/String")) {
+                emitUnbox(nested, type, isStatic, false);
+                var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
+                var stringType = context.getTypeSystem().getType("java/lang/String");
+                generator.emit(JvmOpcode.New, stringBuilderType);
+                generator.emit(JvmOpcode.Dup);
+                generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                if (rightInfo.Type.IsCategory2) {
+                    generator.emit(JvmOpcode.Dup_X2);
+                    generator.emit(JvmOpcode.Pop);
+                } else {
+                    generator.emit(JvmOpcode.Swap);
+                }
+                BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
+                    && rightInfo != null && rightInfo.Type == stringType;
+                context.MethodGenerationContext.IsBuildingString = isStringAdd;
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                if (!isStringAdd) {
+                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                }
+                context.MethodGenerationContext.IsBuildingString = false;
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                emitBox(nested, type, isStatic, false);
+            } else if (BytecodeHelper.isDelegateType(type)) {
+                emitUnbox(nested, type, isStatic, false);
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
+                var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                if (operator == AssignOperator.Add) {
+                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                } else {
+                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                }
+                generator.emit(JvmOpcode.Checkcast, type);
+                emitBox(nested, type, isStatic, false);
+            } else {
+                JvmTypeInfo rightType;
+                switch (operator) {
+                case LeftShift:
+                case RightShift:
+                case UnsignedRightShift:
+                    rightType = JvmTypeInfo.INT;
+                    break;
+                default:
+                    rightType = type;
+                    break;
+                }
+                switch (type.NumericTypeKind) {
+                case Byte:
+                    emitUnbox(nested, JvmTypeInfo.BYTE, isStatic, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2b);
+                    emitBox(nested, JvmTypeInfo.BYTE, isStatic, false);
+                    break;
 
-				case Char:
-					emitUnbox(nested, JvmTypeInfo.CHAR, isStatic, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2c);
-					emitBox(nested, JvmTypeInfo.CHAR, isStatic, false);
-					break;
+                case Char:
+                    emitUnbox(nested, JvmTypeInfo.CHAR, isStatic, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2c);
+                    emitBox(nested, JvmTypeInfo.CHAR, isStatic, false);
+                    break;
 
-				case Double:
-					emitUnbox(nested, JvmTypeInfo.DOUBLE, isStatic, true);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Dconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitDoubleOperator();
-					emitBox(nested, JvmTypeInfo.DOUBLE, isStatic, true);
-					break;
+                case Double:
+                    emitUnbox(nested, JvmTypeInfo.DOUBLE, isStatic, true);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Dconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitDoubleOperator();
+                    emitBox(nested, JvmTypeInfo.DOUBLE, isStatic, true);
+                    break;
 
-				case Float:
-					emitUnbox(nested, JvmTypeInfo.FLOAT, isStatic, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Fconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitFloatOperator();
-					emitBox(nested, JvmTypeInfo.FLOAT, isStatic, false);
-					break;
+                case Float:
+                    emitUnbox(nested, JvmTypeInfo.FLOAT, isStatic, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Fconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitFloatOperator();
+                    emitBox(nested, JvmTypeInfo.FLOAT, isStatic, false);
+                    break;
 
-				case Int:
-					emitUnbox(nested, JvmTypeInfo.INT, isStatic, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					emitBox(nested, JvmTypeInfo.INT, isStatic, false);
-					break;
+                case Int:
+                    emitUnbox(nested, JvmTypeInfo.INT, isStatic, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    emitBox(nested, JvmTypeInfo.INT, isStatic, false);
+                    break;
 
-				case Long:
-					emitUnbox(nested, JvmTypeInfo.LONG, isStatic, true);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Lconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitLongOperator();
-					emitBox(nested, JvmTypeInfo.LONG, isStatic, true);
-					break;
+                case Long:
+                    emitUnbox(nested, JvmTypeInfo.LONG, isStatic, true);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Lconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitLongOperator();
+                    emitBox(nested, JvmTypeInfo.LONG, isStatic, true);
+                    break;
 
-				case Short:
-					emitUnbox(nested, JvmTypeInfo.SHORT, isStatic, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2s);
-					emitBox(nested, JvmTypeInfo.SHORT, isStatic, false);
-					break;
+                case Short:
+                    emitUnbox(nested, JvmTypeInfo.SHORT, isStatic, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2s);
+                    emitBox(nested, JvmTypeInfo.SHORT, isStatic, false);
+                    break;
 
-				default:
-					throw new Exception("Internal error");
-				}
-			}
-		}
-		
-		private void handleElementAccessAssign(ElementAccessExpressionNode elementAccess, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			var tinfo = elementAccess.TargetObject.getUserData(typeof(ExpressionInfo));
-			var ttype = tinfo.Type;
-			if (!ttype.IsArray) {
-				var info = elementAccess.getUserData(typeof(ExpressionInfo));
-				var member = info.Member;
-				var method = member.SetAccessor;
-				if (!method.IsStatic) {
-					expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
-				}
-				var requireLocal = elementAccess.Indexes.size() > 1;
-				var it = method.Parameters.iterator();
-				foreach (var e in elementAccess.Indexes) {
-					expressionGenerator.handleExpression(e, null, true);
-					var p = it.next();
-					BytecodeGenerator.emitConversion(context, p.Type, e);
-					if (!requireLocal) {
-						if (p.Type.TypeKind == TypeKind.Long || p.Type.TypeKind == TypeKind.Double) {
-							requireLocal = true;
-						}
-					}
-				}
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				var type = member.Type;
-				BytecodeGenerator.emitConversion(context, type, rightExpression);
-				if (boxingKind == BoxingKind.Box) {
-					JvmTypeInfo rtype;
-					if (type.IsObject) {
-						var rinfo = rightExpression.getUserData(typeof(ExpressionInfo));
-						rtype = rinfo.Type;
-					} else {
-						rtype = type;
-					}
-					generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
-				}
-				if (nested) {
-					var isCategory2 = type.IsCategory2;
-					if (requireLocal) {
-						generator.beginScope();
-						generator.emit((isCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-						generator.emit(BytecodeHelper.getStoreOpcode(type), generator.declareLocal(type, "elementValue$0"));
-					} else if (method.IsStatic) {
-						generator.emit((isCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
-					} else {
-						generator.emit((isCategory2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
-					}
-				}
-				emitPropertyOrIndexerModification(method);
-				if (method.ReturnType != JvmTypeInfo.VOID) {
-					generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
-				}
-				if (nested && requireLocal) {
-					generator.emit(BytecodeHelper.getLoadOpcode(type), generator.getLocal("elementValue$0"));
-					generator.endScope();
-				}
-			} else {
-				expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
-				var index = elementAccess.Indexes[0];
-				expressionGenerator.handleExpression(index, null, true);
-				BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
-				expressionGenerator.handleExpression(rightExpression, null, true);
-				BytecodeGenerator.emitConversion(context, ttype.ElementType, rightExpression);
-				
-				switch (ttype.ElementType.TypeKind) {
-				case Boolean:
-				case Byte:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Bastore);
-					break;
-				case Char:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Castore);
-					break;
-				case Float:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Fastore);
-					break;
-				case Double:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup2_X2);
-					}
-					generator.emit(JvmOpcode.Dastore);
-					break;
-				case Int:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Iastore);
-					break;
-				case Long:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup2_X2);
-					}
-					generator.emit(JvmOpcode.Lastore);
-					break;
-				case Short:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Sastore);
-					break;
-				default:
-					if (nested) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Aastore);
-					break;
-				}
-			}
-		}
-		
-		private void handleElementAccessOperationAssign(ElementAccessExpressionNode elementAccess, boolean nested) {
-			var generator = context.MethodGenerationContext.Generator;
-			var tinfo = elementAccess.TargetObject.getUserData(typeof(ExpressionInfo));
-			var ttype = tinfo.Type;
-			if (!ttype.IsArray) {
-				var info = elementAccess.getUserData(typeof(ExpressionInfo));
-				var method = info.Member.GetAccessor;
-				var isStatic = method.IsStatic;
-				if (!isStatic) {
-					expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
-				}
-				var requireLocals = elementAccess.Indexes.size() > 1;
-				if (!requireLocals) {
-					foreach (var p in method.Parameters) {
-						if (p.Type.IsCategory2) {
-							requireLocals = true;
-							break;
-						}
-					}
-				}
-				if (requireLocals) {
-					generator.beginScope();
-					if (!isStatic) {
-						generator.emit(JvmOpcode.Dup);
-						generator.emit(JvmOpcode.Astore, generator.declareLocal(ttype, "elementTarget$0"));
-					}
-				}
-				int n = 0;
-				var it = method.Parameters.iterator();
-				foreach (var e in elementAccess.Indexes) {
-					expressionGenerator.handleExpression(e, null, true);
-					var p = it.next();
-					BytecodeGenerator.emitConversion(context, p.Type, e);
-					if (requireLocals) {
-						generator.emit((p.Type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-						generator.emit(BytecodeHelper.getStoreOpcode(p.Type), generator.declareLocal(p.Type, "elementIndex$" + n++));
-					}
-				}
-				if (!requireLocals) {
-					generator.emit((isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup2);
-				}
-				BytecodeGenerator.emitIndexerAccess(context, method);
-				if (requireLocals && nested && postAssign) {
-					generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-					generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
-						generator.declareLocal(method.ReturnType, "elementResult$0"));
-				}
-				if (method.ReturnType.IsBoolean) {
-					if (!requireLocals && nested && postAssign) {
-						generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-					}
-					emitUnbox(false, JvmTypeInfo.BOOLEAN, false, false);
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-						BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, method.ReturnType);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2b);
-					emitBox(false, JvmTypeInfo.BOOLEAN, false, false);
-					if (!requireLocals && nested && !postAssign) {
-						generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-					}
-				} else if (method.getReturnType().getFullName().equals("java/lang/String")) {
-					if (!requireLocals && nested && postAssign) {
-						generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-					}
-					var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
-					var stringType = context.getTypeSystem().getType("java/lang/String");
-					generator.emit(JvmOpcode.New, stringBuilderType);
-					generator.emit(JvmOpcode.Dup);
-					generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-					if (rightInfo.Type.IsCategory2) {
-						generator.emit(JvmOpcode.Dup_X2);
-						generator.emit(JvmOpcode.Pop);
-					} else {
-						generator.emit(JvmOpcode.Swap);
-					}
-					BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
-					boolean isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
-						&& rightInfo != null && rightInfo.Type == stringType;
-					context.MethodGenerationContext.IsBuildingString = isStringAdd;
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					if (!isStringAdd) {
-						BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
-					}
-					context.MethodGenerationContext.IsBuildingString = false;
-					generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
-					if (!requireLocals && nested && !postAssign) {
-						generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-					}
-				} else if (BytecodeHelper.isDelegateType(method.ReturnType)) {
-					if (!requireLocals && nested && postAssign) {
-						generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-					}
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-					var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
-					if (operator == AssignOperator.Add) {
-						generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
-					} else {
-						generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
-					}
-					generator.emit(JvmOpcode.Checkcast, method.ReturnType);
-					if (!requireLocals && nested && !postAssign) {
-						generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-					}
-				} else {
-					JvmTypeInfo rightType;
-					switch (operator) {
-					case LeftShift:
-					case RightShift:
-					case UnsignedRightShift:
-						rightType = JvmTypeInfo.INT;
-						break;
-					default:
-						rightType = method.ReturnType;
-						break;
-					}
-					switch (method.ReturnType.NumericTypeKind) {
-					case Byte:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.BYTE, false, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						generator.emit(JvmOpcode.I2b);
-						emitBox(false, JvmTypeInfo.BYTE, false, false);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						break;
+                default:
+                    throw new Exception("Internal error");
+                }
+            }
+        }
+        
+        private void handleElementAccessAssign(ElementAccessExpressionNode elementAccess, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            var tinfo = elementAccess.TargetObject.getUserData(typeof(ExpressionInfo));
+            var ttype = tinfo.Type;
+            if (!ttype.IsArray) {
+                var info = elementAccess.getUserData(typeof(ExpressionInfo));
+                var member = info.Member;
+                var method = member.SetAccessor;
+                if (!method.IsStatic) {
+                    expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
+                }
+                var requireLocal = elementAccess.Indexes.size() > 1;
+                var it = method.Parameters.iterator();
+                foreach (var e in elementAccess.Indexes) {
+                    expressionGenerator.handleExpression(e, null, true);
+                    var p = it.next();
+                    BytecodeGenerator.emitConversion(context, p.Type, e);
+                    if (!requireLocal) {
+                        if (p.Type.TypeKind == TypeKind.Long || p.Type.TypeKind == TypeKind.Double) {
+                            requireLocal = true;
+                        }
+                    }
+                }
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                var type = member.Type;
+                BytecodeGenerator.emitConversion(context, type, rightExpression);
+                if (boxingKind == BoxingKind.Box) {
+                    JvmTypeInfo rtype;
+                    if (type.IsObject) {
+                        var rinfo = rightExpression.getUserData(typeof(ExpressionInfo));
+                        rtype = rinfo.Type;
+                    } else {
+                        rtype = type;
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
+                }
+                if (nested) {
+                    var isCategory2 = type.IsCategory2;
+                    if (requireLocal) {
+                        generator.beginScope();
+                        generator.emit((isCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                        generator.emit(BytecodeHelper.getStoreOpcode(type), generator.declareLocal(type, "elementValue$0"));
+                    } else if (method.IsStatic) {
+                        generator.emit((isCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                    } else {
+                        generator.emit((isCategory2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                    }
+                }
+                emitPropertyOrIndexerModification(method);
+                if (method.ReturnType != JvmTypeInfo.VOID) {
+                    generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                }
+                if (nested && requireLocal) {
+                    generator.emit(BytecodeHelper.getLoadOpcode(type), generator.getLocal("elementValue$0"));
+                    generator.endScope();
+                }
+            } else {
+                expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
+                var index = elementAccess.Indexes[0];
+                expressionGenerator.handleExpression(index, null, true);
+                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
+                expressionGenerator.handleExpression(rightExpression, null, true);
+                BytecodeGenerator.emitConversion(context, ttype.ElementType, rightExpression);
+                
+                switch (ttype.ElementType.TypeKind) {
+                case Boolean:
+                case Byte:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Bastore);
+                    break;
+                case Char:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Castore);
+                    break;
+                case Float:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Fastore);
+                    break;
+                case Double:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup2_X2);
+                    }
+                    generator.emit(JvmOpcode.Dastore);
+                    break;
+                case Int:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Iastore);
+                    break;
+                case Long:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup2_X2);
+                    }
+                    generator.emit(JvmOpcode.Lastore);
+                    break;
+                case Short:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Sastore);
+                    break;
+                default:
+                    if (nested) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Aastore);
+                    break;
+                }
+            }
+        }
+        
+        private void handleElementAccessOperationAssign(ElementAccessExpressionNode elementAccess, boolean nested) {
+            var generator = context.MethodGenerationContext.Generator;
+            var tinfo = elementAccess.TargetObject.getUserData(typeof(ExpressionInfo));
+            var ttype = tinfo.Type;
+            if (!ttype.IsArray) {
+                var info = elementAccess.getUserData(typeof(ExpressionInfo));
+                var method = info.Member.GetAccessor;
+                var isStatic = method.IsStatic;
+                if (!isStatic) {
+                    expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
+                }
+                var requireLocals = elementAccess.Indexes.size() > 1;
+                if (!requireLocals) {
+                    foreach (var p in method.Parameters) {
+                        if (p.Type.IsCategory2) {
+                            requireLocals = true;
+                            break;
+                        }
+                    }
+                }
+                if (requireLocals) {
+                    generator.beginScope();
+                    if (!isStatic) {
+                        generator.emit(JvmOpcode.Dup);
+                        generator.emit(JvmOpcode.Astore, generator.declareLocal(ttype, "elementTarget$0"));
+                    }
+                }
+                int n = 0;
+                var it = method.Parameters.iterator();
+                foreach (var e in elementAccess.Indexes) {
+                    expressionGenerator.handleExpression(e, null, true);
+                    var p = it.next();
+                    BytecodeGenerator.emitConversion(context, p.Type, e);
+                    if (requireLocals) {
+                        generator.emit((p.Type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                        generator.emit(BytecodeHelper.getStoreOpcode(p.Type), generator.declareLocal(p.Type, "elementIndex$" + n++));
+                    }
+                }
+                if (!requireLocals) {
+                    generator.emit((isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup2);
+                }
+                BytecodeGenerator.emitIndexerAccess(context, method);
+                if (requireLocals && nested && postAssign) {
+                    generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
+                        generator.declareLocal(method.ReturnType, "elementResult$0"));
+                }
+                if (method.ReturnType.IsBoolean) {
+                    if (!requireLocals && nested && postAssign) {
+                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                    }
+                    emitUnbox(false, JvmTypeInfo.BOOLEAN, false, false);
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                        BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, method.ReturnType);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2b);
+                    emitBox(false, JvmTypeInfo.BOOLEAN, false, false);
+                    if (!requireLocals && nested && !postAssign) {
+                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                    }
+                } else if (method.getReturnType().getFullName().equals("java/lang/String")) {
+                    if (!requireLocals && nested && postAssign) {
+                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                    }
+                    var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
+                    var stringType = context.getTypeSystem().getType("java/lang/String");
+                    generator.emit(JvmOpcode.New, stringBuilderType);
+                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                    if (rightInfo.Type.IsCategory2) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(JvmOpcode.Pop);
+                    } else {
+                        generator.emit(JvmOpcode.Swap);
+                    }
+                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                    boolean isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
+                        && rightInfo != null && rightInfo.Type == stringType;
+                    context.MethodGenerationContext.IsBuildingString = isStringAdd;
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    if (!isStringAdd) {
+                        BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                    }
+                    context.MethodGenerationContext.IsBuildingString = false;
+                    generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                    if (!requireLocals && nested && !postAssign) {
+                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                    }
+                } else if (BytecodeHelper.isDelegateType(method.ReturnType)) {
+                    if (!requireLocals && nested && postAssign) {
+                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                    }
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
+                    var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                    if (operator == AssignOperator.Add) {
+                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                    } else {
+                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                    }
+                    generator.emit(JvmOpcode.Checkcast, method.ReturnType);
+                    if (!requireLocals && nested && !postAssign) {
+                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                    }
+                } else {
+                    JvmTypeInfo rightType;
+                    switch (operator) {
+                    case LeftShift:
+                    case RightShift:
+                    case UnsignedRightShift:
+                        rightType = JvmTypeInfo.INT;
+                        break;
+                    default:
+                        rightType = method.ReturnType;
+                        break;
+                    }
+                    switch (method.ReturnType.NumericTypeKind) {
+                    case Byte:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.BYTE, false, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        generator.emit(JvmOpcode.I2b);
+                        emitBox(false, JvmTypeInfo.BYTE, false, false);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        break;
 
-					case Char:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.CHAR, false, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						generator.emit(JvmOpcode.I2c);
-						emitBox(false, JvmTypeInfo.CHAR, false, false);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						break;
+                    case Char:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.CHAR, false, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        generator.emit(JvmOpcode.I2c);
+                        emitBox(false, JvmTypeInfo.CHAR, false, false);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        break;
 
-					case Double:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.DOUBLE, false, true);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Dconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitDoubleOperator();
-						emitBox(false, JvmTypeInfo.DOUBLE, false, true);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
-						}
-						break;
+                    case Double:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.DOUBLE, false, true);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Dconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitDoubleOperator();
+                        emitBox(false, JvmTypeInfo.DOUBLE, false, true);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                        }
+                        break;
 
-					case Float:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.FLOAT, false, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Fconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitFloatOperator();
-						emitBox(false, JvmTypeInfo.FLOAT, false, false);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						break;
+                    case Float:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.FLOAT, false, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Fconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitFloatOperator();
+                        emitBox(false, JvmTypeInfo.FLOAT, false, false);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        break;
 
-					case Int:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.INT, false, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						emitBox(false, JvmTypeInfo.INT, false, false);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						break;
+                    case Int:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.INT, false, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        emitBox(false, JvmTypeInfo.INT, false, false);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        break;
 
-					case Long:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.LONG, false, true);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Lconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitLongOperator();
-						emitBox(false, JvmTypeInfo.LONG, false, true);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
-						}
-						break;
+                    case Long:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.LONG, false, true);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Lconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitLongOperator();
+                        emitBox(false, JvmTypeInfo.LONG, false, true);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                        }
+                        break;
 
-					case Short:
-						if (!requireLocals && nested && postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						emitUnbox(false, JvmTypeInfo.SHORT, false, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.getType(), rightType);
-						}
-						emitIntOperator();
-						generator.emit(JvmOpcode.I2s);
-						emitBox(false, JvmTypeInfo.SHORT, false, false);
-						if (!requireLocals && nested && !postAssign) {
-							generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
-						}
-						break;
+                    case Short:
+                        if (!requireLocals && nested && postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        emitUnbox(false, JvmTypeInfo.SHORT, false, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.getType(), rightType);
+                        }
+                        emitIntOperator();
+                        generator.emit(JvmOpcode.I2s);
+                        emitBox(false, JvmTypeInfo.SHORT, false, false);
+                        if (!requireLocals && nested && !postAssign) {
+                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        }
+                        break;
 
-					default:
-						throw new Exception("Internal error");
-					}
-				}
-				if (requireLocals) {
-					generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
-						generator.declareLocal(method.ReturnType, "elementValue$0"));
-					if (!isStatic) {
-						generator.emit(JvmOpcode.Aload, generator.getLocal("elementTarget$0"));
-					}
-					n = 0;
-					foreach (var p in method.Parameters) {
-						generator.emit(BytecodeHelper.getLoadOpcode(p.Type), generator.getLocal("elementIndex$" + n++));
-					}
-					generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementValue$0"));
-				}
-				emitPropertyOrIndexerModification(info.Member.SetAccessor);
-				if (requireLocals) {
-					if (nested) {
-						if (postAssign) {
-							generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementResult$0"));
-						} else {
-							generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementValue$0"));
-						}
-					}
-					generator.endScope();
-				}
-			} else {
-				expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
-				var index = elementAccess.Indexes[0];
-				expressionGenerator.handleExpression(index, null, true);
-				BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
-				
-				generator.emit(JvmOpcode.Dup2);
-				if (ttype.ElementType.IsBoolean) {
-					generator.emit(JvmOpcode.Baload);
-					if (nested && postAssign) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					if (rightExpression == null) {
-						generator.emit(JvmOpcode.Iconst_1);
-					} else {
-						expressionGenerator.handleExpression(rightExpression, null, true);
-					}
-					emitIntOperator();
-					generator.emit(JvmOpcode.I2b);
-					if (nested && !postAssign) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Bastore);
-				} else if (ttype.ElementType.FullName.equals("java/lang/String")) {
-					generator.emit(JvmOpcode.Aaload);
-					if (nested && postAssign) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					var stringBuilderType = context.TypeSystem.getType("java/lang/StringBuilder");
-					var stringType = context.TypeSystem.getType("java/lang/String");
-					generator.emit(JvmOpcode.New, stringBuilderType);
-					generator.emit(JvmOpcode.Dup);
-					generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-					if (rightInfo.getType().IsCategory2) {
-						generator.emit(JvmOpcode.Dup_X2);
-						generator.emit(JvmOpcode.Pop);
-					} else {
-						generator.emit(JvmOpcode.Swap);
-					}
-					BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
-					var isStringAdd = rightExpression.getExpressionKind() == ExpressionKind.Binary
-						&& rightInfo != null && rightInfo.getType() == stringType;
-					context.MethodGenerationContext.IsBuildingString = isStringAdd;
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					if (!isStringAdd) {
-						BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
-					}
-					context.MethodGenerationContext.IsBuildingString = false;
-					generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
-					if (nested && !postAssign) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Bastore);
-				} else if (BytecodeHelper.isDelegateType(ttype.ElementType)) {
-					generator.emit(JvmOpcode.Aaload);
-					if (nested && postAssign) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					expressionGenerator.handleExpression(rightExpression, null, true);
-					var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-					var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
-					if (operator == AssignOperator.Add) {
-						generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
-					} else {
-						generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
-					}
-					generator.emit(JvmOpcode.Checkcast, ttype);
-					if (nested && !postAssign) {
-						generator.emit(JvmOpcode.Dup_X2);
-					}
-					generator.emit(JvmOpcode.Bastore);
-				} else {
-					JvmTypeInfo rightType;
-					switch (operator) {
-					case LeftShift:
-					case RightShift:
-					case UnsignedRightShift:
-						rightType = JvmTypeInfo.INT;
-						break;
-					default:
-						rightType = ttype.ElementType;
-						break;
-					}
-					switch (ttype.ElementType.NumericTypeKind) {
-					case Byte:
-						emitAload(nested, JvmOpcode.Baload, JvmTypeInfo.BYTE, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						generator.emit(JvmOpcode.I2b);
-						emitAstore(nested, JvmOpcode.Bastore, JvmTypeInfo.BYTE, false);
-						break;
-					case Char:
-						emitAload(nested, JvmOpcode.Caload, JvmTypeInfo.CHAR, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						generator.emit(JvmOpcode.I2c);
-						emitAstore(nested, JvmOpcode.Castore, JvmTypeInfo.CHAR, false);
-						break;
-					case Float:
-						emitAload(nested, JvmOpcode.Faload, JvmTypeInfo.FLOAT, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Fconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitFloatOperator();
-						emitAstore(nested, JvmOpcode.Fastore, JvmTypeInfo.FLOAT, false);
-						break;
-					case Double:
-						emitAload(nested, JvmOpcode.Daload, JvmTypeInfo.DOUBLE, true);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Dconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitDoubleOperator();
-						emitAstore(nested, JvmOpcode.Dastore, JvmTypeInfo.DOUBLE, true);
-						break;
-					case Int:
-						emitAload(nested, JvmOpcode.Iaload, JvmTypeInfo.INT, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						emitAstore(nested, JvmOpcode.Iastore, JvmTypeInfo.INT, false);
-						break;
-					case Long:
-						emitAload(nested, JvmOpcode.Laload, JvmTypeInfo.LONG, true);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Lconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitLongOperator();
-						emitAstore(nested, JvmOpcode.Lastore, JvmTypeInfo.LONG, true);
-						break;
-					case Short:
-						emitAload(nested, JvmOpcode.Saload, JvmTypeInfo.SHORT, false);
-						if (rightExpression == null) {
-							generator.emit(JvmOpcode.Iconst_1);
-						} else {
-							expressionGenerator.handleExpression(rightExpression, null, true);
-							BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
-						}
-						emitIntOperator();
-						generator.emit(JvmOpcode.I2s);
-						emitAstore(nested, JvmOpcode.Sastore, JvmTypeInfo.SHORT, false);
-						break;
-					default:
-						throw new IllegalStateException();
-					}
-				}
-			}
-		}
+                    default:
+                        throw new Exception("Internal error");
+                    }
+                }
+                if (requireLocals) {
+                    generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
+                        generator.declareLocal(method.ReturnType, "elementValue$0"));
+                    if (!isStatic) {
+                        generator.emit(JvmOpcode.Aload, generator.getLocal("elementTarget$0"));
+                    }
+                    n = 0;
+                    foreach (var p in method.Parameters) {
+                        generator.emit(BytecodeHelper.getLoadOpcode(p.Type), generator.getLocal("elementIndex$" + n++));
+                    }
+                    generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementValue$0"));
+                }
+                emitPropertyOrIndexerModification(info.Member.SetAccessor);
+                if (requireLocals) {
+                    if (nested) {
+                        if (postAssign) {
+                            generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementResult$0"));
+                        } else {
+                            generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementValue$0"));
+                        }
+                    }
+                    generator.endScope();
+                }
+            } else {
+                expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
+                var index = elementAccess.Indexes[0];
+                expressionGenerator.handleExpression(index, null, true);
+                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
+                
+                generator.emit(JvmOpcode.Dup2);
+                if (ttype.ElementType.IsBoolean) {
+                    generator.emit(JvmOpcode.Baload);
+                    if (nested && postAssign) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    if (rightExpression == null) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        expressionGenerator.handleExpression(rightExpression, null, true);
+                    }
+                    emitIntOperator();
+                    generator.emit(JvmOpcode.I2b);
+                    if (nested && !postAssign) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Bastore);
+                } else if (ttype.ElementType.FullName.equals("java/lang/String")) {
+                    generator.emit(JvmOpcode.Aaload);
+                    if (nested && postAssign) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    var stringBuilderType = context.TypeSystem.getType("java/lang/StringBuilder");
+                    var stringType = context.TypeSystem.getType("java/lang/String");
+                    generator.emit(JvmOpcode.New, stringBuilderType);
+                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                    if (rightInfo.getType().IsCategory2) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(JvmOpcode.Pop);
+                    } else {
+                        generator.emit(JvmOpcode.Swap);
+                    }
+                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                    var isStringAdd = rightExpression.getExpressionKind() == ExpressionKind.Binary
+                        && rightInfo != null && rightInfo.getType() == stringType;
+                    context.MethodGenerationContext.IsBuildingString = isStringAdd;
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    if (!isStringAdd) {
+                        BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                    }
+                    context.MethodGenerationContext.IsBuildingString = false;
+                    generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                    if (nested && !postAssign) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Bastore);
+                } else if (BytecodeHelper.isDelegateType(ttype.ElementType)) {
+                    generator.emit(JvmOpcode.Aaload);
+                    if (nested && postAssign) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    expressionGenerator.handleExpression(rightExpression, null, true);
+                    var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
+                    var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                    if (operator == AssignOperator.Add) {
+                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                    } else {
+                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                    }
+                    generator.emit(JvmOpcode.Checkcast, ttype);
+                    if (nested && !postAssign) {
+                        generator.emit(JvmOpcode.Dup_X2);
+                    }
+                    generator.emit(JvmOpcode.Bastore);
+                } else {
+                    JvmTypeInfo rightType;
+                    switch (operator) {
+                    case LeftShift:
+                    case RightShift:
+                    case UnsignedRightShift:
+                        rightType = JvmTypeInfo.INT;
+                        break;
+                    default:
+                        rightType = ttype.ElementType;
+                        break;
+                    }
+                    switch (ttype.ElementType.NumericTypeKind) {
+                    case Byte:
+                        emitAload(nested, JvmOpcode.Baload, JvmTypeInfo.BYTE, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        generator.emit(JvmOpcode.I2b);
+                        emitAstore(nested, JvmOpcode.Bastore, JvmTypeInfo.BYTE, false);
+                        break;
+                    case Char:
+                        emitAload(nested, JvmOpcode.Caload, JvmTypeInfo.CHAR, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        generator.emit(JvmOpcode.I2c);
+                        emitAstore(nested, JvmOpcode.Castore, JvmTypeInfo.CHAR, false);
+                        break;
+                    case Float:
+                        emitAload(nested, JvmOpcode.Faload, JvmTypeInfo.FLOAT, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Fconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitFloatOperator();
+                        emitAstore(nested, JvmOpcode.Fastore, JvmTypeInfo.FLOAT, false);
+                        break;
+                    case Double:
+                        emitAload(nested, JvmOpcode.Daload, JvmTypeInfo.DOUBLE, true);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Dconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitDoubleOperator();
+                        emitAstore(nested, JvmOpcode.Dastore, JvmTypeInfo.DOUBLE, true);
+                        break;
+                    case Int:
+                        emitAload(nested, JvmOpcode.Iaload, JvmTypeInfo.INT, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        emitAstore(nested, JvmOpcode.Iastore, JvmTypeInfo.INT, false);
+                        break;
+                    case Long:
+                        emitAload(nested, JvmOpcode.Laload, JvmTypeInfo.LONG, true);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Lconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitLongOperator();
+                        emitAstore(nested, JvmOpcode.Lastore, JvmTypeInfo.LONG, true);
+                        break;
+                    case Short:
+                        emitAload(nested, JvmOpcode.Saload, JvmTypeInfo.SHORT, false);
+                        if (rightExpression == null) {
+                            generator.emit(JvmOpcode.Iconst_1);
+                        } else {
+                            expressionGenerator.handleExpression(rightExpression, null, true);
+                            BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
+                        }
+                        emitIntOperator();
+                        generator.emit(JvmOpcode.I2s);
+                        emitAstore(nested, JvmOpcode.Sastore, JvmTypeInfo.SHORT, false);
+                        break;
+                    default:
+                        throw new IllegalStateException();
+                    }
+                }
+            }
+        }
 
-		private void emitUnbox(boolean nested, JvmTypeInfo type, boolean isStatic, boolean category2) {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (boxingKind) {
-			case Box:
-				if (nested && postAssign) {
-					generator.emit(JvmOpcode.Dup);
-				}
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
-				break;
-			case Unbox:
-				if (nested && postAssign) {
-					generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
-				}
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
-				break;
-			default:
-				if (nested && postAssign) {
-					generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
-				}
-				break;
-			}
-		}
+        private void emitUnbox(boolean nested, JvmTypeInfo type, boolean isStatic, boolean category2) {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (boxingKind) {
+            case Box:
+                if (nested && postAssign) {
+                    generator.emit(JvmOpcode.Dup);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                break;
+            case Unbox:
+                if (nested && postAssign) {
+                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                }
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                break;
+            default:
+                if (nested && postAssign) {
+                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                }
+                break;
+            }
+        }
 
-		private void emitBox(boolean nested, JvmTypeInfo type, boolean isStatic, boolean category2) {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (boxingKind) {
-			case Box:
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
-				if (nested && !postAssign) {
-					generator.emit(JvmOpcode.Dup);
-				}
-				break;
-			case Unbox:
-				if (nested && !postAssign) {
-					generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
-				}
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
-				break;
-			default:
-				if (nested && !postAssign) {
-					generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
-				}
-				break;
-			}
-		}
-		
-		private void emitAload(boolean nested, JvmOpcode opcode, JvmTypeInfo type, boolean category2) {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (boxingKind) {
-			case Box:
-				generator.emit(JvmOpcode.Aaload);
-				if (nested && postAssign) {
-					generator.emit(JvmOpcode.Dup_X2);
-				}
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
-				break;
-			case Unbox:
-				generator.emit(opcode);
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
-				if (nested && postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
-				}
-				break;
-			default:
-				generator.emit(opcode);
-				if (nested && postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
-				}
-				break;
-			}
-		}
-		
-		private void emitAstore(boolean nested, JvmOpcode opcode, JvmTypeInfo type, boolean category2) {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (boxingKind) {
-			case Box:
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
-				if (nested && !postAssign) {
-					generator.emit(JvmOpcode.Dup_X2);
-				}
-				generator.emit(JvmOpcode.Aastore);
-				break;
-			case Unbox:
-				if (nested && !postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
-				}
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
-				generator.emit(opcode);
-				break;
-			default:
-				if (nested && !postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
-				}
-				generator.emit(opcode);
-				break;
-			}
-		}
+        private void emitBox(boolean nested, JvmTypeInfo type, boolean isStatic, boolean category2) {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (boxingKind) {
+            case Box:
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                if (nested && !postAssign) {
+                    generator.emit(JvmOpcode.Dup);
+                }
+                break;
+            case Unbox:
+                if (nested && !postAssign) {
+                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                break;
+            default:
+                if (nested && !postAssign) {
+                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                }
+                break;
+            }
+        }
+        
+        private void emitAload(boolean nested, JvmOpcode opcode, JvmTypeInfo type, boolean category2) {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (boxingKind) {
+            case Box:
+                generator.emit(JvmOpcode.Aaload);
+                if (nested && postAssign) {
+                    generator.emit(JvmOpcode.Dup_X2);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                break;
+            case Unbox:
+                generator.emit(opcode);
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                if (nested && postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                }
+                break;
+            default:
+                generator.emit(opcode);
+                if (nested && postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                }
+                break;
+            }
+        }
+        
+        private void emitAstore(boolean nested, JvmOpcode opcode, JvmTypeInfo type, boolean category2) {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (boxingKind) {
+            case Box:
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                if (nested && !postAssign) {
+                    generator.emit(JvmOpcode.Dup_X2);
+                }
+                generator.emit(JvmOpcode.Aastore);
+                break;
+            case Unbox:
+                if (nested && !postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                generator.emit(opcode);
+                break;
+            default:
+                if (nested && !postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                }
+                generator.emit(opcode);
+                break;
+            }
+        }
 
-		private void emitLoad(boolean nested, JvmOpcode opcode, JvmLocalInfo local, boolean category2) {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (boxingKind) {
-			case Box:
-				generator.emit(JvmOpcode.Aload, local);
-				if (nested && postAssign) {
-					generator.emit(JvmOpcode.Dup);
-				}
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
-				break;
-			case Unbox:
-				generator.emit(opcode, local);
-				if (nested && postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-				}
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
-				break;
-			default:
-				generator.emit(opcode, local);
-				if (nested && postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-				}
-				break;
-			}
-		}
-		
-		private void emitStore(boolean nested, JvmOpcode opcode, JvmLocalInfo local, boolean category2) {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (boxingKind) {
-			case Box:
-				generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
-				if (nested && !postAssign) {
-					generator.emit(JvmOpcode.Dup);
-				}
-				generator.emit(JvmOpcode.Astore, local);
-				break;
-			case Unbox:
-				if (nested && !postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-				}
-				generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
-				generator.emit(opcode, local);
-				break;
-			default:
-				if (nested && !postAssign) {
-					generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-				}
-				generator.emit(opcode, local);
-				break;
-			}
-		}
+        private void emitLoad(boolean nested, JvmOpcode opcode, JvmLocalInfo local, boolean category2) {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (boxingKind) {
+            case Box:
+                generator.emit(JvmOpcode.Aload, local);
+                if (nested && postAssign) {
+                    generator.emit(JvmOpcode.Dup);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
+                break;
+            case Unbox:
+                generator.emit(opcode, local);
+                if (nested && postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                }
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
+                break;
+            default:
+                generator.emit(opcode, local);
+                if (nested && postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                }
+                break;
+            }
+        }
+        
+        private void emitStore(boolean nested, JvmOpcode opcode, JvmLocalInfo local, boolean category2) {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (boxingKind) {
+            case Box:
+                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
+                if (nested && !postAssign) {
+                    generator.emit(JvmOpcode.Dup);
+                }
+                generator.emit(JvmOpcode.Astore, local);
+                break;
+            case Unbox:
+                if (nested && !postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
+                generator.emit(opcode, local);
+                break;
+            default:
+                if (nested && !postAssign) {
+                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                }
+                generator.emit(opcode, local);
+                break;
+            }
+        }
 
-		private void emitFieldModification(JvmFieldInfo field) {
-			var generator = context.MethodGenerationContext.Generator;
-			if (BytecodeGenerator.requireAccessor(context, field.DeclaringType, field.IsPublic, field.IsProtected, field.IsPrivate)) {
-				var mutator = context.PrivateMutators[field];
-				if (mutator == null) {
-					JvmTypeBuilder outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
-					while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
-						if (field.DeclaringType.isAssignableFrom(outerClass)) {
-							break;
-						}
-					}
-					int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
-					var methodBuilder = outerClass.defineMethod("access$" + n);
-					methodBuilder.setReturnType(JvmTypeInfo.VOID);
-					methodBuilder.setStatic(field.IsStatic);
-					methodBuilder.setFinal(!field.IsStatic);
-					methodBuilder.setSynthetic(true);
-					var param = methodBuilder.addParameter(field.Type);
-					param.setName(field.Name);
-					var gen = methodBuilder.getCodeGenerator();
-					gen.beginScope();
-					if (field.IsStatic) {
-						gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
-						gen.emit(JvmOpcode.Putstatic, field);
-					} else {
-						gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-						gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
-						gen.emit(JvmOpcode.Putfield, field);
-					}
-					gen.emit(JvmOpcode.Return);
-					gen.endScope();
-					mutator = methodBuilder;
-					context.PrivateMutators[field] = mutator;
-				}
-				if (field.IsStatic) {
-					generator.emit(JvmOpcode.Invokestatic, mutator);
-				} else {
-					generator.emit(JvmOpcode.Invokevirtual, mutator);
-				}
-			} else if (field.IsStatic) {
-				generator.emit(JvmOpcode.Putstatic, field);
-			} else {
-				generator.emit(JvmOpcode.Putfield, field);
-			}
-		}
-		
-		private void emitPropertyOrIndexerModification(JvmMethodInfo method) {
-			var generator = context.MethodGenerationContext.Generator;
-			if (BytecodeGenerator.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
-				var mutator = context.PrivateMutators[method];
-				if (mutator == null) {
-					var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
-					while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
-						if (method.DeclaringType.isAssignableFrom(outerClass)) {
-							break;
-						}
-					}
-					int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
-					var type = method.Parameters.first().Type;
-					var methodBuilder = outerClass.defineMethod("access$" + n);
-					methodBuilder.setReturnType(JvmTypeInfo.VOID);
-					methodBuilder.setStatic(method.IsStatic);
-					methodBuilder.setFinal(!method.IsStatic);
-					methodBuilder.setSynthetic(true);
-					foreach (var p in method.Parameters) {
-						var param = methodBuilder.addParameter(p.Type);
-						param.setName(p.Name);
-					}
-					var param = methodBuilder.addParameter(type);
-					param.setName("value");
-					var gen = methodBuilder.CodeGenerator;
-					gen.beginScope();
-					if (method.IsStatic) {
-						foreach (var p in method.Parameters) {
-							gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-						}
-						gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
-						gen.emit(JvmOpcode.Invokestatic, method);
-					} else {
-						gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-						foreach (var p in method.Parameters) {
-							gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-						}
-						gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
-						gen.emit(JvmOpcode.Invokevirtual, method);
-					}
-					gen.emit(JvmOpcode.Return);
-					gen.endScope();
-					mutator = methodBuilder;
-					context.PrivateMutators[method] = mutator;
-				}
-				if (method.IsStatic) {
-					generator.emit(JvmOpcode.Invokestatic, mutator);
-				} else {
-					generator.emit(JvmOpcode.Invokevirtual, mutator);
-				}
-			} else if (method.IsStatic) {
-				generator.emit(JvmOpcode.Invokestatic, method);
-			} else if (method.DeclaringType.IsInterface) {
-				generator.emit(JvmOpcode.Invokeinterface, method);
-			} else {
-				generator.emit(JvmOpcode.Invokevirtual, method);
-			}
-		}
-		
-		private void emitIntOperator() {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (operator) {
-			case Add:
-				generator.emit(JvmOpcode.Iadd);
-				break;
+        private void emitFieldModification(JvmFieldInfo field) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (BytecodeGenerator.requireAccessor(context, field.DeclaringType, field.IsPublic, field.IsProtected, field.IsPrivate)) {
+                var mutator = context.PrivateMutators[field];
+                if (mutator == null) {
+                    JvmTypeBuilder outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (field.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    methodBuilder.setStatic(field.IsStatic);
+                    methodBuilder.setFinal(!field.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    var param = methodBuilder.addParameter(field.Type);
+                    param.setName(field.Name);
+                    var gen = methodBuilder.getCodeGenerator();
+                    gen.beginScope();
+                    if (field.IsStatic) {
+                        gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
+                        gen.emit(JvmOpcode.Putstatic, field);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
+                        gen.emit(JvmOpcode.Putfield, field);
+                    }
+                    gen.emit(JvmOpcode.Return);
+                    gen.endScope();
+                    mutator = methodBuilder;
+                    context.PrivateMutators[field] = mutator;
+                }
+                if (field.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, mutator);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, mutator);
+                }
+            } else if (field.IsStatic) {
+                generator.emit(JvmOpcode.Putstatic, field);
+            } else {
+                generator.emit(JvmOpcode.Putfield, field);
+            }
+        }
+        
+        private void emitPropertyOrIndexerModification(JvmMethodInfo method) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (BytecodeGenerator.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+                var mutator = context.PrivateMutators[method];
+                if (mutator == null) {
+                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var type = method.Parameters.first().Type;
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    methodBuilder.setStatic(method.IsStatic);
+                    methodBuilder.setFinal(!method.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    foreach (var p in method.Parameters) {
+                        var param = methodBuilder.addParameter(p.Type);
+                        param.setName(p.Name);
+                    }
+                    var param = methodBuilder.addParameter(type);
+                    param.setName("value");
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    if (method.IsStatic) {
+                        foreach (var p in method.Parameters) {
+                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                        }
+                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
+                        gen.emit(JvmOpcode.Invokestatic, method);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        foreach (var p in method.Parameters) {
+                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                        }
+                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
+                        gen.emit(JvmOpcode.Invokevirtual, method);
+                    }
+                    gen.emit(JvmOpcode.Return);
+                    gen.endScope();
+                    mutator = methodBuilder;
+                    context.PrivateMutators[method] = mutator;
+                }
+                if (method.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, mutator);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, mutator);
+                }
+            } else if (method.IsStatic) {
+                generator.emit(JvmOpcode.Invokestatic, method);
+            } else if (method.DeclaringType.IsInterface) {
+                generator.emit(JvmOpcode.Invokeinterface, method);
+            } else {
+                generator.emit(JvmOpcode.Invokevirtual, method);
+            }
+        }
+        
+        private void emitIntOperator() {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (operator) {
+            case Add:
+                generator.emit(JvmOpcode.Iadd);
+                break;
 
-			case Divide:
-				generator.emit(JvmOpcode.Idiv);
-				break;
-				
-			case And:
-				generator.emit(JvmOpcode.Iand);
-				break;
-				
-			case LeftShift:
-				generator.emit(JvmOpcode.Ishl);
-				break;
-				
-			case Modulo:
-				generator.emit(JvmOpcode.Irem);
-				break;
-				
-			case Multiply:
-				generator.emit(JvmOpcode.Imul);
-				break;
-				
-			case Or:
-				generator.emit(JvmOpcode.Ior);
-				break;
-				
-			case RightShift:
-				generator.emit(JvmOpcode.Ishr);
-				break;
-				
-			case Subtract:
-				generator.emit(JvmOpcode.Isub);
-				break;
-				
-			case UnsignedRightShift:
-				generator.emit(JvmOpcode.Iushr);
-				break;
-				
-			case Xor:
-				generator.emit(JvmOpcode.Ixor);
-				break;
-				
-			default:
-				throw new IllegalStateException();
-			}
-		}
+            case Divide:
+                generator.emit(JvmOpcode.Idiv);
+                break;
+                
+            case And:
+                generator.emit(JvmOpcode.Iand);
+                break;
+                
+            case LeftShift:
+                generator.emit(JvmOpcode.Ishl);
+                break;
+                
+            case Modulo:
+                generator.emit(JvmOpcode.Irem);
+                break;
+                
+            case Multiply:
+                generator.emit(JvmOpcode.Imul);
+                break;
+                
+            case Or:
+                generator.emit(JvmOpcode.Ior);
+                break;
+                
+            case RightShift:
+                generator.emit(JvmOpcode.Ishr);
+                break;
+                
+            case Subtract:
+                generator.emit(JvmOpcode.Isub);
+                break;
+                
+            case UnsignedRightShift:
+                generator.emit(JvmOpcode.Iushr);
+                break;
+                
+            case Xor:
+                generator.emit(JvmOpcode.Ixor);
+                break;
+                
+            default:
+                throw new IllegalStateException();
+            }
+        }
 
-		private void emitLongOperator() {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (operator) {
-			case Add:
-				generator.emit(JvmOpcode.Ladd);
-				break;
+        private void emitLongOperator() {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (operator) {
+            case Add:
+                generator.emit(JvmOpcode.Ladd);
+                break;
 
-			case Divide:
-				generator.emit(JvmOpcode.Ldiv);
-				break;
-				
-			case And:
-				generator.emit(JvmOpcode.Land);
-				break;
-				
-			case LeftShift:
-				generator.emit(JvmOpcode.Lshl);
-				break;
-				
-			case Modulo:
-				generator.emit(JvmOpcode.Lrem);
-				break;
-				
-			case Multiply:
-				generator.emit(JvmOpcode.Lmul);
-				break;
-				
-			case Or:
-				generator.emit(JvmOpcode.Lor);
-				break;
-				
-			case RightShift:
-				generator.emit(JvmOpcode.Lshr);
-				break;
-				
-			case Subtract:
-				generator.emit(JvmOpcode.Lsub);
-				break;
-				
-			case UnsignedRightShift:
-				generator.emit(JvmOpcode.Lushr);
-				break;
-				
-			case Xor:
-				generator.emit(JvmOpcode.Lxor);
-				break;
-				
-			default:
-				throw new IllegalStateException();
-			}
-		}
-		
-		private void emitFloatOperator() {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (operator) {
-			case Add:
-				generator.emit(JvmOpcode.Fadd);
-				break;
+            case Divide:
+                generator.emit(JvmOpcode.Ldiv);
+                break;
+                
+            case And:
+                generator.emit(JvmOpcode.Land);
+                break;
+                
+            case LeftShift:
+                generator.emit(JvmOpcode.Lshl);
+                break;
+                
+            case Modulo:
+                generator.emit(JvmOpcode.Lrem);
+                break;
+                
+            case Multiply:
+                generator.emit(JvmOpcode.Lmul);
+                break;
+                
+            case Or:
+                generator.emit(JvmOpcode.Lor);
+                break;
+                
+            case RightShift:
+                generator.emit(JvmOpcode.Lshr);
+                break;
+                
+            case Subtract:
+                generator.emit(JvmOpcode.Lsub);
+                break;
+                
+            case UnsignedRightShift:
+                generator.emit(JvmOpcode.Lushr);
+                break;
+                
+            case Xor:
+                generator.emit(JvmOpcode.Lxor);
+                break;
+                
+            default:
+                throw new IllegalStateException();
+            }
+        }
+        
+        private void emitFloatOperator() {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (operator) {
+            case Add:
+                generator.emit(JvmOpcode.Fadd);
+                break;
 
-			case Divide:
-				generator.emit(JvmOpcode.Fdiv);
-				break;
-				
-			case Modulo:
-				generator.emit(JvmOpcode.Frem);
-				break;
-				
-			case Multiply:
-				generator.emit(JvmOpcode.Fmul);
-				break;
-				
-			case Subtract:
-				generator.emit(JvmOpcode.Fsub);
-				break;
-				
-			default:
-				throw new IllegalStateException();
-			}
-		}
-		
-		private void emitDoubleOperator() {
-			var generator = context.MethodGenerationContext.Generator;
-			switch (operator) {
-			case Add:
-				generator.emit(JvmOpcode.Dadd);
-				break;
+            case Divide:
+                generator.emit(JvmOpcode.Fdiv);
+                break;
+                
+            case Modulo:
+                generator.emit(JvmOpcode.Frem);
+                break;
+                
+            case Multiply:
+                generator.emit(JvmOpcode.Fmul);
+                break;
+                
+            case Subtract:
+                generator.emit(JvmOpcode.Fsub);
+                break;
+                
+            default:
+                throw new IllegalStateException();
+            }
+        }
+        
+        private void emitDoubleOperator() {
+            var generator = context.MethodGenerationContext.Generator;
+            switch (operator) {
+            case Add:
+                generator.emit(JvmOpcode.Dadd);
+                break;
 
-			case Divide:
-				generator.emit(JvmOpcode.Ddiv);
-				break;
-				
-			case Modulo:
-				generator.emit(JvmOpcode.Drem);
-				break;
-				
-			case Multiply:
-				generator.emit(JvmOpcode.Dmul);
-				break;
-				
-			case Subtract:
-				generator.emit(JvmOpcode.Dsub);
-				break;
-				
-			default:
-				throw new IllegalStateException();
-			}
-		}
-	}
+            case Divide:
+                generator.emit(JvmOpcode.Ddiv);
+                break;
+                
+            case Modulo:
+                generator.emit(JvmOpcode.Drem);
+                break;
+                
+            case Multiply:
+                generator.emit(JvmOpcode.Dmul);
+                break;
+                
+            case Subtract:
+                generator.emit(JvmOpcode.Dsub);
+                break;
+                
+            default:
+                throw new IllegalStateException();
+            }
+        }
+    }
 }

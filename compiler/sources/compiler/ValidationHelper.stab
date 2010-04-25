@@ -15,11 +15,11 @@
    limitations under the License.
  */
 using java.lang;
-using stab.bytecode;
 using stab.query;
-using stab.syntaxtree;
+using stab.tools.bytecode;
+using stab.tools.syntaxtree;
 
-package stab.compiler {
+package stab.tools.compiler {
     
     enum BoxingKind {
         None,

@@ -16,130 +16,130 @@
  */
 using java.lang;
 using java.util;
-using stab.bytecode;
-using stab.helpers;
 using stab.query;
+using stab.tools.bytecode;
+using stab.tools.helpers;
 
-package stab.compiler {
+package stab.tools.compiler {
 
-	public class TypeFinder {
-		private Node root;
-		
-		public TypeFinder(JvmTypeSystem typeSystem) {
-			this.TypeSystem = typeSystem;
-			this.root = new Node();
-			initialize();
-		}
+    public class TypeFinder {
+        private Node root;
+        
+        public TypeFinder(JvmTypeSystem typeSystem) {
+            this.TypeSystem = typeSystem;
+            this.root = new Node();
+            initialize();
+        }
 
-		public JvmTypeSystem TypeSystem {
-			get;
-			private set;
-		}
-		
-		public boolean packageExists(Iterable<String> packages) {
-			Node n = root;
-			foreach (var p in packages) {
-				n = n.children[p];
-				if (n == null) {
-					return false;
-				}
-			}
-			return true;
-		}
+        public JvmTypeSystem TypeSystem {
+            get;
+            private set;
+        }
+        
+        public boolean packageExists(Iterable<String> packages) {
+            Node n = root;
+            foreach (var p in packages) {
+                n = n.children[p];
+                if (n == null) {
+                    return false;
+                }
+            }
+            return true;
+        }
 
-		public Set<String> getClasses(Iterable<String> packages) {
-			var n = root;
-			foreach (var p in packages) {
-				n = n.children[p];
-				if (n == null) {
-					return Collections.emptySet();
-				}
-			}
-			return n.classes;
-		}
+        public Set<String> getClasses(Iterable<String> packages) {
+            var n = root;
+            foreach (var p in packages) {
+                n = n.children[p];
+                if (n == null) {
+                    return Collections.emptySet();
+                }
+            }
+            return n.classes;
+        }
 
-		public Set<String> getClasses(String packageName) {
-			int idx;
-			var n = root;
-			if (!Helper.isNullOrEmpty(packageName)) {
-				while (n != null && (idx = packageName.indexOf('/')) > 0) {
-					var pkg = packageName.substring(0, idx);
-					packageName = packageName.substring(idx + 1);
-					n = n.children[pkg];
-				}
-				if (n == null) {
-					return Collections.emptySet();
-				}
-				n = n.children[packageName];
-				if (n == null) {
-					return Collections.emptySet();
-				}
-			}
-			return n.classes;
-		}
+        public Set<String> getClasses(String packageName) {
+            int idx;
+            var n = root;
+            if (!Helper.isNullOrEmpty(packageName)) {
+                while (n != null && (idx = packageName.indexOf('/')) > 0) {
+                    var pkg = packageName.substring(0, idx);
+                    packageName = packageName.substring(idx + 1);
+                    n = n.children[pkg];
+                }
+                if (n == null) {
+                    return Collections.emptySet();
+                }
+                n = n.children[packageName];
+                if (n == null) {
+                    return Collections.emptySet();
+                }
+            }
+            return n.classes;
+        }
 
-		public Iterable<String> getSubPackages(Iterable<String> packages) {
-			var n = root;
-			foreach (var p in packages) {
-				n = n.children[p];
-				if (n == null) {
-					return Query.empty();
-				}
-			}
-			return n.children.keySet();
-		}
+        public Iterable<String> getSubPackages(Iterable<String> packages) {
+            var n = root;
+            foreach (var p in packages) {
+                n = n.children[p];
+                if (n == null) {
+                    return Query.empty();
+                }
+            }
+            return n.children.keySet();
+        }
 
-		public Iterable<String> getSubPackages(String packageName) {
-			int idx;
-			var n = root;
-			if (!Helper.isNullOrEmpty(packageName)) {
-				while (n != null && (idx = packageName.indexOf('/')) > 0) {
-					var pkg = packageName.substring(0, idx);
-					packageName = packageName.substring(idx + 1);
-					n = n.children[pkg];
-				}
-				if (n == null) {
-					return Query.empty();
-				}
-				n = n.children[packageName];
-				if (n == null) {
-					return Query.empty();
-				}
-			}
-			return n.children.keySet();
-		}
+        public Iterable<String> getSubPackages(String packageName) {
+            int idx;
+            var n = root;
+            if (!Helper.isNullOrEmpty(packageName)) {
+                while (n != null && (idx = packageName.indexOf('/')) > 0) {
+                    var pkg = packageName.substring(0, idx);
+                    packageName = packageName.substring(idx + 1);
+                    n = n.children[pkg];
+                }
+                if (n == null) {
+                    return Query.empty();
+                }
+                n = n.children[packageName];
+                if (n == null) {
+                    return Query.empty();
+                }
+            }
+            return n.children.keySet();
+        }
 
-		private void initialize() {
-			foreach (var c in this.TypeSystem.getAllClassNames()) {
-				if (c.lastIndexOf('$') > 0) {
-					continue;
-				}
-				initializeNode(root, c);
-			}
-		}
+        private void initialize() {
+            foreach (var c in this.TypeSystem.getAllClassNames()) {
+                if (c.lastIndexOf('$') > 0) {
+                    continue;
+                }
+                initializeNode(root, c);
+            }
+        }
 
-		private static void initializeNode(Node n, String c) {
-			for (;;) {
-				int idx = c.indexOf('/');
-				if (idx < 0) {
-					n.classes.add(c);
-					break;
-				} else {
-					var pkg = c.substring(0, idx);
-					var cn = n.children[pkg];
-					if (cn == null) {
-						cn = new Node();
-						n.children[pkg] = cn;
-					}
-					n = cn;
-					c = c.substring(idx + 1);
-				}
-			}
-		}
-		
-		private class Node {
-			HashMap<String, Node> children = new HashMap<String, Node>();
-			HashSet<String> classes = new HashSet<String>();
-		}
-	}
+        private static void initializeNode(Node n, String c) {
+            for (;;) {
+                int idx = c.indexOf('/');
+                if (idx < 0) {
+                    n.classes.add(c);
+                    break;
+                } else {
+                    var pkg = c.substring(0, idx);
+                    var cn = n.children[pkg];
+                    if (cn == null) {
+                        cn = new Node();
+                        n.children[pkg] = cn;
+                    }
+                    n = cn;
+                    c = c.substring(idx + 1);
+                }
+            }
+        }
+        
+        private class Node {
+            HashMap<String, Node> children = new HashMap<String, Node>();
+            HashSet<String> classes = new HashSet<String>();
+        }
+    }
 }

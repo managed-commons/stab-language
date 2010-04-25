@@ -18,88 +18,88 @@ using java.lang;
 using java.util;
 using stab.query;
 
-package stab.bytecode {
+package stab.tools.bytecode {
 
-	class RawGenericMethod : JvmMethodInfo {
-		private JvmMethodInfo genericMethodDefinition;
-		private JvmTypeInfo returnType;
-		private ArrayList<JvmParameterInfo> parameters;
-		private Iterable<JvmTypeInfo> exceptions;
+    class RawGenericMethod : JvmMethodInfo {
+        private JvmMethodInfo genericMethodDefinition;
+        private JvmTypeInfo returnType;
+        private ArrayList<JvmParameterInfo> parameters;
+        private Iterable<JvmTypeInfo> exceptions;
 
-		RawGenericMethod(JvmTypeInfo declaringType, JvmMethodInfo genericMethodDefinition)
-			: super(declaringType, genericMethodDefinition.Name) {
-			this.genericMethodDefinition = genericMethodDefinition;
-		}
+        RawGenericMethod(JvmTypeInfo declaringType, JvmMethodInfo genericMethodDefinition)
+            : super(declaringType, genericMethodDefinition.Name) {
+            this.genericMethodDefinition = genericMethodDefinition;
+        }
 
-		public override JvmTypeInfo ReturnType {
-			get {
-				initialize();
-				return returnType;
-			}
-		}
-		
-		public override Iterable<JvmParameterInfo> Parameters {
-			get {
-				initialize();
-				return parameters;
-			}
-		}
+        public override JvmTypeInfo ReturnType {
+            get {
+                initialize();
+                return returnType;
+            }
+        }
+        
+        public override Iterable<JvmParameterInfo> Parameters {
+            get {
+                initialize();
+                return parameters;
+            }
+        }
 
-		public override Iterable<JvmTypeInfo> Exceptions {
-			get {
-				initialize();
-				return exceptions;
-			}
-		}
-		
-		public override Iterable<JvmTypeInfo> GenericArguments {
-			get {
-				return Query.empty();
-			}
-		}
-		
-		public override Iterable<JvmAnnotationValue> Annotations {
-			get {
-				return genericMethodDefinition.Annotations;
-			}
-		}
-		
-		public override JvmAnnotationValue DefaultValue {
-			get {
-				return genericMethodDefinition.DefaultValue;
-			}
-		}
-		
-		public override String Descriptor {
-			get {
-				return genericMethodDefinition.Descriptor;
-			}
-		}
-		
-		protected override int Modifiers {
-			get {
-				return genericMethodDefinition.Modifiers;
-			}
-		}
-		
-		private void initialize() {
-			if (returnType != null) {
-				return;
-			}
-			
-			returnType = BytecodeHelper.getRawType(genericMethodDefinition.DeclaringType, genericMethodDefinition.ReturnType);
-			parameters = new ArrayList<JvmParameterInfo>();
-			foreach (var p in genericMethodDefinition.Parameters) {
-				var newp = new JvmParameterInfo(p.Position, BytecodeHelper.getRawType(genericMethodDefinition.DeclaringType, p.Type));
-				newp.name = p.Name;
-				parameters.add(newp);
-			}
-			
-			var exceptions = new ArrayList<JvmTypeInfo>();
-			this.exceptions = exceptions;
-			foreach (var t in genericMethodDefinition.Exceptions) {
-				exceptions.add(BytecodeHelper.getRawType(genericMethodDefinition.DeclaringType, t));
-			}
-		}
-	}
+        public override Iterable<JvmTypeInfo> Exceptions {
+            get {
+                initialize();
+                return exceptions;
+            }
+        }
+        
+        public override Iterable<JvmTypeInfo> GenericArguments {
+            get {
+                return Query.empty();
+            }
+        }
+        
+        public override Iterable<JvmAnnotationValue> Annotations {
+            get {
+                return genericMethodDefinition.Annotations;
+            }
+        }
+        
+        public override JvmAnnotationValue DefaultValue {
+            get {
+                return genericMethodDefinition.DefaultValue;
+            }
+        }
+        
+        public override String Descriptor {
+            get {
+                return genericMethodDefinition.Descriptor;
+            }
+        }
+        
+        protected override int Modifiers {
+            get {
+                return genericMethodDefinition.Modifiers;
+            }
+        }
+        
+        private void initialize() {
+            if (returnType != null) {
+                return;
+            }
+            
+            returnType = BytecodeHelper.getRawType(genericMethodDefinition.DeclaringType, genericMethodDefinition.ReturnType);
+            parameters = new ArrayList<JvmParameterInfo>();
+            foreach (var p in genericMethodDefinition.Parameters) {
+                var newp = new JvmParameterInfo(p.Position, BytecodeHelper.getRawType(genericMethodDefinition.DeclaringType, p.Type));
+                newp.name = p.Name;
+                parameters.add(newp);
+            }
+            
+            var exceptions = new ArrayList<JvmTypeInfo>();
+            this.exceptions = exceptions;
+            foreach (var t in genericMethodDefinition.Exceptions) {
+                exceptions.add(BytecodeHelper.getRawType(genericMethodDefinition.DeclaringType, t));
+            }
+        }
+    }
 }

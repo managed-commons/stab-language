@@ -20,163 +20,163 @@ using org.objectweb.asm;
 
 using AsmType = org.objectweb.asm.Type;
 
-package stab.bytecode {
-	
-	public enum AnnotationArgumentKind {
-		Annotation,
-		Boolean,
-		Byte,
-		Char,
-		Short,
-		Int,
-		Long,
-		Float,
-		Double,
-		String,
-		Type,
-		Array,
-		Enum
-	}
+package stab.tools.bytecode {
+    
+    public enum AnnotationArgumentKind {
+        Annotation,
+        Boolean,
+        Byte,
+        Char,
+        Short,
+        Int,
+        Long,
+        Float,
+        Double,
+        String,
+        Type,
+        Array,
+        Enum
+    }
 
-	public abstract class JvmAnnotationArgument {
-		protected JvmAnnotationArgument(AnnotationArgumentKind annotationArgumentKind) {
-			this.AnnotationArgumentKind = annotationArgumentKind;
-		}
-		
-		public AnnotationArgumentKind AnnotationArgumentKind {
-			get;
-			private set;
-		}
-		
-		public virtual Iterable<String> ArgumentNames {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual JvmAnnotationArgument getArgument(String name) {
-			throw new UnsupportedOperationException();
-		}
-		
-		public virtual Object Value {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual Iterable<JvmAnnotationArgument> Elements {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual boolean IsRuntimeVisible {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual JvmTypeInfo Type {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		public virtual String Name {
-			get {
-				throw new UnsupportedOperationException();
-			}
-		}
-		
-		abstract void accept(String name, AnnotationVisitor visitor);
-		
-		class SimpleValue : JvmAnnotationArgument {
-			private Object value;
-			
-			SimpleValue(AnnotationArgumentKind annotationArgumentKind, Object value)
-				: super(annotationArgumentKind) {
-				this.value = value;
-			}
-			
-			public override Object Value {
-				get {
-					return value;
-				}
-			}
-			
-			override void accept(String name, AnnotationVisitor visitor) {
-				visitor.visit(name, value);
-			}
-		}
-		
-		class ArrayValue : JvmAnnotationArgument {
-			ArrayList<JvmAnnotationArgument> elements;
-			
-			ArrayValue()
-				: super(AnnotationArgumentKind.Array) {
-				this.elements = new ArrayList<JvmAnnotationArgument>();
-			}
-			
-			public override Iterable<JvmAnnotationArgument> Elements {
-				get {
-					return elements;
-				}
-			}
-			
-			override void accept(String name, AnnotationVisitor visitor) {
-				var v = visitor.visitArray(name);
-				foreach (var e in elements) {
-					e.accept("", v);
-				}
-				v.visitEnd();
-			}
-		}
-		
-		class EnumValue : JvmAnnotationArgument {
-			private JvmTypeInfo type;
-			private String name;
-			
-			EnumValue(JvmTypeInfo type, String name)
-				: super(AnnotationArgumentKind.Enum) {
-				this.type = type;
-				this.name = name;
-			}
-			
-			public override JvmTypeInfo Type {
-				get {
-					return type;
-				}
-			}
-			
-			public override String Name {
-				get {
-					return name;
-				}
-			}
-			
-			override void accept(String name, AnnotationVisitor visitor) {
-				visitor.visitEnum(name, type.Descriptor, this.name);
-			}
-		}
-		
-		class TypeValue : JvmAnnotationArgument {
-			private JvmTypeInfo type;
-			
-			TypeValue(JvmTypeInfo type)
-				: super(AnnotationArgumentKind.Type) {
-				this.type = type;
-			}
-			
-			public override JvmTypeInfo Type {
-				get {
-					return type;
-				}
-			}
-			
-			override void accept(String name, AnnotationVisitor visitor) {
-				visitor.visit(name, AsmType.getType(type.Descriptor));
-			}
-		}
-	}
-	
+    public abstract class JvmAnnotationArgument {
+        protected JvmAnnotationArgument(AnnotationArgumentKind annotationArgumentKind) {
+            this.AnnotationArgumentKind = annotationArgumentKind;
+        }
+        
+        public AnnotationArgumentKind AnnotationArgumentKind {
+            get;
+            private set;
+        }
+        
+        public virtual Iterable<String> ArgumentNames {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual JvmAnnotationArgument getArgument(String name) {
+            throw new UnsupportedOperationException();
+        }
+        
+        public virtual Object Value {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual Iterable<JvmAnnotationArgument> Elements {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual boolean IsRuntimeVisible {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual JvmTypeInfo Type {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        public virtual String Name {
+            get {
+                throw new UnsupportedOperationException();
+            }
+        }
+        
+        abstract void accept(String name, AnnotationVisitor visitor);
+        
+        class SimpleValue : JvmAnnotationArgument {
+            private Object value;
+            
+            SimpleValue(AnnotationArgumentKind annotationArgumentKind, Object value)
+                : super(annotationArgumentKind) {
+                this.value = value;
+            }
+            
+            public override Object Value {
+                get {
+                    return value;
+                }
+            }
+            
+            override void accept(String name, AnnotationVisitor visitor) {
+                visitor.visit(name, value);
+            }
+        }
+        
+        class ArrayValue : JvmAnnotationArgument {
+            ArrayList<JvmAnnotationArgument> elements;
+            
+            ArrayValue()
+                : super(AnnotationArgumentKind.Array) {
+                this.elements = new ArrayList<JvmAnnotationArgument>();
+            }
+            
+            public override Iterable<JvmAnnotationArgument> Elements {
+                get {
+                    return elements;
+                }
+            }
+            
+            override void accept(String name, AnnotationVisitor visitor) {
+                var v = visitor.visitArray(name);
+                foreach (var e in elements) {
+                    e.accept("", v);
+                }
+                v.visitEnd();
+            }
+        }
+        
+        class EnumValue : JvmAnnotationArgument {
+            private JvmTypeInfo type;
+            private String name;
+            
+            EnumValue(JvmTypeInfo type, String name)
+                : super(AnnotationArgumentKind.Enum) {
+                this.type = type;
+                this.name = name;
+            }
+            
+            public override JvmTypeInfo Type {
+                get {
+                    return type;
+                }
+            }
+            
+            public override String Name {
+                get {
+                    return name;
+                }
+            }
+            
+            override void accept(String name, AnnotationVisitor visitor) {
+                visitor.visitEnum(name, type.Descriptor, this.name);
+            }
+        }
+        
+        class TypeValue : JvmAnnotationArgument {
+            private JvmTypeInfo type;
+            
+            TypeValue(JvmTypeInfo type)
+                : super(AnnotationArgumentKind.Type) {
+                this.type = type;
+            }
+            
+            public override JvmTypeInfo Type {
+                get {
+                    return type;
+                }
+            }
+            
+            override void accept(String name, AnnotationVisitor visitor) {
+                visitor.visit(name, AsmType.getType(type.Descriptor));
+            }
+        }
+    }
+    
 }
