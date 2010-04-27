@@ -1,13 +1,10 @@
 @ECHO OFF
 
-IF EXIST annotated\classes RMDIR /S /Q annotated\classes
 IF EXIST annotated\stabal.jar DEL /Q annotated\stabal.jar
-IF EXIST compiler\classes RMDIR /S /Q compiler\classes
 IF EXIST compiler\stabc.jar DEL /Q compiler\stabc.jar
-IF EXIST runtime\classes RMDIR /S /Q runtime\classes
 IF EXIST runtime\stabrt.jar DEL /Q runtime\stabrt.jar
 IF EXIST runtime\doc.xml DEL /Q runtime\doc.xml
-IF EXIST tests\classes RMDIR /S /Q tests\classes
+IF EXIST tests\tests.jar DEL /Q tests\tests.jar
 IF EXIST tests\resources\ExpressionsTest\generated RMDIR /S /Q tests\resources\ExpressionsTest\generated
 IF EXIST tests\resources\LibraryTest\generated RMDIR /S /Q tests\resources\LibraryTest\generated
 IF EXIST tests\resources\NotCommittedTest\generated RMDIR /S /Q tests\resources\NotCommittedTest\generated

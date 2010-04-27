@@ -24,7 +24,7 @@ using stab.tools.helpers;
 package stab.tools.bytecode.test {
 
 	public class TypeSystemTest {
-		private String bin = System.getProperty("user.dir") + "\\Tests\\classes";
+		private String bin = System.getProperty("user.dir") + "\\Tests\\tests.jar";
 		
 		[Test]
 		public void testObjectMethods() {

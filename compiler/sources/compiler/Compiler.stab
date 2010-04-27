@@ -54,17 +54,12 @@ package stab.tools.compiler {
             set;
         }
         
-        public String OutputPath {
-            get;
-            set;
-        }
-        
         public String[] BootClasses {
             get;
             set;
         }
         
-        public String DocumentationFile {
+        public String DocumentationPath {
             get;
             set;
         }
@@ -237,8 +232,8 @@ package stab.tools.compiler {
             }
             
             // Documentation file
-            if (context.Parameters.DocumentationFile != null) {
-                buildDocumentation(new File(context.Parameters.DocumentationFile));
+            if (context.Parameters.DocumentationPath != null) {
+                buildDocumentation(new File(context.Parameters.DocumentationPath));
             }
         }
         

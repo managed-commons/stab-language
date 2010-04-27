@@ -18,6 +18,7 @@ using java.io;
 using java.lang;
 using java.util;
 using java.util.jar;
+using java.util.zip;
 using stab.tools.helpers;
 
 package stab.tools.compiler {
@@ -35,7 +36,9 @@ package stab.tools.compiler {
             Define,
             Doc,
             Help,
+            Manifest,
             Out,
+            Resources,
             Runtimelib
         }
         
@@ -81,10 +84,16 @@ package stab.tools.compiler {
                         Description = "a ; separated list of conditional compilation symbols" },
                 new OptionInfo { Option = Option.Doc, Name = "doc",
                         Arguments = "<file>",
-                        Description = "Specify a file populated with the documentation comments in the\n\tinput files" },
+                        Description = "specify a file populated with the documentation comments in the\n\tinput files" },
+                new OptionInfo { Option = Option.Manifest, Name = "manifest", ShortForm = "mf",
+                        Arguments = "<file>",
+                        Description = "specify a manifest file to include in the generated jar" },
                 new OptionInfo { Option = Option.Out, Name = "out",
+                        Arguments = "<file>",
+                        Description = "specify output file name (default: base name of the first\n\tinput file)" },
+                new OptionInfo { Option = Option.Resources, Name = "resources", ShortForm = "res",
                         Arguments = "<directory>",
-                        Description = "specify output directory name (default: base name of the first\n\tinput file)" },
+                        Description = "specify a directory containing the resources to include in\n\tthe generated jar" },
                 new OptionInfo { Option = Option.Runtimelib, Name = "runtimelib", ShortForm = "rt",
                         Arguments = "<directory or zip/jar file>",
                         Description = "specify runtime library path" }
@@ -102,6 +111,9 @@ package stab.tools.compiler {
         
         private ArrayList<File> sourceFiles;
         private CompilerParameters parameters;
+        private String manifestPath;
+        private String resourcesPath;
+        private String outputPath;
         
         Application() {
             sourceFiles = new ArrayList<File>();
@@ -145,16 +157,37 @@ package stab.tools.compiler {
                 System.out.println(error.Message);
             }
             if (!hasErrors) {
-                var destination = parameters.OutputPath;
-                foreach (var e in results.ClassFiles.entrySet()) {
-                    var file = PathHelper.combine(destination, e.Key.replace('.', '/') + ".class");
-                    var dir = new File(PathHelper.getDirectoryName(file));
-                    if (!dir.exists()) {
-                        dir.mkdirs();
+                var destination = outputPath;
+                if (PathHelper.getExtension(destination).length() == 0) {
+                    destination += ".jar";
+                }
+                using (var zipStream = new ZipOutputStream(new FileOutputStream(destination))) {
+                    if (manifestPath != null) {
+                        var zipEntry = new ZipEntry("META-INF/MANIFEST.MF");
+                        zipStream.putNextEntry(zipEntry);
+                        var buffer = new byte[4096];
+                        var inputStream = new FileInputStream(manifestPath);
+                        int read;
+                        while ((read = inputStream.read(buffer)) != -1) {
+                            zipStream.write(buffer, 0, read);
+                        }
                     }
-                    var output = new FileOutputStream(file);
-                    output.write(e.Value);
-                    output.close();
+                    if (resourcesPath != null) {
+                        var rootDir = new File(resourcesPath);
+                        foreach (var content in rootDir.list()) {
+                            var file = new File(rootDir, content);
+                            if (file.isDirectory()) {
+                                exploreDirectory(zipStream, "", file);
+                            } else {
+                                addEntry(zipStream, "", file);
+                            }
+                        }
+                    }
+                    foreach (var e in results.ClassFiles.entrySet()) {
+                        var zipEntry = new ZipEntry(e.Key.replace('.', '/') + ".class");
+                        zipStream.putNextEntry(zipEntry);
+                        zipStream.write(e.Value);
+                    }
                 }
                 System.out.println(String.format("%d class(es) successfully generated in %.2fs",
                     results.classFiles.size(), (System.nanoTime() - t0) / 1e9));
@@ -162,6 +195,35 @@ package stab.tools.compiler {
             } else {
                 System.out.println("Compilation failed");
                 return 1;
+            }
+        }
+
+        private void addEntry(ZipOutputStream zipStream, String root, File file) {
+            if (file.isHidden()) {
+                return;
+            }
+            var name = root + file.getName();
+            var zipEntry = new ZipEntry(name);
+            zipStream.putNextEntry(zipEntry);
+            var buffer = new byte[4096];
+            var inputStream = new FileInputStream(file);
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                zipStream.write(buffer, 0, read);
+            }
+        }
+        
+        private void exploreDirectory(ZipOutputStream zipStream, String root, File directory) {
+            if (directory.isHidden()) {
+                return;
+            }
+            foreach (var content in directory.list()) {
+                var file = new File(directory, content);
+                if (file.isDirectory()) {
+                    exploreDirectory(zipStream, root + directory.getName() + '/', file);
+                } else {
+                    addEntry(zipStream, root + directory.getName() + '/', file);
+                }
             }
         }
         
@@ -234,11 +296,23 @@ package stab.tools.compiler {
                     break;
                 }
                 case Doc: {
-                    parameters.DocumentationFile = parameter;
+                    parameters.DocumentationPath = parameter;
+                    break;
+                }
+                case Manifest: {
+                    manifestPath = parameter;
+                    if (!new File(manifestPath).exists()) {
+                        System.out.println("Error: File not found: " + manifestPath);
+                        return false;
+                    }
                     break;
                 }
                 case Out: {
-                    parameters.OutputPath = parameter;
+                    outputPath = parameter;
+                    break;
+                }
+                case Resources: {
+                    resourcesPath = parameter;
                     break;
                 }
                 case Runtimelib: {
@@ -288,8 +362,10 @@ package stab.tools.compiler {
                 System.out.println("Error: No input file");
                 return false;
             }
-            if (parameters.OutputPath == null) {
-                parameters.OutputPath = PathHelper.getDirectoryName(sourceFiles[0].getAbsolutePath());
+            if (outputPath == null) {
+                var absolutePath = sourceFiles[0].getAbsolutePath();
+                outputPath = PathHelper.combine(PathHelper.getDirectoryName(absolutePath),
+                        PathHelper.getFileNameWithoutExtension(absolutePath) + ".jar");
             }
             return true;
         }
