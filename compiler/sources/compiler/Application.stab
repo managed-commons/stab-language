@@ -183,7 +183,7 @@ package stab.tools.compiler {
                 }
                 switch (option) {
                 case Annotatedlibs: {
-                    while (parameter.Length > 0) {
+                    while (parameter.length() > 0) {
                         idx = parameter.indexOf(';');
                         String file;
                         if (idx >= 0) {
@@ -202,7 +202,7 @@ package stab.tools.compiler {
                     break;
                 }
                 case Classpath: {
-                    while (parameter.Length > 0) {
+                    while (parameter.length() > 0) {
                         idx = parameter.indexOf(';');
                         String file;
                         if (idx >= 0) {
@@ -221,7 +221,7 @@ package stab.tools.compiler {
                     break;
                 }
                 case Define: {
-                    while (parameter.Length > 0) {
+                    while (parameter.length() > 0) {
                         idx = parameter.indexOf(';');
                         if (idx >= 0) {
                             parameters.getSymbols().add(parameter.substring(0, idx));
@@ -327,7 +327,7 @@ package stab.tools.compiler {
                     reader = new BufferedReader(new FileReader(rtClassesFile));
                     String line;
                     while ((line = reader.readLine()) != null) {
-                        if (line.Length > 0) {
+                        if (line.length() > 0) {
                             bootClasses.add(line);
                         }
                     }

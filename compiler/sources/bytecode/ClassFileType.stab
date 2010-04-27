@@ -538,7 +538,7 @@ package stab.tools.bytecode {
             JvmTypeInfo result;
             switch (signature.TypeSignatureKind) {
             case ClassType:
-                var name = signature.Name.substring(1, signature.Name.Length - 1);
+                var name = signature.Name.substring(1, signature.Name.length() - 1);
                 result = typeSystem.getType(name);
                 if (signature.TypeArguments.any()) {
                     var typeArgs = new ArrayList<JvmTypeInfo>();

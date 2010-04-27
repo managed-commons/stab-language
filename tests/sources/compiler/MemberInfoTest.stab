@@ -66,18 +66,6 @@ package stab.tools.compiler.test {
 			
 			Assert.assertEquals(1, indexer.getOverridenMembers(typeSystem).count());
 		}
-		
-		[Test]
-		public void testStringLength() {
-			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
-			var typeSystem = new JvmTypeSystem(new String[] { alPath, rtPath });
-			var stringType = typeSystem.getType("java/lang/String");
-			var members = MemberInfo.getMembers(typeSystem, stringType, "Length");
-			
-			Assert.assertEquals(1, members.count());
-		}
 
 		[Test]
 		public void testMapIndexer() {

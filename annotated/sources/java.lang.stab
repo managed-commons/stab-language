@@ -17,11 +17,24 @@
 using stab.lang;
 
 package stab.annotated.java.lang {
+
+	public interface CharSequence {
+		[IndexerGet]
+		char charAt(int index);
+	}
+
 	public interface String {
 		[IndexerGet]
 		char charAt(int index);
-		
-		[PropertyGet(name = "Length")]
-		int length();
+	}
+
+	public interface StringBuffer {
+		[IndexerGet]
+		char charAt(int index);
+	}
+
+	public interface StringBuilder {
+		[IndexerGet]
+		char charAt(int index);
 	}
 }

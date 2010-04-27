@@ -1278,7 +1278,7 @@ package stab.tools.parser {
 
         private LexicalUnit scanKeyword(String suffix, Keyword keyword, boolean contextual) {
             var isKeyword = true;
-            for (var i = 0; i < suffix.Length; i++) {
+            for (var i = 0; i < suffix.length(); i++) {
                 var c = suffix[i];
                 if (this.Next == -1 || (char)this.Next != c) {
                     isKeyword = false;

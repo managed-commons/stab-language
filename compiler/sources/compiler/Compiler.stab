@@ -1620,7 +1620,7 @@ package stab.tools.compiler {
             if (get != null) {
                 var methodName = "get" + name;
                 if (type.IsBoolean) {
-                    if (name.Length > 2 && name.startsWith("Is") && Character.isUpperCase(name[2])) {
+                    if (name.length() > 2 && name.startsWith("Is") && Character.isUpperCase(name[2])) {
                         methodName = Character.toLowerCase(name[0]) + name.substring(1);
                     }
                 }

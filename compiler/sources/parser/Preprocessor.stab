@@ -685,10 +685,10 @@ package stab.tools.parser {
         }
         
         private boolean isIdentifier(String identifier, int offset, int length) {
-            if (identifier.Length != length) {
+            if (identifier.length() != length) {
                 return false;
             }
-            for (int i = 0; i < identifier.Length; i++) {
+            for (int i = 0; i < identifier.length(); i++) {
                 if (this.Text[offset + i] != identifier[i]) {
                     return false;
                 }

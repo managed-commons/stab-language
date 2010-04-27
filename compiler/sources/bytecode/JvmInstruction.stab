@@ -462,7 +462,7 @@ package stab.tools.bytecode {
         override void accept(MethodVisitor visitor) {
             if (type.IsGenericParameter) {
                 var desc = type.Descriptor;
-                visitor.visitTypeInsn(this.Opcode.Value, desc.substring(1, desc.Length - 1));
+                visitor.visitTypeInsn(this.Opcode.Value, desc.substring(1, desc.length() - 1));
             } else {
                 visitor.visitTypeInsn(this.Opcode.Value, type.FullName);
             }

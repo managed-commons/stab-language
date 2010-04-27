@@ -649,7 +649,7 @@ package stab.tools.compiler {
                 if (method.Name.startsWith("get")) {
                     result = method.Name.substring(3);
                 } else if (method.ReturnType.IsBoolean
-                        && method.Name.Length > 2
+                        && method.Name.length() > 2
                         && method.Name.startsWith("is")
                         && Character.isUpperCase(method.Name[2])) {
                     result = Character.toUpperCase(method.Name[0]) + method.Name.substring(1);

@@ -308,7 +308,7 @@ package stab.tools.bytecode.signature {
         }
 
         private int advance() {
-            if (position + 1 < signature.Length) {
+            if (position + 1 < signature.length()) {
                 return current = signature[++position];
             } else {
                 ++position;

@@ -34,6 +34,14 @@ package stab.annotated.java.util {
 		E set(int index, E element);
 	}
 	
+	public interface LinkedList<E> {
+		[IndexerGet]
+		E get(int index);
+		
+		[IndexerSet]
+		E set(int index, E element);
+	}
+	
 	public abstract class Map<K, V> {
 		[IndexerGet]
 		public abstract V get(Object key);

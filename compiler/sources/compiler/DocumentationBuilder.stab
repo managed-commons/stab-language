@@ -296,7 +296,7 @@ package stab.tools.compiler {
             if (Helper.isNullOrEmpty(cref)) {
                 context.addWarning(CompileErrorId.MissingDocAttribute, node, "cref", element.getLocalName());
             } else {
-                if (cref.Length > 1 && cref[1] == ':') {
+                if (cref.length() > 1 && cref[1] == ':') {
                     return;
                 }
                 String arguments = null;
@@ -440,8 +440,8 @@ package stab.tools.compiler {
                         return;
                     } else if (arguments != null && arguments.endsWith(")")) {
                         var args = new ArrayList<JvmTypeInfo>();
-                        if (arguments.Length > 2) {
-                            arguments = arguments.substring(1, arguments.Length - 1);
+                        if (arguments.length() > 2) {
+                            arguments = arguments.substring(1, arguments.length() - 1);
                             int idx;
                             while ((idx = arguments.indexOf(',')) != -1) {
                                 var name = arguments.substring(0, idx);
@@ -452,7 +452,7 @@ package stab.tools.compiler {
                                 }
                                 args.add(type);
                             }
-                            if (arguments.Length == 0) {
+                            if (arguments.length() == 0) {
                                 goto failed;
                             }
                             var type = getType(arguments);
@@ -484,7 +484,7 @@ package stab.tools.compiler {
             int dimensions = 0;
             while (name.endsWith("[]")) {
                 dimensions++;
-                name = name.substring(0, name.Length - 2);
+                name = name.substring(0, name.length() - 2);
             }
             JvmTypeInfo result;
             switch (name) {

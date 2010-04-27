@@ -37,7 +37,7 @@ package stab.tools.helpers {
 					index = index2;
 				}
 				if (index != -1) {
-					if (index == path.Length - 1) {
+					if (index == path.length() - 1) {
 						if (path.indexOf(VOLUME_SEPARATOR_CHAR) == index - 1) {
 							return null;
 						} else {
@@ -50,7 +50,7 @@ package stab.tools.helpers {
 							path = path.substring(0, index);
 						}
 					}
-					if (path.Length == 2 && path[1] == VOLUME_SEPARATOR_CHAR) {
+					if (path.length() == 2 && path[1] == VOLUME_SEPARATOR_CHAR) {
 						return "";
 					}
 				}
@@ -107,7 +107,7 @@ package stab.tools.helpers {
 			if (index == -1) {
 				return false;
 			}
-			return (index + 1) != path.Length;
+			return (index + 1) != path.length();
 		}
 
 		public static String combine(String path1, String path2) {
@@ -117,16 +117,16 @@ package stab.tools.helpers {
 			if (path2 == null) {
 				throw new NullPointerException("path2");
 			}
-			if (path1.Length == 0) {
+			if (path1.length() == 0) {
 				return path2;
 			}
-			if (path2.Length == 0) {
+			if (path2.length() == 0) {
 				return path1;
 			}
-			if (path2.Length > 2 && path2[1] == VOLUME_SEPARATOR_CHAR) {
+			if (path2.length() > 2 && path2[1] == VOLUME_SEPARATOR_CHAR) {
 				return path2;
 			}
-			var path1LastChar = path1[path1.Length - 1];
+			var path1LastChar = path1[path1.length() - 1];
 			var path2LastChar = path2[0];
 			if (path1LastChar == DIRECTORY_SEPARATOR_CHAR
 					|| path1LastChar == ALT_DIRECTORY_SEPARATOR_CHAR

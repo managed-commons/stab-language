@@ -5,6 +5,6 @@ using stab.query;
 public class Any {
 	public static boolean test() {
 		var list = new ArrayList<String> { "a", "bb", "ccc" };
-		return list.any(p => p.Length > 2);
+		return list.any(p => p.length() > 2);
 	}
 }
