@@ -1127,28 +1127,32 @@ package stab.tools.compiler {
                         methodBuilder.setReturnType(context.CodeValidationContext.LambdaReturnType);
                     }
                 } else {
-                    var block = new BlockStatementNode();
-                    block.Filename = lambda.Body.Filename;
-                    block.Line = lambda.Body.Line;
-                    block.Column = lambda.Body.Column;
-                    block.DisabledWarnings = lambda.Body.DisabledWarnings;
-                    var returnNode = new ReturnStatementNode();
-                    block.Statements.add(returnNode);
-                    returnNode.Filename = lambda.Body.Filename;
-                    returnNode.Line = lambda.Body.Line;
-                    returnNode.Column = lambda.Body.Column;
-                    returnNode.DisabledWarnings = lambda.Body.DisabledWarnings;
-                    returnNode.Value = ((ExpressionStatementNode)lambda.Body).Expression;
-                    lambda.Body = block;
-                    this.StatementValidator.handleStatement(block, null);
+                    var expr = ((ExpressionStatementNode)lambda.Body).Expression;
+                    handleExpression(expr, targetType, true);
+                    var einfo = expr.getUserData(typeof(ExpressionInfo));
+                    var returnType = (einfo == null) ? context.TypeSystem.ObjectType : ValidationHelper.getType(context, expr);
                     if (targetType == null) {
-                        var rinfo = returnNode.Value.getUserData(typeof(ExpressionInfo));
-                        if (rinfo == null) {
-                            context.CodeValidationContext.LambdaReturnType = context.TypeSystem.ObjectType;
+                        context.CodeValidationContext.LambdaReturnType = returnType;
+                        methodBuilder.setReturnType(returnType);
+                    } else {
+                        var block = new BlockStatementNode();
+                        block.Filename = lambda.Body.Filename;
+                        block.Line = lambda.Body.Line;
+                        block.Column = lambda.Body.Column;
+                        block.DisabledWarnings = lambda.Body.DisabledWarnings;
+                        if (returnType == JvmTypeInfo.VOID) {
+                            block.Statements.add(lambda.Body);
                         } else {
-                            context.CodeValidationContext.LambdaReturnType = ValidationHelper.getType(context, returnNode.Value);
+                            var returnNode = new ReturnStatementNode();
+                            block.Statements.add(returnNode);
+                            returnNode.Filename = lambda.Body.Filename;
+                            returnNode.Line = lambda.Body.Line;
+                            returnNode.Column = lambda.Body.Column;
+                            returnNode.DisabledWarnings = lambda.Body.DisabledWarnings;
+                            returnNode.Value = expr;
                         }
-                        methodBuilder.setReturnType(context.CodeValidationContext.LambdaReturnType);
+                        lambda.Body = block;
+                        this.StatementValidator.handleStatement(block, null);
                     }
                 }
                 lambda.addOrReplaceUserData(new ExpressionInfo(targetType));
