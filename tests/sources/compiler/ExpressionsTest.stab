@@ -1337,5 +1337,9 @@ package stab.tools.compiler.test {
 			doTest("StringStringIntConcat", new Class<?>[] {}, new Object[] {}, "ab1");
 		}
 		
+		[Test]
+		public void voidLambda() {
+			doTest("VoidLambda", new Class<?>[] {}, new Object[] {}, 2);
+		}
 	}
 }
