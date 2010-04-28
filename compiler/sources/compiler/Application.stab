@@ -87,16 +87,13 @@ package stab.tools.compiler {
                         Description = "specify a file populated with the documentation comments in the\n\tinput files" },
                 new OptionInfo { Option = Option.Manifest, Name = "manifest", ShortForm = "mf",
                         Arguments = "<file>",
-                        Description = "specify a manifest file to include in the generated jar" },
+                        Description = "specify a manifest file to include in the generated jar file\n\t" },
                 new OptionInfo { Option = Option.Out, Name = "out",
                         Arguments = "<file>",
                         Description = "specify output file name (default: base name of the first\n\tinput file)" },
                 new OptionInfo { Option = Option.Resources, Name = "resources", ShortForm = "res",
                         Arguments = "<directory>",
-                        Description = "specify a directory containing the resources to include in\n\tthe generated jar" },
-                new OptionInfo { Option = Option.Runtimelib, Name = "runtimelib", ShortForm = "rt",
-                        Arguments = "<directory or zip/jar file>",
-                        Description = "specify runtime library path" }
+                        Description = "specify a directory containing the resources to include in\n\tthe generated jar" }
             };
         
             Options = new HashMap<String, Option>();
@@ -313,10 +310,6 @@ package stab.tools.compiler {
                 }
                 case Resources: {
                     resourcesPath = parameter;
-                    break;
-                }
-                case Runtimelib: {
-                    parameters.RuntimeLibraryPath = parameter;
                     break;
                 }
                 case Help: {

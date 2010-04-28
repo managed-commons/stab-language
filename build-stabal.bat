@@ -2,6 +2,6 @@
 
 ECHO Compiling source code...
 
-java -jar bin\stabc.jar -runtimelib:bin\stabrt.jar -out:annotated\stabal.jar annotated\sources\*.stab
+java -jar bin\stabc.jar -cp:bin\stabrt.jar -out:annotated\stabal.jar annotated\sources\*.stab
 
 ECHO Done.

@@ -49,11 +49,6 @@ package stab.tools.compiler {
             private set;
         }
         
-        public String RuntimeLibraryPath {
-            get;
-            set;
-        }
-        
         public String[] BootClasses {
             get;
             set;
@@ -175,13 +170,7 @@ package stab.tools.compiler {
         
         private void doCompile() {
             int nPaths = context.Parameters.ClassPath.size();
-            if (context.Parameters.RuntimeLibraryPath != null) {
-                nPaths++;
-            }
             var classPath = context.Parameters.ClassPath.toArray(new String[nPaths]);
-            if (context.Parameters.RuntimeLibraryPath != null) {
-                classPath[nPaths - 1] = context.Parameters.RuntimeLibraryPath;
-            }
             context.TypeSystem = new JvmTypeSystem(classPath, context.Parameters.BootClasses);
             
             nPaths = context.Parameters.AnnotatedLibraryPaths.size();

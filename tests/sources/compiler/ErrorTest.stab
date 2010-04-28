@@ -44,7 +44,7 @@ package stab.tools.compiler.test {
 			if (this.parameters == null) {
 				this.parameters = new CompilerParameters();
 			}
-			this.parameters.RuntimeLibraryPath = PathHelper.combine(userDir, "runtime/stabrt.jar");
+			this.parameters.ClassPath.add(PathHelper.combine(userDir, "runtime/stabrt.jar"));
 			this.parameters.AnnotatedLibraryPaths.add(PathHelper.combine(userDir, "annotated/stabal.jar"));
 
 			var results = compiler.compileFromFiles(this.parameters, new File[] { new File(path) });
