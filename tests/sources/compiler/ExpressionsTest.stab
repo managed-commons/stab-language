@@ -1343,8 +1343,18 @@ package stab.tools.compiler.test {
 		}
 		
 		[Test]
-		public void expressionTree1() {
-			doTest("ExpressionTree1", new Class<?>[] {}, new Object[] {}, "p");
+		public void expressionTreeParameter() {
+			doTest("ExpressionTreeParameter", new Class<?>[] {}, new Object[] {}, "p");
+		}
+		
+		[Test]
+		public void expressionTreeConstant() {
+			doTest("ExpressionTreeConstant", new Class<?>[] {}, new Object[] {}, 1);
+		}
+		
+		[Test]
+		public void expressionTreeVariable() {
+			doTest("ExpressionTreeVariable", new Class<?>[] {}, new Object[] {}, 1);
 		}
 	}
 }

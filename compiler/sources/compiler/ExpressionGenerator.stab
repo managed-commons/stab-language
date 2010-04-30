@@ -754,7 +754,23 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Checkcast, info.OriginalType);
                 } else if (info.Type.OriginalTypeDefinition != einfo.Type.OriginalTypeDefinition) {
                     if (!info.Type.IsGenericParameter || info.Type.GenericParameterBounds.any()) {
-                        generator.emit(JvmOpcode.Checkcast, type);
+                        if (type.IsPrimitive) {
+                            if (type.TypeKind == TypeKind.Boolean) {
+                                var method = context.TypeSystem.getUnboxingMethod(type);
+                                generator.emit(JvmOpcode.Checkcast, method.DeclaringType);
+                                generator.emit(JvmOpcode.Invokevirtual, method);
+                            } else {
+                                if (einfo.Type.IsPrimitive) {
+                                    BytecodeHelper.emitNumericConversion(generator, einfo.Type, type);
+                                } else {
+                                    var method = context.TypeSystem.getUnboxingMethod(type);
+                                    generator.emit(JvmOpcode.Checkcast, method.DeclaringType);
+                                    generator.emit(JvmOpcode.Invokevirtual, method);
+                                }
+                            }
+                        } else {
+                            generator.emit(JvmOpcode.Checkcast, type);
+                        }
                     }
                 }
             }
@@ -867,7 +883,12 @@ package stab.tools.compiler {
         protected override Void handleLambda(LambdaExpressionNode lambda, TargetLabels labels, boolean nested) {
             var targetType = lambda.getUserData(typeof(ExpressionInfo)).Type;
             var typeBuilder = context.MethodGenerationContext.LambdaScope;
-            
+
+            if (targetType.FullName.equals("stab/tree/ExpressionTree")) {
+                expressionTreeGenerator.generateExpressionTree(lambda);
+                return null;
+            }
+ 
             var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
             context.MethodGenerationContext.enterLambda(methodBuilder);
             var gen = methodBuilder.CodeGenerator;
@@ -900,10 +921,8 @@ package stab.tools.compiler {
             }
             if (BytecodeHelper.isDelegateType(targetType)) {
                 emitDelegateCreation(targetType, methodBuilder, arg, nested);
-            } else if (targetType.IsInterface) {
-                emitInterfaceCreation(targetType, methodBuilder, arg, nested);
             } else {
-                expressionTreeGenerator.generateExpressionTree(lambda, arg);
+                emitInterfaceCreation(targetType, methodBuilder, arg, nested);
             }
             return null;
         }
@@ -1237,18 +1256,9 @@ package stab.tools.compiler {
                 generator.emit((info.Negate) ? JvmOpcode.Ifeq : JvmOpcode.Ifne, labels.ifFalse);
             }
         }
-        
+
         private void emitBoxing(ExpressionNode expression) {
-            var generator = context.MethodGenerationContext.Generator;
-            var info = expression.getUserData(typeof(ExpressionInfo));
-            switch (info.BoxingKind) {
-            case Box:
-                generator.emit(JvmOpcode.Invokestatic, info.BoxingMethod);
-                break;
-            case Unbox:
-                generator.emit(JvmOpcode.Invokevirtual, info.BoxingMethod);
-                break;
-            }
+            BytecodeGenerator.emitBoxing(context, expression);
         }
         
         private void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int fixedLength,

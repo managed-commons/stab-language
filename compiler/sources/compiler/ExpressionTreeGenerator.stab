@@ -32,7 +32,7 @@ package stab.tools.compiler {
             this.expressionGenerator = new ExpressionGenerator(this, context);
         }
         
-        void generateExpressionTree(LambdaExpressionNode lambda, ExpressionNode arg) {
+        void generateExpressionTree(LambdaExpressionNode lambda) {
             expressionGenerator.handleExpression(lambda, null, false);
         }
         
@@ -58,6 +58,135 @@ package stab.tools.compiler {
                 : super(true) {
                 this.statementGenerator = statementGenerator;
                 this.context = context;
+            }
+            
+            public override Void handleExpression(ExpressionNode expression, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = expression.getUserData(typeof(ExpressionInfo));
+                var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+                var unboundedClassType = context.TypeSystem.getType("java/lang/Class").getGenericType(
+                        Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                var valueParameters = new ArrayList<JvmTypeInfo> { unboundedClassType, context.TypeSystem.ObjectType };
+                var valueMethod = expressionType.getMethod("value", valueParameters);
+                if (info == null) {
+                    generator.emit(JvmOpcode.Aconst_Null);
+                    generator.emit(JvmOpcode.Aconst_Null);
+                    generator.emit(JvmOpcode.Invokestatic, valueMethod);
+                    return null;
+                }
+                if (!info.IsConstant) {
+                    return super.handleExpression(expression, null, nested);
+                }
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+                var value = info.Value;
+                switch (info.Type.TypeKind) {
+                case Boolean:
+                    if (((Boolean)value).booleanValue()) {
+                        generator.emit(JvmOpcode.Iconst_1);
+                    } else {
+                        generator.emit(JvmOpcode.Iconst_0);
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                    break;
+                case Char:
+                case Byte:
+                case Short:
+                case Int:
+                    if (value instanceof Integer) {
+                        BytecodeHelper.emitIntConstant(generator, ((Integer)value).intValue());
+                    } else if (value instanceof Character) {
+                        BytecodeHelper.emitIntConstant(generator, ((Character)value).charValue());
+                    } else if (value instanceof Byte) {
+                        BytecodeHelper.emitIntConstant(generator, ((Byte)value).byteValue());
+                    } else if (value instanceof Short) {
+                        BytecodeHelper.emitIntConstant(generator, ((Short)value).shortValue());
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                    break;
+
+                case Long:
+                    long l = 0;
+                    if (value instanceof Long) {
+                        l = ((Long)value).longValue();
+                    } else if (value instanceof Integer) {
+                        l = ((Integer)value).intValue();
+                    } else if (value instanceof Character) {
+                        l = ((Character)value).charValue();
+                    } else if (value instanceof Byte) {
+                        l = ((Byte)value).byteValue();
+                    } else if (value instanceof Short) {
+                        l = ((Short)value).shortValue();
+                    }
+                    if (l == 0) {
+                        generator.emit(JvmOpcode.Lconst_0);
+                    } else if (l == 1) {
+                        generator.emit(JvmOpcode.Lconst_1);
+                    } else {
+                        generator.emit(JvmOpcode.Ldc, Long.valueOf(l));
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                    break;
+
+                case Float:
+                    float f = 0;
+                    if (value instanceof Float) {
+                        f = ((Float)value).floatValue();
+                    } else if (value instanceof Long) {
+                        f = ((Long)value).longValue();
+                    } else if (value instanceof Integer) {
+                        f = ((Integer)value).intValue();
+                    } else if (value instanceof Character) {
+                        f = ((Character)value).charValue();
+                    } else if (value instanceof Byte) {
+                        f = ((Byte)value).byteValue();
+                    } else if (value instanceof Short) {
+                        f = ((Short)value).shortValue();
+                    }
+                    if (f == 0f) {
+                        generator.emit(JvmOpcode.Fconst_0);
+                    } else if (f == 1f) {
+                        generator.emit(JvmOpcode.Fconst_1);
+                    } else if (f == 2f) {
+                        generator.emit(JvmOpcode.Fconst_2);
+                    } else {
+                        generator.emit(JvmOpcode.Ldc, Float.valueOf(f));
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                    break;
+
+                case Double:
+                    double d = 0;
+                    if (value instanceof Double) {
+                        d = ((Double)value).doubleValue();
+                    } else if (value instanceof Float) {
+                        d = ((Float)value).floatValue();
+                    } else if (value instanceof Long) {
+                        d = ((Long)value).longValue();
+                    } else if (value instanceof Integer) {
+                        d = ((Integer)value).intValue();
+                    } else if (value instanceof Character) {
+                        d = ((Character)value).charValue();
+                    } else if (value instanceof Byte) {
+                        d = ((Byte)value).byteValue();
+                    } else if (value instanceof Short) {
+                        d = ((Short)value).shortValue();
+                    }
+                    if (d == 0d) {
+                        generator.emit(JvmOpcode.Dconst_0);
+                    } else if (d == 1d) {
+                        generator.emit(JvmOpcode.Dconst_1);
+                    } else {
+                        generator.emit(JvmOpcode.Ldc, Double.valueOf(d));
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                    break;
+
+                default:
+                    generator.emit(JvmOpcode.Ldc, value);
+                    break;
+                }
+                generator.emit(JvmOpcode.Invokestatic, valueMethod);
+                return null;
             }
             
             protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
@@ -113,7 +242,23 @@ package stab.tools.compiler {
                     if (context.MethodGenerationContext.TreeLocals.containsKey(local)) {
                         generator.emit(JvmOpcode.Aload, context.MethodGenerationContext.TreeLocals[local]);
                     } else {
-                        throw new Exception("TODO");
+                        BytecodeHelper.emitTypeof(generator, context.TypeSystem, local.Type);
+                        var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+                        var unboundedClassType = context.TypeSystem.getType("java/lang/Class").getGenericType(
+                                Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                        var valueParameters = new ArrayList<JvmTypeInfo> { unboundedClassType, context.TypeSystem.ObjectType };
+                        var valueMethod = expressionType.getMethod("value", valueParameters);
+                        if (local.IsUsedFromLambda) {
+                            BytecodeGenerator.emitLoadLambdaScope(context, generator, local.Method);
+                            generator.emit(JvmOpcode.Getfield, BytecodeGenerator.getLambdaScopeField(context, local));
+                        } else {
+                            generator.emit(BytecodeHelper.getLoadOpcode(local.Type), generator.getLocal(local.Name));
+                        }
+                        BytecodeGenerator.emitBoxing(context, simpleName);
+                        if (info.Type.IsPrimitive) {
+                            generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                        }
+                        generator.emit(JvmOpcode.Invokestatic, valueMethod);
                     }
                     break;
                 }

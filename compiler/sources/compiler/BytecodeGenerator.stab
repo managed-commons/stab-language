@@ -36,6 +36,19 @@ package stab.tools.compiler {
             this.labelRemover = new LabelRemover();
         }
 
+        static void emitBoxing(CompilerContext context, ExpressionNode expression) {
+            var generator = context.MethodGenerationContext.Generator;
+            var info = expression.getUserData(typeof(ExpressionInfo));
+            switch (info.BoxingKind) {
+            case Box:
+                generator.emit(JvmOpcode.Invokestatic, info.BoxingMethod);
+                break;
+            case Unbox:
+                generator.emit(JvmOpcode.Invokevirtual, info.BoxingMethod);
+                break;
+            }
+        }
+
         void generateConstructorsBytecode() {
             foreach (var methodBuilder in context.ConstructorBuilders) {
                 var baseConstructor = methodBuilder.DeclaringType.BaseType.getMethod("<init>",

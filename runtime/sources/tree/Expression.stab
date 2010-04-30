@@ -20,7 +20,8 @@ package stab.tree {
 
     public enum ExpressionKind {
         Lambda,
-        Parameter
+        Parameter,
+        Value
     }
 
     public abstract class Expression {
@@ -49,6 +50,10 @@ package stab.tree {
         
         public static ExpressionTree<T> tree<T>(Class<T> type, ParameterExpression[] parameters, Statement body) {
             return new ExpressionTree<T>(type, parameters, body);
+        }
+        
+        public static ValueExpression value(Class<?> type, Object value) {
+            return new ValueExpression(type, value);
         }
     }
     
