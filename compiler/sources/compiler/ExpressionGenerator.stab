@@ -35,11 +35,13 @@ package stab.tools.compiler {
     class ExpressionGenerator : ExpressionHandler<TargetLabels, Void> {
         private BytecodeGenerator bytecodeGenerator;
         private CompilerContext context;
+        private ExpressionTreeGenerator expressionTreeGenerator;
     
         ExpressionGenerator(BytecodeGenerator bytecodeGenerator, CompilerContext context)
             : super(true) {
             this.bytecodeGenerator = bytecodeGenerator;
             this.context = context;
+            this.expressionTreeGenerator = new ExpressionTreeGenerator(context);
         }
         
         public override Void handleExpression(ExpressionNode expression, TargetLabels labels, boolean nested) {
@@ -898,8 +900,10 @@ package stab.tools.compiler {
             }
             if (BytecodeHelper.isDelegateType(targetType)) {
                 emitDelegateCreation(targetType, methodBuilder, arg, nested);
-            } else {
+            } else if (targetType.IsInterface) {
                 emitInterfaceCreation(targetType, methodBuilder, arg, nested);
+            } else {
+                expressionTreeGenerator.generateExpressionTree(lambda, arg);
             }
             return null;
         }

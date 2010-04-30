@@ -285,6 +285,7 @@ package stab.tools.compiler {
         private boolean destructor;
         private int foreachStatement;
         private int stringSwitch;
+        private int generatedLocal;
     
         MethodGenerationContext() {
             this.methods = new ArrayList<JvmMethodBuilder>();
@@ -293,6 +294,7 @@ package stab.tools.compiler {
             this.ParametersUsedInLambdas = new HashSet<LocalInfo>();
             this.ParametersUsedInLambda = new ArrayList<LocalInfo>();
             this.CatchVariables = new ArrayList<JvmLocalInfo>();
+            this.TreeLocals = new HashMap<LocalInfo, JvmLocalInfo>();
         }
         
         void initialize(JvmMethodBuilder methodBuilder, JvmTypeBuilder lambdaScope) {
@@ -301,6 +303,7 @@ package stab.tools.compiler {
             this.ParametersUsedInLambdas.clear();
             this.ParametersUsedInLambda.clear();
             this.CatchVariables.clear();
+            this.TreeLocals.clear();
             
             this.methods.add(methodBuilder);
             this.LambdaScope = lambdaScope;
@@ -314,6 +317,7 @@ package stab.tools.compiler {
             this.YieldCount = 0;
             this.stringSwitch = 0;
             this.PreviousLineNumber = 0;
+            this.generatedLocal = 0;
         }
         
         void enterLambda(JvmMethodBuilder method) {
@@ -434,6 +438,15 @@ package stab.tools.compiler {
         
         int nextStringSwitch() {
             return stringSwitch++;
+        }
+        
+        int nextGeneratedLocal() {
+            return generatedLocal++;
+        }
+        
+        Map<LocalInfo, JvmLocalInfo> TreeLocals {
+            get;
+            private set;
         }
     }
 }

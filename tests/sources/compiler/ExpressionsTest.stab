@@ -1341,5 +1341,10 @@ package stab.tools.compiler.test {
 		public void voidLambda() {
 			doTest("VoidLambda", new Class<?>[] {}, new Object[] {}, 2);
 		}
+		
+		[Test]
+		public void expressionTree1() {
+			doTest("ExpressionTree1", new Class<?>[] {}, new Object[] {}, "p");
+		}
 	}
 }

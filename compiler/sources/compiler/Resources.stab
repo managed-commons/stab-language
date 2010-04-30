@@ -169,7 +169,8 @@ package stab.tools.compiler {
         ImplicitVariableWithArrayInitializer,
         InvalidTargetForMemberAccess,
         UnexpectedArrayArgument,
-        TypeExpressionNotAllowed
+        TypeExpressionNotAllowed,
+        InvalidExpressionTreeArgument
     }
 
     class Resources {

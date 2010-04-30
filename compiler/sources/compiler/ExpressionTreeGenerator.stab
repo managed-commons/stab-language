@@ -1,0 +1,127 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.util;
+using stab.query;
+using stab.tools.bytecode;
+using stab.tools.syntaxtree;
+ 
+package stab.tools.compiler {
+
+    class ExpressionTreeGenerator : StatementHandler<Void, Void> {
+        private CompilerContext context;
+        private ExpressionGenerator expressionGenerator;
+    
+        ExpressionTreeGenerator(CompilerContext context)
+            : super(true) {
+            this.context = context;
+            this.expressionGenerator = new ExpressionGenerator(this, context);
+        }
+        
+        void generateExpressionTree(LambdaExpressionNode lambda, ExpressionNode arg) {
+            expressionGenerator.handleExpression(lambda, null, false);
+        }
+        
+        protected override Void handleExpression(ExpressionStatementNode expression, Void source) {
+            var info = expression.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            var statementType = context.TypeSystem.getType("stab/tree/Statement");
+            var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+            var expressionMethod = statementType.getMethod("expression", Collections.singletonList(expressionType));
+            expressionGenerator.handleExpression(expression.Expression, null, true);
+            generator.emit(JvmOpcode.Invokestatic, expressionMethod);
+            return null;
+        }
+        
+        private class ExpressionGenerator : ExpressionHandler<Void, Void> {
+            private ExpressionTreeGenerator statementGenerator;
+            private CompilerContext context;
+        
+            ExpressionGenerator(ExpressionTreeGenerator statementGenerator, CompilerContext context)
+                : super(true) {
+                this.statementGenerator = statementGenerator;
+                this.context = context;
+            }
+            
+            protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
+                var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
+                ((JvmTypeBuilder)methodBuilder.DeclaringType).undefineMethod(methodBuilder);
+                
+                var info = lambda.getUserData(typeof(ExpressionInfo));
+                
+                var generator = context.MethodGenerationContext.Generator;
+                generator.beginScope();
+                var parameterExpressionType = context.TypeSystem.getType("stab/tree/ParameterExpression");
+                var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+                var unboundedClassType = context.TypeSystem.getType("java/lang/Class").getGenericType(
+                        Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                var parameterParameters = new ArrayList<JvmTypeInfo> { unboundedClassType, context.TypeSystem.StringType };
+                var parameterMethod = expressionType.getMethod("parameter", parameterParameters);
+                var parameters = new ArrayList<JvmLocalInfo>();
+                foreach (var pi in methodBuilder.Parameters) {
+                    var local = generator.declareLocal(parameterExpressionType, "tree$local" + context.MethodGenerationContext.nextGeneratedLocal());
+                    parameters.add(local);
+                    context.MethodGenerationContext.TreeLocals[pi.getUserData(typeof(LocalInfo))] = local;
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, pi.Type);
+                    generator.emit(JvmOpcode.Ldc, pi.Name);
+                    generator.emit(JvmOpcode.Invokestatic, parameterMethod);
+                    generator.emit(JvmOpcode.Astore, local);
+                }
+                var treeMethod = expressionType.Methods.where(p => p.Name.equals("tree")).single();
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type.GenericArguments.single());
+                
+                BytecodeHelper.emitIntConstant(generator, parameters.count());
+                BytecodeHelper.emitNewarray(generator, 1, parameterExpressionType);
+                int i = 0;
+                foreach (var p in parameters) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    generator.emit(JvmOpcode.Aload, p);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                
+                statementGenerator.handleStatement(lambda.Body, null);
+                generator.emit(JvmOpcode.Invokestatic, treeMethod);
+                generator.endScope();
+                return null;
+            }
+            
+            protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = simpleName.getUserData(typeof(ExpressionInfo));
+                var member = info.Member;
+                switch (member.MemberKind) {
+                case Local: {
+                    var local = (LocalInfo)member;
+                    if (context.MethodGenerationContext.TreeLocals.containsKey(local)) {
+                        generator.emit(JvmOpcode.Aload, context.MethodGenerationContext.TreeLocals[local]);
+                    } else {
+                        throw new Exception("TODO");
+                    }
+                    break;
+                }
+                default:
+                    throw new Exception("Internal error: unhandled name kind: " + member.MemberKind);
+                }
+                return null;
+            }
+        }
+    }
+}

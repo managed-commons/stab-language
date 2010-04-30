@@ -1007,38 +1007,48 @@ package stab.tools.compiler {
         }
 
         protected override Void handleLambda(LambdaExpressionNode lambda, JvmTypeInfo targetType, boolean nested) {
-            var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-            if (typeBuilder == null) {
-                int n = context.CurrentType.NestedTypes.where(p => p.Name.startsWith("LambdaScope")).count();
-                typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType("LambdaScope" + n);
-                typeBuilder.setSourceFile(PathHelper.getFileName(lambda.Filename));
-                context.LambdaScopes[context.CodeValidationContext.RootMethod] = typeBuilder;
-                typeBuilder.setSynthetic(true);
-                typeBuilder.setSuper(true);
-                context.TypeBuilders.add(typeBuilder);
-                
-                var objectType = context.TypeSystem.ObjectType;
-                typeBuilder.setBaseType(objectType);
-                
-                var methodBuilder = typeBuilder.defineMethod("<init>");
-                methodBuilder.setReturnType(JvmTypeInfo.VOID);
-                var gen = methodBuilder.CodeGenerator;
-                gen.beginScope();
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Invokespecial, objectType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-                gen.emit(JvmOpcode.Return);
-                gen.endScope();
+            JvmTypeBuilder typeBuilder;
+            var inExpressionTree = (context.CodeValidationContext.CurrentMethod != context.CodeValidationContext.RootMethod
+                && context.CodeValidationContext.CurrentMethod.DeclaringType.FullName.indexOf('#') != -1);
+            if (!inExpressionTree && targetType != null && !targetType.FullName.equals("stab/tree/ExpressionTree")) {
+                typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+                if (typeBuilder == null) {
+                    int n = context.CurrentType.NestedTypes.where(p => p.Name.startsWith("LambdaScope")).count();
+                    typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType("LambdaScope" + n);
+                    typeBuilder.setSourceFile(PathHelper.getFileName(lambda.Filename));
+                    context.LambdaScopes[context.CodeValidationContext.RootMethod] = typeBuilder;
+                    typeBuilder.setSynthetic(true);
+                    typeBuilder.setSuper(true);
+                    context.TypeBuilders.add(typeBuilder);
+                    
+                    var objectType = context.TypeSystem.ObjectType;
+                    typeBuilder.setBaseType(objectType);
+                    
+                    var methodBuilder = typeBuilder.defineMethod("<init>");
+                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                    gen.emit(JvmOpcode.Invokespecial, objectType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                    gen.emit(JvmOpcode.Return);
+                    gen.endScope();
+                }
+            } else if (inExpressionTree) {
+                typeBuilder = (JvmTypeBuilder)context.CodeValidationContext.CurrentMethod.DeclaringType;
+            } else {
+                var prefix = ((JvmTypeBuilder)context.CurrentType).FullName + "#";
+                int n = 0;
+                while (context.TypeSystem.typeExists(prefix + n)) {
+                    n++;
+                }
+                typeBuilder = context.TypeSystem.defineType(prefix + n);
             }
             
             var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
-            String methodName;
             if (methodBuilder != null) {
-                methodName = methodBuilder.Name;
-                typeBuilder.undefineMethod(methodBuilder);
-            } else {
-                methodName = "lambda$" + (typeBuilder.Methods.count() - 1);
+                ((JvmTypeBuilder)methodBuilder.DeclaringType).undefineMethod(methodBuilder);
             }
-            methodBuilder = typeBuilder.defineMethod(methodName);
+            methodBuilder = typeBuilder.defineMethod("lambda$" + (typeBuilder.Methods.count() - 1));
             lambda.addOrReplaceUserData(methodBuilder);
             
             if (targetType == null) {
@@ -1053,16 +1063,32 @@ package stab.tools.compiler {
                 JvmMethodInfo method;
                 if (BytecodeHelper.isDelegateType(targetType)) {
                     method = targetType.Methods.where(p => p.Name.equals("invoke")).firstOrDefault();
-                } else { // TODO: expression tree
-                    if (!targetType.IsInterface) {
-                        throw context.error(CompileErrorId.InvalidLambdaTarget, lambda);
-                    }
+                } else if (targetType.IsInterface) {
                     var methods = getAllMethods(targetType);
                     if (methods.count() != 1) {
                         throw context.error(CompileErrorId.IncompatibleLambdaInterface, lambda,
                             BytecodeHelper.getDisplayName(targetType), methods.count());
                     }
                     method = methods.single();
+                } else if (targetType.FullName.equals("stab/tree/ExpressionTree")) {
+                    var typeArg = targetType.GenericArguments.singleOrDefault();
+                    if (typeArg == null) {
+                        throw context.error(CompileErrorId.InvalidExpressionTreeArgument, lambda);
+                    }
+                    if (BytecodeHelper.isDelegateType(typeArg)) {
+                        method = typeArg.Methods.where(p => p.Name.equals("invoke")).firstOrDefault();
+                    } else if (typeArg.IsInterface) {
+                        var methods = getAllMethods(typeArg);
+                        if (methods.count() != 1) {
+                            throw context.error(CompileErrorId.IncompatibleLambdaInterface, lambda,
+                                BytecodeHelper.getDisplayName(typeArg), methods.count());
+                        }
+                        method = methods.single();
+                    } else {
+                        throw context.error(CompileErrorId.InvalidExpressionTreeArgument, lambda);
+                    }
+                } else {
+                    throw context.error(CompileErrorId.InvalidLambdaTarget, lambda);
                 }
                 if (method.Parameters.count() != lambda.Parameters.size()) {
                     throw context.error(CompileErrorId.IncompatibleParameterList, lambda, BytecodeHelper.getDisplayName(method.DeclaringType));
@@ -1131,7 +1157,7 @@ package stab.tools.compiler {
                     handleExpression(expr, targetType, true);
                     var einfo = expr.getUserData(typeof(ExpressionInfo));
                     var returnType = (einfo == null) ? context.TypeSystem.ObjectType : ValidationHelper.getType(context, expr);
-                    if (targetType == null) {
+                    if (targetType == null || targetType.FullName.equals("stab/tree/ExpressionTree")) {
                         context.CodeValidationContext.LambdaReturnType = returnType;
                         methodBuilder.setReturnType(returnType);
                     } else {

@@ -35,3 +35,20 @@ public class ArrayInitializerAutoboxing {
 	}
 }
 => Error: wrong array element type
+===============================
+package a {
+    class A {
+        protected void m() {
+        }
+    }
+}
+package b {
+    class B {
+        void n() {
+            new C().m();
+        }
+        class C : A {
+        }
+    }
+}
+=> Error: no accessible member 'm'

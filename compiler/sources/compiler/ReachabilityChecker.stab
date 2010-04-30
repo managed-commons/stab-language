@@ -792,20 +792,25 @@ package stab.tools.compiler {
             
             protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
                 var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
-                var body = (BlockStatementNode)lambda.Body;
-                var info = statementChecker.handleStatement(body, null);
-                if (info.IsEndPointReachable) {
-                    if (methodBuilder.ReturnType == JvmTypeInfo.VOID) {
-                        var returnStatement = new ReturnStatementNode();
-                        returnStatement.addOrReplaceUserData(new StatementInfo());
-                        body.Statements.add(returnStatement);
-                    } else if (context.Iterables[methodBuilder] != null) {
-                        var yieldStatement = new YieldStatementNode();
-                        yieldStatement.addOrReplaceUserData(new StatementInfo());
-                        body.Statements.add(yieldStatement);
-                    } else {
-                        context.addError(CompileErrorId.MissingReturn, lambda);
+                if (lambda.Body instanceof BlockStatementNode) {
+                    var body = (BlockStatementNode)lambda.Body;
+                    var info = statementChecker.handleStatement(body, null);
+                    if (info.IsEndPointReachable) {
+                        if (methodBuilder.ReturnType == JvmTypeInfo.VOID) {
+                            var returnStatement = new ReturnStatementNode();
+                            returnStatement.addOrReplaceUserData(new StatementInfo());
+                            body.Statements.add(returnStatement);
+                        } else if (context.Iterables[methodBuilder] != null) {
+                            var yieldStatement = new YieldStatementNode();
+                            yieldStatement.addOrReplaceUserData(new StatementInfo());
+                            body.Statements.add(yieldStatement);
+                        } else {
+                            context.addError(CompileErrorId.MissingReturn, lambda);
+                        }
                     }
+                } else {
+                    handleExpression(((ExpressionStatementNode)lambda.Body).Expression, null, true);
+                    lambda.Body.addOrReplaceUserData(new StatementInfo());
                 }
                 return null;
             }
@@ -1208,8 +1213,7 @@ package stab.tools.compiler {
                 }
                 
                 protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
-                    var body = (BlockStatementNode)lambda.Body;
-                    statementHandler.handleStatement(body, null);
+                    statementHandler.handleStatement(lambda.Body, null);
                     return null;
                 }
                 
