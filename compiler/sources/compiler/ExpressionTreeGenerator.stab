@@ -50,6 +50,33 @@ package stab.tools.compiler {
             return null;
         }
         
+        static void emitThisAccess(CompilerContext context, JvmCodeGenerator generator) {
+            BytecodeHelper.emitTypeof(generator, context.TypeSystem, context.MethodGenerationContext.CurrentMethod.DeclaringType);
+            BytecodeGenerator.emitThisAccess(context, generator);
+            var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+            var unboundedClassType = context.TypeSystem.getType("java/lang/Class").getGenericType(
+                    Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD));
+            var valueParameters = new ArrayList<JvmTypeInfo> { unboundedClassType, context.TypeSystem.ObjectType };
+            var valueMethod = expressionType.getMethod("value", valueParameters);
+            generator.emit(JvmOpcode.Invokestatic, valueMethod);
+        }
+        
+        void emitArray(int dimensions, JvmTypeInfo type, Iterator<ExpressionNode> values) {
+            var generator = context.MethodGenerationContext.Generator;
+            BytecodeHelper.emitNewarray(generator, dimensions, type.ElementType);
+            if (values != null) {
+                var opcode = BytecodeHelper.getAstoreOpcode(type.ElementType);
+                int i = 0;
+                while (values.hasNext()) {
+                    var e = values.next();
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    expressionGenerator.handleExpression(e, null, true);
+                    generator.emit(opcode);
+                }
+            }
+        }
+        
         private class ExpressionGenerator : ExpressionHandler<Void, Void> {
             private ExpressionTreeGenerator statementGenerator;
             private CompilerContext context;
@@ -69,9 +96,7 @@ package stab.tools.compiler {
                 var valueParameters = new ArrayList<JvmTypeInfo> { unboundedClassType, context.TypeSystem.ObjectType };
                 var valueMethod = expressionType.getMethod("value", valueParameters);
                 if (info == null) {
-                    generator.emit(JvmOpcode.Aconst_Null);
-                    generator.emit(JvmOpcode.Aconst_Null);
-                    generator.emit(JvmOpcode.Invokestatic, valueMethod);
+                    emitNull();
                     return null;
                 }
                 if (!info.IsConstant) {
@@ -189,6 +214,123 @@ package stab.tools.compiler {
                 return null;
             }
             
+            protected override Void handleInvocation(InvocationExpressionNode invocation, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = invocation.getUserData(typeof(ExpressionInfo));
+                var method = info.Method;
+                if (method.IsExcludedFromCompilation || CompilerHelper.shouldIgnoreCalls(context, method)) {
+                    return null;
+                }
+                var isDelegateInvocation = BytecodeHelper.isDelegateType(method.DeclaringType) && method.Name.equals("invoke");
+                JvmMethodInfo getMethodMethod = null;
+                if (!isDelegateInvocation) {
+                    generator.emit(JvmOpcode.Ldc, method.DeclaringType);
+                    generator.emit(JvmOpcode.Ldc, method.Name);
+                    var classType = context.TypeSystem.getType("java/lang/Class");
+                    getMethodMethod = classType.Methods.where(p => p.Name.equals("getDeclaredMethod")).single();
+                    
+                    BytecodeHelper.emitIntConstant(generator, method.Parameters.count());
+                    BytecodeHelper.emitNewarray(generator, 1, classType);
+                    int i = 0;
+                    foreach (var p in method.Parameters) {
+                        generator.emit(JvmOpcode.Dup);
+                        BytecodeHelper.emitIntConstant(generator, i++);
+                        BytecodeHelper.emitTypeof(generator, context.TypeSystem, p.Type);
+                        generator.emit(JvmOpcode.Aastore);
+                    }
+                    generator.emit(JvmOpcode.Invokevirtual, getMethodMethod);
+                }
+                if (!method.IsStatic) {
+                    if (isDelegateInvocation) {
+                        handleExpression(invocation.TargetObject, null, true);
+                    } else if (invocation.TargetObject.ExpressionKind == ExpressionKind.MemberAccess) {
+                        var targetTarget = ((MemberAccessExpressionNode)invocation.TargetObject).TargetObject;
+                        handleExpression(targetTarget, null, true);
+                    } else { // SimpleName
+                        ExpressionTreeGenerator.emitThisAccess(context, generator);
+                    }
+                } else {
+                    emitNull();
+                }
+                var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+                BytecodeHelper.emitIntConstant(generator, method.Parameters.count());
+                BytecodeHelper.emitNewarray(generator, 1, expressionType);
+                
+                int nParams = method.Parameters.count();
+                int len = (method.IsVarargs) ? nParams - 1 : nParams;
+                var arguments = invocation.Arguments;
+                if (info.IsExtension) {
+                    var target = (MemberAccessExpressionNode)invocation.TargetObject;
+                    arguments = new ArrayList<ExpressionNode> { target.TargetObject };
+                    arguments.addAll(invocation.Arguments);
+                }
+                emitArguments(arguments, method.Parameters, len, arguments.size() - len, method.IsVarargs);
+                if (!isDelegateInvocation) {
+                    var callParameters = new ArrayList<JvmTypeInfo> { getMethodMethod.ReturnType, expressionType, expressionType.ArrayType };
+                    var callMethod = expressionType.getMethod("call", callParameters);
+                    generator.emit(JvmOpcode.Invokestatic, callMethod);
+                } else {
+                    var invokeParameters = new ArrayList<JvmTypeInfo> { expressionType, expressionType.ArrayType };
+                    var invokeMethod = expressionType.getMethod("invoke", invokeParameters);
+                    generator.emit(JvmOpcode.Invokestatic, invokeMethod);
+                }
+                return null;
+            }
+
+            private void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int fixedLength,
+                    int nvarargs, boolean varargs) {
+                var generator = context.MethodGenerationContext.Generator;
+                var it1 = parameters.iterator();
+                var it2 = arguments.iterator();
+                int i;
+                for (i = 0; i < fixedLength; i++) {
+                    var p = it1.next();
+                    var e = it2.next();
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i);
+                    handleExpression(e, null, true);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                if (varargs) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i);
+                    if (nvarargs > 0) {
+                        var paramType = it1.next().Type;
+                        if (nvarargs == 1) {
+                            var e = arguments[i];
+                            var ei = e.getUserData(typeof(ExpressionInfo));
+                            if (ei == null) {
+                                emitNull();
+                            } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
+                                handleExpression(e, null, true);
+                            } else {
+                                BytecodeHelper.emitIntConstant(generator, 1);
+                                statementGenerator.emitArray(1, paramType, it2);
+                            }
+                        } else {
+                            BytecodeHelper.emitIntConstant(generator, nvarargs);
+                            statementGenerator.emitArray(1, paramType, it2);
+                        }
+                    } else {
+                        BytecodeHelper.emitIntConstant(generator, 0);
+                        statementGenerator.emitArray(1, it1.next().Type, it2);
+                    }
+                    generator.emit(JvmOpcode.Aastore);
+                }
+            }
+            
+            void emitNull() {
+                var generator = context.MethodGenerationContext.Generator;
+                var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+                var unboundedClassType = context.TypeSystem.getType("java/lang/Class").getGenericType(
+                        Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                var valueParameters = new ArrayList<JvmTypeInfo> { unboundedClassType, context.TypeSystem.ObjectType };
+                var valueMethod = expressionType.getMethod("value", valueParameters);
+                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(JvmOpcode.Invokestatic, valueMethod);
+            }
+            
             protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
                 var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
                 ((JvmTypeBuilder)methodBuilder.DeclaringType).undefineMethod(methodBuilder);
@@ -255,11 +397,29 @@ package stab.tools.compiler {
                             generator.emit(BytecodeHelper.getLoadOpcode(local.Type), generator.getLocal(local.Name));
                         }
                         BytecodeGenerator.emitBoxing(context, simpleName);
-                        if (info.Type.IsPrimitive) {
-                            generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(info.Type));
+                        if (local.Type.IsPrimitive) {
+                            generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
                         }
                         generator.emit(JvmOpcode.Invokestatic, valueMethod);
                     }
+                    break;
+                }
+                case Field: {
+                    var field = member.Field;
+                    if (!field.IsStatic) {
+                        ExpressionTreeGenerator.emitThisAccess(context, generator);
+                    } else {
+                        emitNull();
+                    }
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, field.DeclaringType);
+                    var classType = context.TypeSystem.getType("java/lang/Class");
+                    var getFieldMethod = classType.getMethod("getDeclaredField", Collections.singletonList(context.TypeSystem.StringType));
+                    generator.emit(JvmOpcode.Ldc, field.Name);
+                    generator.emit(JvmOpcode.Invokevirtual, getFieldMethod);
+                    var expressionType = context.TypeSystem.getType("stab/tree/Expression");
+                    var fieldParameters = new ArrayList<JvmTypeInfo> { expressionType, context.TypeSystem.getType("java/lang/reflect/Field") };
+                    var fieldMethod = expressionType.getMethod("field", fieldParameters);
+                    generator.emit(JvmOpcode.Invokestatic, fieldMethod);
                     break;
                 }
                 default:

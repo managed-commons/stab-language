@@ -1356,5 +1356,20 @@ package stab.tools.compiler.test {
 		public void expressionTreeVariable() {
 			doTest("ExpressionTreeVariable", new Class<?>[] {}, new Object[] {}, 1);
 		}
+		
+		[Test]
+		public void expressionTreeMethodCall() {
+			doTest("ExpressionTreeMethodCall", new Class<?>[] {}, new Object[] {}, "method");
+		}
+		
+		[Test]
+		public void expressionTreeInvoke() {
+			doTest("ExpressionTreeInvoke", new Class<?>[] {}, new Object[] {}, "ExpressionTreeInvoke$D");
+		}
+		
+		[Test]
+		public void expressionTreeField() {
+			doTest("ExpressionTreeField", new Class<?>[] {}, new Object[] {}, "field");
+		}
 	}
 }

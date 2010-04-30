@@ -962,7 +962,9 @@ package stab.tools.compiler {
                         method = type.Methods.where(p => p.Name.equals("invoke")).single();
                         method = MethodResolver.resolveMethod(Collections.singletonList(method), invocation.Arguments, targetType);
                         if (method != null) {
-                            if (member instanceof LocalInfo && member.Method != context.CodeValidationContext.CurrentMethod) {
+                            var currentMethod = context.CodeValidationContext.CurrentMethod;
+                            if (member instanceof LocalInfo && member.Method != currentMethod &&
+                                     currentMethod.DeclaringType.FullName.indexOf('#') == -1) {
                                 ((LocalInfo)member).IsUsedFromLambda = true;
                             }
                             tinfo.Member = member;

@@ -15,11 +15,15 @@
    limitations under the License.
  */
 using java.lang;
+using java.lang.reflect;
  
 package stab.tree {
 
     public enum ExpressionKind {
+        Field,
+        Invocation,
         Lambda,
+        MethodCall,
         Parameter,
         Value
     }
@@ -40,6 +44,18 @@ package stab.tree {
             private set;
         }
 
+        public static MethodCallExpression call(Method method, Expression target, params Expression[] arguments) {
+            return new MethodCallExpression(method, target, arguments);
+        }
+
+        public static FieldExpression field(Expression target, Field field) {
+            return new FieldExpression(field, target);
+        }
+
+        public static InvocationExpression invoke(Expression target, params Expression[] arguments) {
+            return new InvocationExpression(target, arguments);
+        }
+        
         public static LambdaExpression lambda(Class<?> type, ParameterExpression[] parameters, Statement body) {
             return new LambdaExpression(type, parameters, body);
         }
