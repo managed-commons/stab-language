@@ -20,11 +20,13 @@ using java.lang.reflect;
 package stab.tree {
 
     public enum ExpressionKind {
+        Binary,
         Field,
         Invocation,
         Lambda,
         MethodCall,
         Parameter,
+        Unary,
         Value
     }
 
@@ -43,8 +45,12 @@ package stab.tree {
             get;
             private set;
         }
+        
+        public static BinaryExpression binary(Class<?> type, Expression left, BinaryOperator operator, Expression right) {
+            return new BinaryExpression(type, operator, left, right);
+        }
 
-        public static MethodCallExpression call(Method method, Expression target, params Expression[] arguments) {
+        public static MethodCallExpression call(Expression target, Method method, params Expression[] arguments) {
             return new MethodCallExpression(method, target, arguments);
         }
 
@@ -66,6 +72,10 @@ package stab.tree {
         
         public static ExpressionTree<T> tree<T>(Class<T> type, ParameterExpression[] parameters, Statement body) {
             return new ExpressionTree<T>(type, parameters, body);
+        }
+        
+        public static UnaryExpression unary(Class<?> type, UnaryOperator operator, Expression operand) {
+            return new UnaryExpression(type, operator, operand);
         }
         
         public static ValueExpression value(Class<?> type, Object value) {

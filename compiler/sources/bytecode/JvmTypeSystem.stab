@@ -33,6 +33,8 @@ package stab.tools.bytecode {
         
         private JvmTypeInfo objectType;
         private JvmTypeInfo stringType;
+        private JvmTypeInfo classType;
+        private JvmTypeInfo unboundedClassType;
 
         public JvmTypeSystem(String[] classPath)
             : this(classPath, (String[])null) {
@@ -128,6 +130,32 @@ package stab.tools.bytecode {
             }
         }
 
+        public JvmTypeInfo ClassType {
+            get {
+                if (parent == null) {
+                    if (classType == null) {
+                        classType = getType("java/lang/Class");
+                    }
+                    return classType;
+                } else {
+                    return parent.ClassType;
+                }
+            }
+        }
+
+        public JvmTypeInfo UnboundedClassType {
+            get {
+                if (parent == null) {
+                    if (unboundedClassType == null) {
+                        unboundedClassType = this.ClassType.getGenericType(Query.singleton(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                    }
+                    return unboundedClassType;
+                } else {
+                    return parent.UnboundedClassType;
+                }
+            }
+        }
+        
         public JvmMethodInfo getBoxingMethod(JvmTypeInfo type) {
             ClassFileType ctype = null;
             boolean isBoolean;

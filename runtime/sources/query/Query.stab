@@ -162,7 +162,7 @@ package stab.query {
 		///////////////////////////////////////////////////////////////////////////////////////////////
 		// asIterable
 		//
-		
+
 		public static Iterable<TSource> asIterable<TSource>(TSource[] array) {
 			if (array == null) throw new NullPointerException("array");
 		
@@ -3310,6 +3310,31 @@ package stab.query {
 				}
 			}
 		}
+        
+        ///////////////////////////////////////////////////////////////////////////////////////////
+        // Tuples
+        
+        public static Iterable<TSource> singleton<TSource>(TSource item) {
+            yield return item;
+        }
+        
+        public static Iterable<TSource> pair<TSource>(TSource item1, TSource item2) {
+            yield return item1;
+            yield return item2;
+        }
+        
+        public static Iterable<TSource> triple<TSource>(TSource item1, TSource item2, TSource item3) {
+            yield return item1;
+            yield return item2;
+            yield return item3;
+        }
+        
+        public static Iterable<TSource> quadruple<TSource>(TSource item1, TSource item2, TSource item3, TSource item4) {
+            yield return item1;
+            yield return item2;
+            yield return item3;
+            yield return item4;
+        }
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
         //
