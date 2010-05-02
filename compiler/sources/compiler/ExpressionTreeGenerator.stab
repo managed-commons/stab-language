@@ -461,6 +461,55 @@ package stab.tools.compiler {
                 return null;
             }
             
+            protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = memberAccess.getUserData(typeof(ExpressionInfo));
+                if (info.Method != null) {
+                    emitDelegateCreation(info.Type, info.Method, memberAccess);
+                    return null;
+                }
+                var member = info.Member;
+                if (member == null) {
+                    handleExpression(memberAccess.TargetObject, null, true);
+                    return null;
+                }
+                switch (member.MemberKind) {
+                case Field: {
+                    var field = member.Field;
+                    if (!field.IsStatic) {
+                        handleExpression(memberAccess.TargetObject, null, true);
+                    } else {
+                        emitNull();
+                    }
+                    generator.emit(JvmOpcode.Ldc, field.DeclaringType);
+                    generator.emit(JvmOpcode.Ldc, field.Name);
+                    generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredFieldMethod);
+                    generator.emit(JvmOpcode.Invokestatic, statementGenerator.FieldMethod);
+                    break;
+                }
+                case Property: {
+                    var method = member.GetAccessor;
+                    if (!method.IsStatic) {
+                        handleExpression(memberAccess.TargetObject, null, true);
+                    } else {
+                        emitNull();
+                    }
+                    generator.emit(JvmOpcode.Ldc, method.DeclaringType);
+                    generator.emit(JvmOpcode.Ldc, method.Name);
+                    BytecodeHelper.emitIntConstant(generator, 0);
+                    BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                    generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredMethodMethod);
+                    BytecodeHelper.emitIntConstant(generator, 0);
+                    BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                    generator.emit(JvmOpcode.Invokestatic, statementGenerator.CallMethod);
+                    break;
+                }
+                default:
+                    throw new Exception("Internal error: unhandled name kind: " + member.MemberKind);
+                }
+                return null;
+            }
+            
             protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 var info = simpleName.getUserData(typeof(ExpressionInfo));
@@ -499,6 +548,14 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Invokestatic, statementGenerator.FieldMethod);
                     break;
                 }
+                case Method: {
+                    if (info.Method != null) {
+                        emitDelegateCreation(info.Type, info.Method, simpleName);
+                    } else {
+                        statementGenerator.emitThisAccess(context, generator);
+                    }
+                    break;
+                }
                 case Property: {
                     var method = member.GetAccessor;
                     if (!method.IsStatic) {
@@ -519,6 +576,25 @@ package stab.tools.compiler {
                 default:
                     throw new Exception("Internal error: unhandled name kind: " + member.MemberKind);
                 }
+                return null;
+            }
+
+            protected override Void handleThisAccess(ThisAccessExpressionNode thisAccess, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                statementGenerator.emitThisAccess(context, generator);
+                return null;
+            }
+            
+            private void emitDelegateCreation(JvmTypeInfo delegateType, JvmMethodInfo method, ExpressionNode argument) {
+                throw new Exception("TODO");
+            }
+            
+            protected override Void handleTypeof(TypeofExpressionNode typeofExpression, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, context.TypeSystem.ClassType);
+                var type = typeofExpression.getUserData(typeof(JvmTypeInfo));
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, type);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.ValueMethod);
                 return null;
             }
             

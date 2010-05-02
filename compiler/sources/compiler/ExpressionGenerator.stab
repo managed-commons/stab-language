@@ -162,10 +162,10 @@ package stab.tools.compiler {
 
             switch (binary.Operator) {
             case Add:
-                if (info.Type.FullName.equals("java/lang/String")) {
+                var stringType = context.TypeSystem.StringType;
+                if (info.Type == stringType) {
                     var isBuildingString = context.MethodGenerationContext.IsBuildingString;
                     var stringBuilderType = context.TypeSystem.getType("java/lang/StringBuilder");
-                    var stringType = context.TypeSystem.getType("java/lang/String");
                     if (!isBuildingString) {
                         generator.emit(JvmOpcode.New, stringBuilderType);
                         generator.emit(JvmOpcode.Dup);

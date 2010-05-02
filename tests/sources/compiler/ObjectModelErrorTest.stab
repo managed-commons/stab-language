@@ -168,5 +168,19 @@ package stab.tools.compiler.test {
 				"InconsistentAccessibility.stab (7, 14) error 110: Type 'C' is less accessible than method 'm'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void nestedProtectedMember() {
+			doTest("NestedProtectedMember", new String[]{
+				"NestedProtectedMember.stab (10, 21) error 131: Type 'b.B.C' does not contain an accessible 'm' member" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void nestedStaticAccess() {
+			doTest("NestedStaticAccess", new String[]{
+				"NestedStaticAccess.stab (5, 15) error 131: Type 'C' does not contain an accessible 'm' member" },
+				new String[] {});
+		}
 	}
 }

@@ -135,6 +135,7 @@ package stab.tools.parser {
                             return position;
                         }
                     }
+                    line = scanner.Line - 1;
                     break;
 
                 default:

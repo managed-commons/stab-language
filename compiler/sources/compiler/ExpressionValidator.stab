@@ -1300,6 +1300,10 @@ package stab.tools.compiler {
                     ttype = ttype.OriginalTypeDefinition;
                 }
                 var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, ttype, name, typeArgs, true);
+                if (staticOnly) {
+                    members = members.where(p => p.IsStatic).toList();
+                }
+
                 var info = new ExpressionInfo(null) { Members = members };
                 if (staticOnly) {
                     info.ExtensionMethods = Query.empty<JvmMethodInfo>();

@@ -1171,7 +1171,7 @@ package stab.tools.compiler {
                         cases.add((String)cinfo.Value);
                     }
                 }
-                var objectType = context.TypeSystem.getType("java/lang/Object");
+                var objectType = context.TypeSystem.ObjectType;
                 if (cases.size() < 7) {
                     expressionGenerator.handleExpression(switchStatement.Selector, null, true);
                     var selectorVar = generator.declareLocal(objectType, "switchselector$" + context.MethodGenerationContext.nextStringSwitch());

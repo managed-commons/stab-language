@@ -4,6 +4,7 @@ Features ==============================
 2 - Generic constructors
 	* syntax for this and super clauses (this<T1, T2>(...))
 	* syntax for new (new <T1, T2> C(...))
+3 - Method parameter annotations
 
 
 Issues ================================
@@ -14,6 +15,7 @@ Issues ================================
 - create an InternalErrorException class
 - test partial methods
 - check that #define/#undef is used before any lexical unit
+- test super access from lambdas and iterators. report an error from expression trees
 
 Errors ================================
 
@@ -35,30 +37,3 @@ public class ArrayInitializerAutoboxing {
 	}
 }
 => Error: wrong array element type
-===============================
-package a {
-    class A {
-        protected void m() {
-        }
-    }
-}
-package b {
-    class B {
-        void n() {
-            new C().m();
-        }
-        class C : A {
-        }
-    }
-}
-=> Error: no accessible member 'm'
-===============================
-class C {
-    void m() {}
-    class D {
-        void n() {
-            C.m();
-        }
-    }
-}
-=> Error: no accessible member 'm'

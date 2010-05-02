@@ -1386,5 +1386,15 @@ package stab.tools.compiler.test {
 		public void expressionTreeAdd() {
 			doTest("ExpressionTreeAdd", new Class<?>[] {}, new Object[] {}, "Add");
 		}
+		
+		[Test]
+		public void expressionTreeField2() {
+			doTest("ExpressionTreeField2", new Class<?>[] {}, new Object[] {}, "field");
+		}
+		
+		[Test]
+		public void expressionTreeTypeof() {
+			doTest("ExpressionTreeTypeof", new Class<?>[] {}, new Object[] {}, "ExpressionTreeTypeof");
+		}
 	}
 }

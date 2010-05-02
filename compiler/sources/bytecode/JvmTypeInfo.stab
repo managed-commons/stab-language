@@ -569,7 +569,11 @@ package stab.tools.bytecode {
                     }
                 }
                 if (s == null) {
-                    return !isPrivate;
+                    if (declaringType.PackageName.equals(this.PackageName)) {
+                        return !isPrivate;
+                    } else {
+                        return isPublic;
+                    }
                 }
             }
             if (s == declaringType) {

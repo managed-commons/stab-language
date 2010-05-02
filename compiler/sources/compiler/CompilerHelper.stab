@@ -244,8 +244,15 @@ package stab.tools.compiler {
                     }
                     var fullName = pkg + '/' + name;
                     if (context.TypeSystem.typeExists(fullName)) {
-                        return getGenericType(context, packageName, context.TypeSystem.getType(fullName), simpleName.TypeArguments,
-                            simpleName, fail);
+                        var t = context.TypeSystem.getType(fullName);
+                        if (!t.IsPublic && !t.PackageName.equals(packageName)) {
+                            if (fail) {
+                                throw context.error(CompileErrorId.UnresolvedTypeName, qualified, fullName.replace('/', '.').replace('$', '.'));
+                            } else {
+                                return null;
+                            }
+                        }
+                        return getGenericType(context, packageName, t, simpleName.TypeArguments, simpleName, fail);
                     } else {
                         if (fail) {
                             throw context.error(CompileErrorId.UnresolvedTypeName, qualified, fullName.replace('/', '.').replace('$', '.'));
