@@ -312,7 +312,8 @@ package stab.tools.compiler {
             foreach (var method in type.Methods) {
                 foreach (var annotation in BytecodeHelper.getAnnotations(typeSystem, method)) {
                     if (BytecodeHelper.isIndexerGet(annotation)) {
-                        if (indexes == method.Parameters.count()) {
+                        var nparams = method.Parameters.count();
+                        if (indexes == nparams || (method.IsVarargs && indexes >= nparams)) {
                             if (getters == null) {
                                 getters = new ArrayList<JvmMethodInfo>();
                             }
@@ -321,7 +322,8 @@ package stab.tools.compiler {
                         break;
                     }
                     if (BytecodeHelper.isIndexerSet(annotation)) {
-                        if (indexes == method.Parameters.count() - 1) {
+                        var nparams = method.Parameters.count() - 1;
+                        if (indexes == nparams || (method.IsVarargs && indexes >= nparams)) {
                             if (setters == null) {
                                 setters = new ArrayList<JvmMethodInfo>();
                             }

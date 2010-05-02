@@ -26,7 +26,8 @@ package stab.tree {
         PostDecrement,
         PostIncrement,
         PreDecrement,
-        PreIncrement
+        PreIncrement,
+        Sizeof
     }
 
     public class UnaryExpression : Expression {

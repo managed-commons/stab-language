@@ -1519,10 +1519,20 @@ package stab.tools.compiler {
             
             var paramTypes = new JvmTypeInfo[indexerDeclaration.Parameters.size()];
             var paramNames = new String[sizeof(paramTypes)];
+            var isVarargs = false;
             int i = 0;
             foreach (var p in indexerDeclaration.Parameters) {
                 paramTypes[i] = CompilerHelper.resolveTypeReference(context, typeBuilder.PackageName, p.Type);
                 paramNames[i] = context.getIdentifier(p.NameOffset, p.NameLength);
+                if (p.Modifier == ParameterModifier.Params) {
+                    if (i < indexerDeclaration.Parameters.size() - 1) {
+                        context.addError(CompileErrorId.ParamsNotLast, p);
+                    }
+                    if (!paramTypes[i].IsArray) {
+                        context.addError(CompileErrorId.ParamsNotArray, p);
+                    }
+                    isVarargs = true;
+                }
                 i++;
             }
             foreach (var meth in typeBuilder.Methods) {
@@ -1536,6 +1546,7 @@ package stab.tools.compiler {
             }
             if (get != null) {
                 var methodBuilder = typeBuilder.defineMethod("getItem");
+                methodBuilder.setVarargs(isVarargs);
                 get.addUserData(methodBuilder);
                 if (isInterface) {
                     methodBuilder.setAbstract(true);
@@ -1552,6 +1563,7 @@ package stab.tools.compiler {
             }
             if (set != null) {
                 var methodBuilder = typeBuilder.defineMethod("setItem");
+                methodBuilder.setVarargs(isVarargs);
                 set.addUserData(methodBuilder);
                 if (isInterface) {
                     methodBuilder.setAbstract(true);

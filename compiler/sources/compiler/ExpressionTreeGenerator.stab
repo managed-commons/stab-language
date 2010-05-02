@@ -314,6 +314,46 @@ package stab.tools.compiler {
                 generator.emit(JvmOpcode.Invokestatic, statementGenerator.BinaryMethod);
                 return null;
             }
+        
+            protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = elementAccess.getUserData(typeof(ExpressionInfo));
+                var target = elementAccess.TargetObject;
+                var tinfo = target.getUserData(typeof(ExpressionInfo));
+                var ttype = tinfo.Type;
+                if (!ttype.IsArray) {
+                    var method = elementAccess.getUserData(typeof(ExpressionInfo)).Member.GetAccessor;
+                    if (!method.IsStatic) {
+                        handleExpression(target, null, true);
+                    } else {
+                        emitNull();
+                    }
+                    generator.emit(JvmOpcode.Ldc, method.DeclaringType);
+                    generator.emit(JvmOpcode.Ldc, method.Name);
+                    BytecodeHelper.emitIntConstant(generator, 1);
+                    BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, 0);
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, method.Parameters.first().Type);
+                    generator.emit(JvmOpcode.Aastore);
+                    generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredMethodMethod);
+
+                    BytecodeHelper.emitIntConstant(generator, method.Parameters.count());
+                    BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                    var arguments = elementAccess.Indexes;
+                    emitArguments(arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
+                    
+                    generator.emit(JvmOpcode.Invokestatic, statementGenerator.CallMethod);
+                } else {
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+                    handleExpression(target, null, true);
+                    generator.emit(JvmOpcode.Getstatic, statementGenerator.BinaryOperatorType.getField("Element"));
+                    var index = elementAccess.Indexes[0];
+                    handleExpression(index, null, true);
+                    generator.emit(JvmOpcode.Invokestatic, statementGenerator.BinaryMethod);
+                }
+                return null;
+            }
             
             protected override Void handleInvocation(InvocationExpressionNode invocation, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
@@ -354,15 +394,13 @@ package stab.tools.compiler {
                 BytecodeHelper.emitIntConstant(generator, method.Parameters.count());
                 BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
                 
-                int nParams = method.Parameters.count();
-                int len = (method.IsVarargs) ? nParams - 1 : nParams;
                 var arguments = invocation.Arguments;
                 if (info.IsExtension) {
                     var target = (MemberAccessExpressionNode)invocation.TargetObject;
                     arguments = new ArrayList<ExpressionNode> { target.TargetObject };
                     arguments.addAll(invocation.Arguments);
                 }
-                emitArguments(arguments, method.Parameters, len, arguments.size() - len, method.IsVarargs);
+                emitArguments(arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
                 if (!isDelegateInvocation) {
                     generator.emit(JvmOpcode.Invokestatic, statementGenerator.CallMethod);
                 } else {
@@ -371,8 +409,8 @@ package stab.tools.compiler {
                 return null;
             }
 
-            private void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int fixedLength,
-                    int nvarargs, boolean varargs) {
+            void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int nparams, boolean varargs) {
+                int fixedLength = (varargs) ?  nparams - 1 : nparams;
                 var generator = context.MethodGenerationContext.Generator;
                 var it1 = parameters.iterator();
                 var it2 = arguments.iterator();
@@ -386,33 +424,29 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Aastore);
                 }
                 if (varargs) {
-                    generator.emit(JvmOpcode.Dup);
+                    int nvarargs = arguments.size() - fixedLength;
+                   generator.emit(JvmOpcode.Dup);
                     BytecodeHelper.emitIntConstant(generator, i);
-                    if (nvarargs > 0) {
+                    if (nvarargs == 1) {
                         var paramType = it1.next().Type;
-                        if (nvarargs == 1) {
-                            var e = arguments[i];
-                            var ei = e.getUserData(typeof(ExpressionInfo));
-                            if (ei == null) {
-                                emitNull();
-                            } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
-                                handleExpression(e, null, true);
-                            } else {
-                                BytecodeHelper.emitIntConstant(generator, 1);
-                                statementGenerator.emitArray(1, paramType, it2);
-                            }
+                        var e = arguments[i];
+                        var ei = e.getUserData(typeof(ExpressionInfo));
+                        if (ei == null) {
+                            emitNull();
+                        } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
+                            handleExpression(e, null, true);
                         } else {
-                            BytecodeHelper.emitIntConstant(generator, nvarargs);
+                            BytecodeHelper.emitIntConstant(generator, 1);
                             statementGenerator.emitArray(1, paramType, it2);
                         }
                     } else {
-                        BytecodeHelper.emitIntConstant(generator, 0);
+                        BytecodeHelper.emitIntConstant(generator, nvarargs);
                         statementGenerator.emitArray(1, it1.next().Type, it2);
                     }
                     generator.emit(JvmOpcode.Aastore);
                 }
             }
-            
+                
             void emitNull() {
                 var generator = context.MethodGenerationContext.Generator;
                 generator.emit(JvmOpcode.Aconst_Null);

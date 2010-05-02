@@ -695,18 +695,9 @@ package stab.tools.compiler {
                 if (!method.IsStatic) {
                     expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
                 }
-                var requireLocal = elementAccess.Indexes.size() > 1;
-                var it = method.Parameters.iterator();
-                foreach (var e in elementAccess.Indexes) {
-                    expressionGenerator.handleExpression(e, null, true);
-                    var p = it.next();
-                    BytecodeGenerator.emitConversion(context, p.Type, e);
-                    if (!requireLocal) {
-                        if (p.Type.TypeKind == TypeKind.Long || p.Type.TypeKind == TypeKind.Double) {
-                            requireLocal = true;
-                        }
-                    }
-                }
+                var requireLocal = elementAccess.Indexes.size() > 1 || method.Parameters.first().Type.IsCategory2;
+                var arguments = elementAccess.Indexes;
+                expressionGenerator.emitArguments(arguments, method.Parameters, method.Parameters.count() - 1, method.IsVarargs);
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 var type = member.Type;
                 BytecodeGenerator.emitConversion(context, type, rightExpression);
@@ -813,15 +804,7 @@ package stab.tools.compiler {
                 if (!isStatic) {
                     expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
                 }
-                var requireLocals = elementAccess.Indexes.size() > 1;
-                if (!requireLocals) {
-                    foreach (var p in method.Parameters) {
-                        if (p.Type.IsCategory2) {
-                            requireLocals = true;
-                            break;
-                        }
-                    }
-                }
+                var requireLocals = elementAccess.Indexes.size() > 1 || method.Parameters.first().Type.IsCategory2;
                 if (requireLocals) {
                     generator.beginScope();
                     if (!isStatic) {
@@ -829,15 +812,57 @@ package stab.tools.compiler {
                         generator.emit(JvmOpcode.Astore, generator.declareLocal(ttype, "elementTarget$0"));
                     }
                 }
-                int n = 0;
-                var it = method.Parameters.iterator();
-                foreach (var e in elementAccess.Indexes) {
-                    expressionGenerator.handleExpression(e, null, true);
-                    var p = it.next();
-                    BytecodeGenerator.emitConversion(context, p.Type, e);
+                var arguments = elementAccess.Indexes;
+                var parameters = method.Parameters;
+                int nparams = method.Parameters.count();
+                var varargs = method.IsVarargs;
+                int fixedLength = (varargs) ?  nparams - 1 : nparams;
+                var it1 = parameters.iterator();
+                var it2 = arguments.iterator();
+                int i;
+                for (i = 0; i < fixedLength; i++) {
+                    var p = it1.next();
+                    var e = it2.next();
+                    var ei = e.getUserData(typeof(ExpressionInfo));
+                    if (ei != null && ei.Member != null && ei.Member.MemberKind == MemberKind.Method && ei.Method != null) {
+                        var thisExp = new ThisAccessExpressionNode();
+                        thisExp.addUserData(new ExpressionInfo(context.CurrentType));
+                        expressionGenerator.emitDelegateCreation(p.Type, ei.Method, thisExp, true);
+                    } else {
+                        expressionGenerator.handleExpression(e, null, true);
+                        if (p.Type.IsPrimitive) {
+                            BytecodeHelper.emitImplicitCast(generator, p.Type, e.getUserData(typeof(ExpressionInfo)).Type);
+                        }
+                    }
                     if (requireLocals) {
                         generator.emit((p.Type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
-                        generator.emit(BytecodeHelper.getStoreOpcode(p.Type), generator.declareLocal(p.Type, "elementIndex$" + n++));
+                        generator.emit(BytecodeHelper.getStoreOpcode(p.Type), generator.declareLocal(p.Type, "elementIndex$" + i));
+                    }
+                }
+                if (varargs) {
+                    int nvarargs = arguments.size() - fixedLength;
+                    var paramType = it1.next().Type;
+                    if (nvarargs == 1) {
+                        var e = arguments[i];
+                        var ei = e.getUserData(typeof(ExpressionInfo));
+                        if (ei == null) {
+                            generator.emit(JvmOpcode.Aconst_Null);
+                        } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
+                            expressionGenerator.handleExpression(e, null, true);
+                            if (paramType.IsPrimitive) {
+                                BytecodeHelper.emitImplicitCast(generator, paramType, e.getUserData(typeof(ExpressionInfo)).Type);
+                            }
+                        } else {
+                            BytecodeHelper.emitIntConstant(generator, 1);
+                            expressionGenerator.emitArray(1, paramType, it2);
+                        }
+                    } else {
+                        BytecodeHelper.emitIntConstant(generator, nvarargs);
+                        expressionGenerator.emitArray(1, paramType, it2);
+                    }
+                    if (requireLocals) {
+                        generator.emit(JvmOpcode.Dup);
+                        generator.emit(BytecodeHelper.getStoreOpcode(paramType), generator.declareLocal(paramType, "elementIndex$" + i));
                     }
                 }
                 if (!requireLocals) {
@@ -1062,7 +1087,7 @@ package stab.tools.compiler {
                     if (!isStatic) {
                         generator.emit(JvmOpcode.Aload, generator.getLocal("elementTarget$0"));
                     }
-                    n = 0;
+                    int n = 0;
                     foreach (var p in method.Parameters) {
                         generator.emit(BytecodeHelper.getLoadOpcode(p.Type), generator.getLocal("elementIndex$" + n++));
                     }
