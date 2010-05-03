@@ -20,28 +20,40 @@ package stab.tree {
 
     public enum BinaryOperator {
 		Add,
+        AddAssign,
 		And,
+        AndAssign,
 		As,
+        Assign,
 		Divide,
+        DivideAssign,
         Element,
 		Equal,
 		GreaterThan,
 		GreaterThanOrEqual,
 		Instanceof,
 		LeftShift,
+        LeftShiftAssign,
 		LessThan,
 		LessThanOrEqual,
 		LogicalAnd,
 		LogicalOr,
 		Modulo,
+        ModuloAssign,
 		Multiply,
+        MultiplyAssign,
 		NotEqual,
 		NullCoalescing,
 		Or,
+        OrAssign,
 		RightShift,
+        RightShiftAssign,
 		Subtract,
+        SubtractAssign,
 		UnsignedRightShift,
-		Xor
+		UnsignedRightShiftAssign,
+		Xor,
+        XorAssign
     }
 
     public class BinaryExpression : Expression {

@@ -21,6 +21,7 @@ package stab.tree {
 
     public enum ExpressionKind {
         Binary,
+        Conditional,
         Field,
         Invocation,
         Lambda,
@@ -48,6 +49,10 @@ package stab.tree {
         
         public static BinaryExpression binary(Class<?> type, Expression left, BinaryOperator operator, Expression right) {
             return new BinaryExpression(type, operator, left, right);
+        }
+
+        public static ConditionalExpression conditional(Class<?> type, Expression condition, Expression ifTrue, Expression ifFalse) {
+            return new ConditionalExpression(type, condition, ifTrue, ifFalse);
         }
 
         public static MethodCallExpression call(Expression target, Method method, params Expression[] arguments) {

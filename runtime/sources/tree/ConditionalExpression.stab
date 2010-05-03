@@ -15,35 +15,28 @@
    limitations under the License.
  */
 using java.lang;
-
+ 
 package stab.tree {
 
-    public enum UnaryOperator {
-        Cast,
-        Complement,
-        Minus,
-        Not,
-        Plus,
-        PostDecrement,
-        PostIncrement,
-        PreDecrement,
-        PreIncrement,
-        Sizeof
-    }
-
-    public class UnaryExpression : Expression {
-        UnaryExpression(Class<?> type, UnaryOperator operator, Expression operand)
-            : super(ExpressionKind.Unary, type) {
-            this.Operator = operator;
-            this.Operand = operand;
+    public class ConditionalExpression : Expression {
+        ConditionalExpression(Class<?> type, Expression condition, Expression ifTrue, Expression ifFalse)
+            : super(ExpressionKind.Conditional, type) {
+            this.Condition = condition;
+            this.IfTrue = ifTrue;
+            this.IfFalse = ifFalse;
         }
         
-        public UnaryOperator Operator {
+        public Expression Condition {
             get;
             private set;
         }
         
-        public Expression Operand {
+        public Expression IfTrue {
+            get;
+            private set;
+        }
+        
+        public Expression IfFalse {
             get;
             private set;
         }

@@ -41,6 +41,7 @@ package stab.tools.compiler {
         private JvmMethodInfo fieldMethod;
         private JvmMethodInfo binaryMethod;
         private JvmMethodInfo unaryMethod;
+        private JvmMethodInfo conditionalMethod;
     
         ExpressionTreeGenerator(CompilerContext context)
             : super(true) {
@@ -203,6 +204,17 @@ package stab.tools.compiler {
             }
         }
         
+        JvmMethodInfo ConditionalMethod {
+            get {
+                if (conditionalMethod == null) {
+                    var parameters = Query.quadruple(context.TypeSystem.UnboundedClassType,
+                            this.ExpressionType, this.ExpressionType, this.ExpressionType);
+                    conditionalMethod = this.ExpressionType.getMethod("conditional", parameters);
+                }
+                return conditionalMethod;
+            }
+        }
+        
         #endregion
         
         void generateExpressionTree(LambdaExpressionNode lambda) {
@@ -303,6 +315,18 @@ package stab.tools.compiler {
                 generator.emit(JvmOpcode.Invokestatic, statementGenerator.ValueMethod);
                 return null;
             }
+
+            protected override Void handleAssign(AssignExpressionNode assign, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = assign.getUserData(typeof(ExpressionInfo));
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+                handleExpression(assign.Left, null, true);
+                var op = (assign.Operator.equals("Assign")) ? "Assign" : assign.Operator.toString() + "Assign";
+                generator.emit(JvmOpcode.Getstatic, statementGenerator.BinaryOperatorType.getField(op));
+                handleExpression(assign.Right, null, true);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.BinaryMethod);
+                return null;
+            }
             
             protected override Void handleBinary(BinaryExpressionNode binary, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
@@ -314,7 +338,28 @@ package stab.tools.compiler {
                 generator.emit(JvmOpcode.Invokestatic, statementGenerator.BinaryMethod);
                 return null;
             }
-        
+
+            protected override Void handleCast(CastExpressionNode cast, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = cast.getUserData(typeof(ExpressionInfo));
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+                generator.emit(JvmOpcode.Getstatic, statementGenerator.UnaryOperatorType.getField("Cast"));
+                handleExpression(cast.Expression, null, true);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.UnaryMethod);
+                return null;
+            }
+
+            protected override Void handleConditional(ConditionalExpressionNode conditional, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = conditional.getUserData(typeof(ExpressionInfo));
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+                handleExpression(conditional.Condition, null, true);
+                handleExpression(conditional.IfTrue, null, true);
+                handleExpression(conditional.IfFalse, null, true);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.ConditionalMethod);
+                return null;
+            }
+            
             protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 var info = elementAccess.getUserData(typeof(ExpressionInfo));
@@ -610,6 +655,15 @@ package stab.tools.compiler {
                 default:
                     throw new Exception("Internal error: unhandled name kind: " + member.MemberKind);
                 }
+                return null;
+            }
+
+            protected override Void handleSizeof(SizeofExpressionNode sizeofExpression, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, JvmTypeInfo.INT);
+                generator.emit(JvmOpcode.Getstatic, statementGenerator.UnaryOperatorType.getField("Sizeof"));
+                handleExpression(sizeofExpression.Expression, null, true);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.UnaryMethod);
                 return null;
             }
 
