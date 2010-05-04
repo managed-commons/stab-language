@@ -224,6 +224,8 @@ package stab.tools.compiler {
                     if (!isArgumentCompatible(argNode, paramType)) {
                         isCompatible = false;
                         break;
+                    } else if (argNode.ExpressionKind == ExpressionKind.Lambda) {
+                        hasLambda = true;
                     }
                 }
                 if (isCompatible && method.IsVarargs) {
@@ -241,6 +243,8 @@ package stab.tools.compiler {
                             if (it1.hasNext()) {
                                 isCompatible = false;
                                 break;
+                            } else if (argNode.ExpressionKind == ExpressionKind.Lambda) {
+                                hasLambda = true;
                             }
                             break;
                         }
