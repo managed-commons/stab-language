@@ -1156,7 +1156,7 @@ package stab.tools.compiler {
                     }
                 } else {
                     var expr = ((ExpressionStatementNode)lambda.Body).Expression;
-                    handleExpression(expr, targetType, true);
+                    handleExpression(expr, null, true);
                     var einfo = expr.getUserData(typeof(ExpressionInfo));
                     var returnType = (einfo == null) ? context.TypeSystem.ObjectType : ValidationHelper.getType(context, expr);
                     if (targetType == null || targetType.FullName.equals("stab/tree/ExpressionTree")) {
@@ -1168,7 +1168,7 @@ package stab.tools.compiler {
                         block.Line = lambda.Body.Line;
                         block.Column = lambda.Body.Column;
                         block.DisabledWarnings = lambda.Body.DisabledWarnings;
-                        if (returnType == JvmTypeInfo.VOID) {
+                        if (returnType == JvmTypeInfo.VOID || methodBuilder.ReturnType == JvmTypeInfo.VOID) {
                             block.Statements.add(lambda.Body);
                         } else {
                             var returnNode = new ReturnStatementNode();
@@ -1533,6 +1533,9 @@ package stab.tools.compiler {
         protected override Void handleSuperAccess(SuperAccessExpressionNode superAccess, JvmTypeInfo targetType, boolean nested) {
             if (context.CodeValidationContext.IsStatic) {
                 context.addError(CompileErrorId.StaticSuperAccess, superAccess);
+            }
+            if (context.CodeValidationContext.IsInNestedMethod) {
+                throw context.error(CompileErrorId.NestedMethodSuperAccess, superAccess);
             }
             superAccess.addOrReplaceUserData(new ExpressionInfo(context.CurrentType.BaseType));
             return null;

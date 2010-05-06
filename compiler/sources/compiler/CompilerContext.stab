@@ -236,6 +236,12 @@ package stab.tools.compiler {
             }
         }
         
+        boolean IsInNestedMethod {
+            get {
+                return methods.size() > 1;
+            }
+        }
+        
         JvmMethodBuilder RootMethod {
             get {
                 return methods[0];

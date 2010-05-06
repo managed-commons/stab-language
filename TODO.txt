@@ -15,7 +15,6 @@ Issues ================================
 - create an InternalErrorException class
 - test partial methods
 - check that #define/#undef is used before any lexical unit
-- test super access from lambdas and iterators. report an error from expression trees
 
 Errors ================================
 

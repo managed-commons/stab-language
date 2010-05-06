@@ -1411,5 +1411,15 @@ package stab.tools.compiler.test {
 		public void expressionTreeCast() {
 			doTest("ExpressionTreeCast", new Class<?>[] {}, new Object[] {}, "Cast");
 		}
+		
+		[Test]
+		public void lambdaAsArgument() {
+			doTest("LambdaAsArgument", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void lambdaAsArgument2() {
+			doTest("LambdaAsArgument2", new Class<?>[] {}, new Object[] {}, 2);
+		}
 	}
 }

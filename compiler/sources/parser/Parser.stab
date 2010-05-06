@@ -2909,6 +2909,7 @@ package stab.tools.parser {
         private ExpressionNode parseSuperAccessExpression() {
             ExpressionNode result = null;
             var superAccess = new SuperAccessExpressionNode();
+            setScannerState(superAccess);
             switch (nextLexicalUnit(true)) {
             case Dot:
                 if (!isIdentifier(nextLexicalUnit(true))) {

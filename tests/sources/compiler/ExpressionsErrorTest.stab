@@ -120,5 +120,12 @@ package stab.tools.compiler.test {
 				"MethodMemberAccess.stab (4, 9) error 207: The expression does not give access to a member 'x'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void lambdaSuperCall() {
+			doTest("LambdaSuperCall", new String[]{
+				"LambdaSuperCall.stab (10, 21) error 211: Access to a member through the 'super' keyword from lambda expressions, expression trees, and iterator blocks is forbidden" },
+				new String[] {});
+		}
 	}
 }
