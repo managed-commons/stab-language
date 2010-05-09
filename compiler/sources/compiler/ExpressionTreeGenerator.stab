@@ -31,7 +31,14 @@ package stab.tools.compiler {
         private JvmTypeInfo unaryOperatorType;
         private JvmTypeInfo unboundedConstructorType;
         private JvmTypeInfo memberInitializerType;
+        private JvmMethodInfo blockMethod;
+        private JvmMethodInfo makeBreakMethod;
+        private JvmMethodInfo makeContinueMethod;
+        private JvmMethodInfo makeDoMethod;
+        private JvmMethodInfo emptyMethod;
         private JvmMethodInfo expressionMethod;
+        private JvmMethodInfo makeReturnMethod;
+        private JvmMethodInfo makeWhileMethod;
         private JvmMethodInfo valueMethod;
         private JvmMethodInfo getDeclaredMethodMethod;
         private JvmMethodInfo getDeclaredFieldMethod;
@@ -112,6 +119,51 @@ package stab.tools.compiler {
             }
         }
         
+        JvmMethodInfo BlockMethod {
+            get {
+                if (blockMethod == null) {
+                    blockMethod = this.StatementType.getMethod("block", Query.singleton(this.StatementType.ArrayType));
+                }
+                return blockMethod;
+            }
+        }
+
+        JvmMethodInfo MakeBreakMethod {
+            get {
+                if (makeBreakMethod == null) {
+                    makeBreakMethod = this.StatementType.getMethod("makeBreak", Query.empty<JvmTypeInfo>());
+                }
+                return makeBreakMethod;
+            }
+        }
+
+        JvmMethodInfo MakeContinueMethod {
+            get {
+                if (makeContinueMethod == null) {
+                    makeContinueMethod = this.StatementType.getMethod("makeContinue", Query.empty<JvmTypeInfo>());
+                }
+                return makeContinueMethod;
+            }
+        }
+        
+        JvmMethodInfo MakeDoMethod {
+            get {
+                if (makeDoMethod == null) {
+                    makeDoMethod = this.StatementType.getMethod("makeDo", Query.pair(this.StatementType, this.ExpressionType));
+                }
+                return makeDoMethod;
+            }
+        }
+
+        JvmMethodInfo EmptyMethod {
+            get {
+                if (emptyMethod == null) {
+                    emptyMethod = this.StatementType.getMethod("empty", Query.empty<JvmTypeInfo>());
+                }
+                return emptyMethod;
+            }
+        }
+
         JvmMethodInfo ExpressionMethod {
             get {
                 if (expressionMethod == null) {
@@ -121,6 +173,24 @@ package stab.tools.compiler {
             }
         }
 
+        JvmMethodInfo MakeReturnMethod {
+            get {
+                if (makeReturnMethod == null) {
+                    makeReturnMethod = this.StatementType.getMethod("makeReturn", Query.singleton(this.ExpressionType));
+                }
+                return makeReturnMethod;
+            }
+        }
+        
+        JvmMethodInfo MakeWhileMethod {
+            get {
+                if (makeWhileMethod == null) {
+                    makeWhileMethod = this.StatementType.getMethod("makeDo", Query.pair(this.ExpressionType, this.StatementType));
+                }
+                return makeWhileMethod;
+            }
+        }
+        
         JvmMethodInfo ValueMethod {
             get {
                 if (valueMethod == null) {
@@ -287,7 +357,68 @@ package stab.tools.compiler {
         void generateExpressionTree(LambdaExpressionNode lambda) {
             expressionGenerator.handleExpression(lambda, null, false);
         }
+
+        protected override Void handleBlock(BlockStatementNode block, Void source) {
+            var info = block.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            BytecodeHelper.emitIntConstant(generator, block.Statements.size());
+            BytecodeHelper.emitNewarray(generator, 1, this.StatementType);
+            int i = 0;
+            foreach (var statement in block.Statements) {
+                generator.emit(JvmOpcode.Dup);
+                BytecodeHelper.emitIntConstant(generator, i++);
+                handleStatement(statement, null);
+                generator.emit(JvmOpcode.Aastore);
+            }
+            generator.emit(JvmOpcode.Invokestatic, this.BlockMethod);
+            return null;
+        }
         
+        protected override Void handleBreak(BreakStatementNode breakStatement, Void source) {
+            var info = breakStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            generator.emit(JvmOpcode.Invokestatic, this.MakeBreakMethod);
+            return null;
+        }
+
+        protected override Void handleContinue(ContinueStatementNode continueStatement, Void source) {
+            var info = continueStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            generator.emit(JvmOpcode.Invokestatic, this.MakeContinueMethod);
+            return null;
+        }
+
+        protected override Void handleDo(DoStatementNode doStatement, Void source) {
+            var info = doStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            handleStatement(doStatement.Statement, null);
+            expressionGenerator.handleExpression(doStatement.Condition, null, true);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeDoMethod);
+            return null;
+        }
+        
+        protected override Void handleEmpty(EmptyStatementNode empty, Void source) {
+            var info = empty.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            generator.emit(JvmOpcode.Invokestatic, this.EmptyMethod);
+            return null;
+        }
+            
         protected override Void handleExpression(ExpressionStatementNode expression, Void source) {
             var info = expression.getUserData(typeof(StatementInfo));
             if (info == null) {
@@ -298,7 +429,34 @@ package stab.tools.compiler {
             generator.emit(JvmOpcode.Invokestatic, this.ExpressionMethod);
             return null;
         }
-        
+
+        protected override Void handleReturn(ReturnStatementNode returnStatement, Void source) {
+            var info = returnStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            if (returnStatement.Value == null) {
+                generator.emit(JvmOpcode.Aconst_Null);
+            } else {
+                expressionGenerator.handleExpression(returnStatement.Value, null, true);
+            }
+            generator.emit(JvmOpcode.Invokestatic, this.MakeReturnMethod);
+            return null;
+        }
+         
+        protected override Void handleWhile(WhileStatementNode whileStatement, Void source) {
+            var info = whileStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            expressionGenerator.handleExpression(whileStatement.Condition, null, true);
+            handleStatement(whileStatement.Statement, null);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeWhileMethod);
+            return null;
+        }
+       
         void emitThisAccess(CompilerContext context, JvmCodeGenerator generator) {
             BytecodeHelper.emitTypeof(generator, context.TypeSystem, context.MethodGenerationContext.CurrentMethod.DeclaringType);
             BytecodeGenerator.emitThisAccess(context, generator);

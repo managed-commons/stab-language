@@ -17,7 +17,14 @@
 package stab.tree {
 
     public enum StatementKind {
-        Expression
+        Break,
+        Block,
+        Continue,
+        Do,
+        Empty,
+        Expression,
+        Return,
+        While
     }
 
     public abstract class Statement {
@@ -30,8 +37,42 @@ package stab.tree {
             private set;
         }
         
+        public static BlockStatement block(Statement[] statements) {
+            return new BlockStatement(statements);
+        }
+
+        public static Statement makeBreak() {
+            return new SimpleStatement(StatementKind.Break);
+        }
+
+        public static Statement makeContinue() {
+            return new SimpleStatement(StatementKind.Continue);
+        }
+        
+        public static LoopStatement makeDo(Statement statement, Expression condition) {
+            return new LoopStatement(StatementKind.Do, condition, statement);
+        }
+
+        public static Statement empty() {
+            return new SimpleStatement(StatementKind.Empty);
+        }
+        
         public static ExpressionStatement expression(Expression expression) {
             return new ExpressionStatement(expression);
+        }
+        
+        public static ReturnStatement makeReturn(Expression value) {
+            return new ReturnStatement(value);
+        }
+        
+        public static LoopStatement makeWhile(Statement statement, Expression condition) {
+            return new LoopStatement(StatementKind.While, condition, statement);
+        }
+    }
+    
+    class SimpleStatement : Statement {
+        SimpleStatement(StatementKind statementKind)
+            : super(statementKind) {
         }
     }
 }

@@ -1481,5 +1481,15 @@ package stab.tools.compiler.test {
 		public void expressionTreeArrayCreation2() {
 			doTest("ExpressionTreeArrayCreation2", new Class<?>[] {}, new Object[] {}, 3);
 		}
+		
+		[Test]
+		public void inferenceCascaded4() {
+			doTest("InferenceCascaded4", new Class<?>[] {}, new Object[] {}, null);
+		}
+		
+		[Test]
+		public void expressionTreeReturn() {
+			doTest("ExpressionTreeReturn", new Class<?>[] {}, new Object[] {}, 1);
+		}
 	}
 }

@@ -81,7 +81,7 @@ package stab.query {
 			}
 			this.keySelector = keySelector;
 			if (comparator == null) {
-				#pragma warning disable 170 // Ignore warning about raw generic types
+				#pragma warning disable 270 // Ignore warning about raw generic types
 				comparator = (Comparator<TKey>)DefaultComparator.INSTANCE; // Assumes that TKey extends Comparable<TKey>
 				#pragma warning restore
 			}
@@ -114,7 +114,7 @@ package stab.query {
 		private class DefaultComparator<T> : Comparator<T>
 				where T : Comparable<T>
 		{
-			#pragma warning disable 152 // Ignore warning about raw generic types
+			#pragma warning disable 252 // Ignore warning about raw generic types
 			static Comparator INSTANCE = new DefaultComparator();
 			#pragma warning restore
 		

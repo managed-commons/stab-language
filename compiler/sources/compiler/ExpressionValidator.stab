@@ -377,6 +377,10 @@ package stab.tools.compiler {
             
             switch (assign.Operator) {
             case Assign:
+                if (BytecodeHelper.isDelegateType(lt) && ValidationHelper.isMethod(right)) {
+                    var ri = right.getUserData(typeof(ExpressionInfo));
+                    MethodResolver.resolveDelegate(lt, right, ri, right);
+                }
                 ValidationHelper.setBoxing(context, lt, right);
                 if (!ValidationHelper.isAssignable(context, lt, right)) {
                     var ri = right.getUserData(typeof(ExpressionInfo));
@@ -394,11 +398,17 @@ package stab.tools.compiler {
                 
             case Subtract:
                 if (BytecodeHelper.isDelegateType(lt)) {
+                    if (ValidationHelper.isMethod(right)) {
+                        var ri = right.getUserData(typeof(ExpressionInfo));
+                        MethodResolver.resolveDelegate(lt, right, ri, right);
+                    }
                     var ri = right.getUserData(typeof(ExpressionInfo));
                     if (ri != null && lt != ValidationHelper.getType(context, right)) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(assign.Operator), left, right);
                     }
                     break;
+                } else if (ValidationHelper.isMethod(right)) {
+                    throw context.error(CompileErrorId.UnexpectedMethodReference, right);
                 }
                 goto case Multiply;
                 
@@ -612,11 +622,9 @@ package stab.tools.compiler {
                     } else {
                         info.Type = (lt == null) ? rt : lt;
                         if (leftIsMethod) {
-                            li.Type = info.Type;
                             MethodResolver.resolveDelegate(info.Type, left, li, left);
                         }
                         if (rightIsMethod) {
-                            ri.Type = info.Type;
                             MethodResolver.resolveDelegate(info.Type, right, ri, right);
                         }
                     }
@@ -1026,10 +1034,14 @@ package stab.tools.compiler {
             return null;
         }
 
+        private boolean isInExpressionTree() {
+            return context.CodeValidationContext.CurrentMethod != context.CodeValidationContext.RootMethod
+                && context.CodeValidationContext.CurrentMethod.DeclaringType.FullName.indexOf('#') != -1;
+        }
+        
         protected override Void handleLambda(LambdaExpressionNode lambda, JvmTypeInfo targetType, boolean nested) {
             JvmTypeBuilder typeBuilder;
-            var inExpressionTree = (context.CodeValidationContext.CurrentMethod != context.CodeValidationContext.RootMethod
-                && context.CodeValidationContext.CurrentMethod.DeclaringType.FullName.indexOf('#') != -1);
+            var inExpressionTree = isInExpressionTree();
             if (!inExpressionTree && targetType != null && !targetType.FullName.equals("stab/tree/ExpressionTree")) {
                 typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
                 if (typeBuilder == null) {
@@ -1779,6 +1791,9 @@ package stab.tools.compiler {
                     }
                     break;
                 case Local:
+                    if (isInExpressionTree() && context.CodeValidationContext.CurrentMethod != member.Method) {
+                        context.addError(CompileErrorId.ExternalLocalAssignment, left);
+                    }
                     break;
                 default:
                     context.addError(CompileErrorId.IllegalLeftValue, left);

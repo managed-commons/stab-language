@@ -183,7 +183,7 @@ package stab.tools.compiler {
         
         private void addError(int level, CompileErrorId id, SyntaxNode node, params Object[] arguments) {
             this.Results.codeErrorManager.DisabledWarnings = node.DisabledWarnings;
-            this.Results.codeErrorManager.addError(node.Filename, id.ordinal() + ParseErrorId.LastId.ordinal(), level,
+            this.Results.codeErrorManager.addError(node.Filename, id.ordinal() + ParseErrorId.LastId.ordinal() + 100, level,
                 Resources.getMessage(id, arguments), node.Line + 1, node.Column + 1);
         }
     }

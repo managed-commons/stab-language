@@ -90,7 +90,7 @@ package stab.tools.helpers {
 						if (obj == null) {
 							break;
 						}
-						#pragma warning disable 170
+						#pragma warning disable 270
 						T foundData = (c.isInstance(obj)) ? (T)obj : null;
 						#pragma warning restore
 						if (foundData != null) {
@@ -98,7 +98,7 @@ package stab.tools.helpers {
 						}
 					}
 				} else {
-					#pragma warning disable 170
+					#pragma warning disable 270
 					return (c.isInstance(this.userData)) ? (T)this.userData : null;
 					#pragma warning restore
 				}
@@ -115,13 +115,13 @@ package stab.tools.helpers {
 							break;
 						}
 						if (c.isInstance(obj)) {
-							#pragma warning disable 170
+							#pragma warning disable 270
 							yield return (T)obj;
 							#pragma warning restore
 						}
 					}
 				} else if (c.isInstance(this.userData)) {
-					#pragma warning disable 170
+					#pragma warning disable 270
 					yield return (T)this.userData;
 					#pragma warning restore
 				}

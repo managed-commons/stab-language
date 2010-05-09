@@ -5,7 +5,7 @@ public class TryCatch {
 		} catch {
 			return 1;
 		}
-		# pragma warning disable 189
+		# pragma warning disable 289
 		return 2;
 	}
 }

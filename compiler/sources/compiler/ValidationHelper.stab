@@ -97,6 +97,9 @@ package stab.tools.compiler {
         }
         
         static JvmTypeInfo getType(CompilerContext context, ExpressionNode expression) {
+            if (ValidationHelper.isMethod(expression)) {
+                throw context.error(CompileErrorId.UnexpectedMethodReference, expression);
+            }
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info.Type != null) {
                 return info.Type;

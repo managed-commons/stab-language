@@ -186,10 +186,12 @@ package stab.tools.compiler {
                         zipStream.write(e.Value);
                     }
                 }
+                System.out.println();
                 System.out.println(String.format("%d class(es) successfully generated in %.2fs",
                     results.classFiles.size(), (System.nanoTime() - t0) / 1e9));
                 return 0;
             } else {
+                System.out.println();
                 System.out.println("Compilation failed");
                 return 1;
             }

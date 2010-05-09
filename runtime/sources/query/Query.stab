@@ -808,7 +808,7 @@ package stab.query {
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// empty
 	
-		#pragma warning disable 152, 170 // Ignore warnings about raw generic types
+		#pragma warning disable 252, 270 // Ignore warnings about raw generic types
 
 		public static Iterable<TResult> empty<TResult>() {
 			return (Iterable<TResult>)EmptyIterable.INSTANCE;
@@ -2214,7 +2214,7 @@ package stab.query {
 			while (it.hasNext()) {
 				var s = it.next();
 				if (targetClass.isInstance(s)) {
-					#pragma warning disable 170 // Disable unchecked cast warning
+					#pragma warning disable 270 // Disable unchecked cast warning
 					yield return (TResult)s;
 					#pragma warning restore
 				}
@@ -3339,7 +3339,7 @@ package stab.query {
 		///////////////////////////////////////////////////////////////////////////////////////////
         //
 		
-		#pragma warning disable 170 // Ignore warning about raw generic types
+		#pragma warning disable 270 // Ignore warning about raw generic types
 		
 		static EqualityTester<T> getDefaultEqualityTester<T>() {
 			return (EqualityTester<T>)DefaultEqualityTester.INSTANCE;

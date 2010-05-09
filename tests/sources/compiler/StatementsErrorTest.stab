@@ -29,71 +29,71 @@ package stab.tools.compiler.test {
 		[Test]
 		public void labelOutsideScope() {
 			doTest("LabelOutsideScope", new String[]{ 
-				"LabelOutsideScope.stab (4, 13) error 173: No such label 'label' within the scope of the goto statement" },
+				"LabelOutsideScope.stab (4, 13) error 273: No such label 'label' within the scope of the goto statement" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void whileNull() {
 			doTest("WhileNull", new String[]{ 
-				"WhileNull.stab (3, 16) error 134: Cannot implicitly convert type '<null>' to 'boolean'" },
+				"WhileNull.stab (3, 16) error 234: Cannot implicitly convert type '<null>' to 'boolean'" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void definiteAssignment() {
 			doTest("DefiniteAssignment", new String[]{ 
-				"DefiniteAssignment.stab (3, 9) error 183: Variable 'i' is used but never initialized" },
+				"DefiniteAssignment.stab (3, 9) error 283: Variable 'i' is used but never initialized" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void definiteAssignment2() {
 			doTest("DefiniteAssignment2", new String[]{ 
-				"DefiniteAssignment2.stab (4, 13) error 169: Use of unassigned local variable 'i'" },
+				"DefiniteAssignment2.stab (4, 13) error 269: Use of unassigned local variable 'i'" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void definiteAssignment3() {
 			doTest("DefiniteAssignment3", new String[]{ 
-				"DefiniteAssignment3.stab (6, 13) error 169: Use of unassigned local variable 'i'" },
+				"DefiniteAssignment3.stab (6, 13) error 269: Use of unassigned local variable 'i'" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void definiteAssignment4() {
 			doTest("DefiniteAssignment4", new String[]{ 
-				"DefiniteAssignment4.stab (10, 20) error 169: Use of unassigned local variable 'i'" },
+				"DefiniteAssignment4.stab (10, 20) error 269: Use of unassigned local variable 'i'" },
 				new String[] {
-				"DefiniteAssignment4.stab (13, 9) warning 189: Unreachable statement" });
+				"DefiniteAssignment4.stab (13, 9) warning 289: Unreachable statement" });
 		}
 		
 		[Test]
 		public void definiteAssignment5() {
 			doTest("DefiniteAssignment5", new String[]{ 
-				"DefiniteAssignment5.stab (13, 16) error 169: Use of unassigned local variable 'i'" },
+				"DefiniteAssignment5.stab (13, 16) error 269: Use of unassigned local variable 'i'" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void definiteAssignment6() {
 			doTest("DefiniteAssignment6", new String[]{ 
-				"DefiniteAssignment6.stab (22, 16) error 169: Use of unassigned local variable 'result'" },
+				"DefiniteAssignment6.stab (22, 16) error 269: Use of unassigned local variable 'result'" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void definiteAssignment7() {
 			doTest("DefiniteAssignment7", new String[]{ 
-				"DefiniteAssignment7.stab (7, 17) error 169: Use of unassigned local variable 'b'" },
+				"DefiniteAssignment7.stab (7, 17) error 269: Use of unassigned local variable 'b'" },
 				new String[] {});
 		}
         
 		[Test]
 		public void varArrayInitializer() {
 			doTest("VarArrayInitializer", new String[]{ 
-				"VarArrayInitializer.stab (3, 9) error 206: Cannot initialize implicitly-typed variable with an array initializer" },
+				"VarArrayInitializer.stab (3, 9) error 306: Cannot initialize implicitly-typed variable with an array initializer" },
 				new String[] {});
 		}
 	}

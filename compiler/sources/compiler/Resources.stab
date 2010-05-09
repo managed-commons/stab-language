@@ -171,7 +171,8 @@ package stab.tools.compiler {
         UnexpectedArrayArgument,
         TypeExpressionNotAllowed,
         InvalidExpressionTreeArgument,
-        NestedMethodSuperAccess
+        NestedMethodSuperAccess,
+        ExternalLocalAssignment
     }
 
     class Resources {
