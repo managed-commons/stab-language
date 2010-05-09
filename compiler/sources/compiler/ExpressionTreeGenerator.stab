@@ -46,6 +46,7 @@ package stab.tools.compiler {
         private JvmMethodInfo unaryMethod;
         private JvmMethodInfo conditionalMethod;
         private JvmMethodInfo newObjectMethod;
+        private JvmMethodInfo newArrayMethod;
         private JvmMethodInfo memberInitializerConstructor;
     
         ExpressionTreeGenerator(CompilerContext context)
@@ -261,6 +262,17 @@ package stab.tools.compiler {
             }
         }
 
+        JvmMethodInfo NewArrayMethod {
+            get {
+                if (newArrayMethod == null) {
+                    var parameters = Query.quadruple(context.TypeSystem.UnboundedClassType, this.ExpressionType.ArrayType,
+                            JvmTypeInfo.INT, this.ExpressionType.ArrayType);
+                    newArrayMethod = this.ExpressionType.getMethod("newArray", parameters);
+                }
+                return newArrayMethod;
+            }
+        }
+
         JvmMethodInfo MemberInitializerConstructor {
             get {
                 if (memberInitializerConstructor == null) {
@@ -371,6 +383,73 @@ package stab.tools.compiler {
                 return null;
             }
 
+            protected override Void handleAnonymousObjectCreation(AnonymousObjectCreationExpressionNode anonymousObject,
+                    Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var typeInfo = anonymousObject.getUserData(typeof(ExpressionInfo)).Type;
+                var constructor = typeInfo.Methods.where(p => p.Name.equals("<init>")).first();
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, typeInfo);
+                BytecodeHelper.emitIntConstant(generator, constructor.Parameters.count());
+                BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                int i = 0;
+                foreach (var p in constructor.Parameters) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, p.Type);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredConstructorMethod);
+                
+                BytecodeHelper.emitIntConstant(generator, constructor.Parameters.count());
+                BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                i = 0;
+                foreach (var decl in anonymousObject.MemberDeclarators) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    handleExpression(decl.Value, null, true);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.NewObjectMethod);
+                return null;
+            }
+
+            protected override Void handleArrayCreation(ArrayCreationExpressionNode arrayCreation, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var type = arrayCreation.getUserData(typeof(ExpressionInfo)).Type;
+                var initializer = arrayCreation.Initializer;
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, type);
+                if (arrayCreation.DimensionExpressions.size() == 0) {
+                    generator.emit(JvmOpcode.Aconst_Null);
+                } else {
+                    BytecodeHelper.emitIntConstant(generator, arrayCreation.DimensionExpressions.size());
+                    BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                    int i = 0;
+                    foreach (var e in arrayCreation.DimensionExpressions) {
+                        generator.emit(JvmOpcode.Dup);
+                        BytecodeHelper.emitIntConstant(generator, i++);
+                        handleExpression(e, null, true);
+                        generator.emit(JvmOpcode.Aastore);
+                    }
+                }
+                BytecodeHelper.emitIntConstant(generator, arrayCreation.Dimensions);
+                if (initializer == null) {
+                    generator.emit(JvmOpcode.Aconst_Null);
+                } else {
+                    BytecodeHelper.emitIntConstant(generator, initializer.Values.size());
+                    BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                    int i = 0;
+                    foreach (var e in initializer.Values) {
+                        generator.emit(JvmOpcode.Dup);
+                        BytecodeHelper.emitIntConstant(generator, i++);
+                        handleExpression(e, null, true);
+                        generator.emit(JvmOpcode.Aastore);
+                    }
+                }
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.NewArrayMethod);
+                return null;
+            }
+            
             protected override Void handleAssign(AssignExpressionNode assign, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 var info = assign.getUserData(typeof(ExpressionInfo));
@@ -826,11 +905,10 @@ package stab.tools.compiler {
                 var it2 = arguments.iterator();
                 int i;
                 for (i = 0; i < fixedLength; i++) {
-                    var p = it1.next();
+                    it1.next();
                     var e = it2.next();
                     generator.emit(JvmOpcode.Dup);
                     BytecodeHelper.emitIntConstant(generator, i);
-                    var ei = e.getUserData(typeof(ExpressionInfo));
                     handleExpression(e, null, true);
                     generator.emit(JvmOpcode.Aastore);
                 }

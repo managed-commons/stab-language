@@ -217,6 +217,10 @@ package stab.tools.compiler {
             }
             return false;
         }
+        
+        static boolean isExpressionTreeType(JvmTypeInfo type) {
+            return type.FullName.equals("stab/tree/ExpressionTree");
+        }
     
         static boolean isIterableType(JvmTypeInfo type) {
             return IterableTypes.contains(type.FullName);

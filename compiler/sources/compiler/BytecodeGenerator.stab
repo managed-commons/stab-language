@@ -1820,8 +1820,10 @@ package stab.tools.compiler {
         
         void emitArray(int dimensions, JvmTypeInfo type, Iterator<ExpressionNode> values) {
             var generator = context.MethodGenerationContext.Generator;
-            BytecodeHelper.emitNewarray(generator, dimensions, type.ElementType);
-            if (values != null) {
+            if (values == null) {
+                BytecodeHelper.emitNewarray(generator, dimensions, type.ElementType);
+            } else {
+                BytecodeHelper.emitNewarray(generator, 1, type.ElementType);
                 var opcode = BytecodeHelper.getAstoreOpcode(type.ElementType);
                 int i = 0;
                 while (values.hasNext()) {

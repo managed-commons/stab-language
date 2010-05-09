@@ -35,8 +35,6 @@ package stab.tools.compiler {
             var candidates = new ArrayList<CandidateMethodInfo>();
             var hasLambda = false;
             
-            //System.out.println("Resolving " + methods.first().DeclaringType.FullName + "." + methods.first().Name);
-            
             foreach (var method in methods) {
                 var parameterCount = method.Parameters.count();
                 var argumentCount = arguments.count();
@@ -79,7 +77,7 @@ package stab.tools.compiler {
                                 if (argInfo == null) {
                                     continue;
                                 }
-                                if (BytecodeHelper.isDelegateType(paramType)) {
+                                if (BytecodeHelper.isDelegateType(paramType) || BytecodeHelper.isExpressionTreeType(paramType)) {
                                     makeExplicitParameterTypeInference(argNode, paramType, typeVariableInfos);
                                 } else {
                                     ValidationHelper.getType(context, argNode);
@@ -115,7 +113,7 @@ package stab.tools.compiler {
                                     if (argInfo == null) {
                                         continue;
                                     }
-                                    if (BytecodeHelper.isDelegateType(paramType)) {
+                                    if (BytecodeHelper.isDelegateType(paramType) || BytecodeHelper.isExpressionTreeType(paramType)) {
                                         makeExplicitParameterTypeInference(argNode, paramType, typeVariableInfos);
                                     } else if (paramType != ValidationHelper.getType(context, argNode)
                                             && !ValidationHelper.isAssignable(context, paramType, argNode)
@@ -182,7 +180,7 @@ package stab.tools.compiler {
                                 paramType = mit.next().Type;
                             }
                             if (e.ExpressionKind != ExpressionKind.Lambda) {
-                                if (!BytecodeHelper.isDelegateType(paramType)) {
+                                if (!BytecodeHelper.isDelegateType(paramType) && !BytecodeHelper.isExpressionTreeType(paramType)) {
                                     continue;
                                 }
                             }
@@ -208,11 +206,6 @@ package stab.tools.compiler {
                     }
                     method = method.getGenericMethod(typeArguments);
                 }
-                // if (methods.elementAt(0).Name.equals("groupJoin")) {
-                    // System.out.println("   INFERRED = " +
-                        // BytecodeHelper.getDisplayName(method.ReturnType) +
-                        // " >> " + BytecodeHelper.getDisplayName(method.Parameters.first().Type));
-                // }
 
                 var it1 = arguments.iterator();
                 var it2 = method.Parameters.iterator();
@@ -252,9 +245,6 @@ package stab.tools.compiler {
                     }
                 }
                 if (isCompatible) {
-                    // if (methods.elementAt(0).Name.equals("groupJoin")) {
-                        // System.out.println("    SELECTED = " + method.ReturnType.FullName + " >> " + method.Parameters.first().Type.FullName);
-                    // }
                     candidates.add(new CandidateMethodInfo(method, parameterTypes, arguments, expandedForm));
                 }
             continueLookup:
@@ -615,7 +605,9 @@ package stab.tools.compiler {
 
         
         private void makeOutputTypeInference(ExpressionNode expression, JvmTypeInfo toType, HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables) {
-            if (expression.ExpressionKind == ExpressionKind.Lambda || BytecodeHelper.isDelegateType(toType)) {
+            if (expression.ExpressionKind == ExpressionKind.Lambda
+                    || BytecodeHelper.isDelegateType(toType)
+                    || BytecodeHelper.isExpressionTreeType(toType)) {
                 JvmMethodInfo method = getInvokeMethod(toType);
                 if (method == null) {
                     return;
@@ -1091,6 +1083,8 @@ package stab.tools.compiler {
         private static JvmMethodInfo getInvokeMethod(JvmTypeInfo type) {
             if (BytecodeHelper.isDelegateType(type)) {
                 return type.Methods.where(p => p.Name.equals("invoke")).firstOrDefault();
+            } if (BytecodeHelper.isExpressionTreeType(type)) {
+                return getInvokeMethod(type.GenericArguments.first());
             } else {
                 return type.Methods.firstOrDefault();
             }

@@ -1090,7 +1090,7 @@ package stab.tools.compiler {
                             BytecodeHelper.getDisplayName(targetType), methods.count());
                     }
                     method = methods.single();
-                } else if (targetType.FullName.equals("stab/tree/ExpressionTree")) {
+                } else if (BytecodeHelper.isExpressionTreeType(targetType)) {
                     var typeArg = targetType.GenericArguments.singleOrDefault();
                     if (typeArg == null) {
                         throw context.error(CompileErrorId.InvalidExpressionTreeArgument, lambda);

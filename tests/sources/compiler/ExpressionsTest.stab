@@ -1466,5 +1466,20 @@ package stab.tools.compiler.test {
 		public void objectInitializer2() {
 			doTest("ObjectInitializer2", new Class<?>[] {}, new Object[] {}, 3);
 		}
+		
+		[Test]
+		public void expressionTreeAnonymousObjectCreation() {
+			doTest("ExpressionTreeAnonymousObjectCreation", new Class<?>[] {}, new Object[] {}, "p");
+		}
+		
+		[Test]
+		public void expressionTreeArrayCreation() {
+			doTest("ExpressionTreeArrayCreation", new Class<?>[] {}, new Object[] {}, 3);
+		}
+		
+		[Test]
+		public void expressionTreeArrayCreation2() {
+			doTest("ExpressionTreeArrayCreation2", new Class<?>[] {}, new Object[] {}, 3);
+		}
 	}
 }
