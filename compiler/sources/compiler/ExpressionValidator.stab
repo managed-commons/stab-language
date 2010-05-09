@@ -79,7 +79,7 @@ package stab.tools.compiler {
                 }
                 propertyNames.add(property);
                 if (ValidationHelper.isMethod(decl.Value)) {
-                    context.addError(CompileErrorId.UnexpectedMethodReference, decl);
+                    throw context.error(CompileErrorId.UnexpectedMethodReference, decl);
                 } else {
                     propertyTypes.add(ValidationHelper.getType(context, decl.Value));
                 }
@@ -567,8 +567,18 @@ package stab.tools.compiler {
                 throw context.error(CompileErrorId.BinaryOperatorNotApplicable, binary,
                     CompilerHelper.getDisplayName(binary.Operator), "<null>", "<null>");
             }
-            lt = (li == null) ? null : ValidationHelper.getType(context, left);
-            rt = (ri == null) ? null : ValidationHelper.getType(context, right);
+            var leftIsMethod = ValidationHelper.isMethod(left);
+            var rightIsMethod = ValidationHelper.isMethod(right);
+            if (leftIsMethod && rightIsMethod) {
+                throw context.error(CompileErrorId.BinaryOperatorNotApplicable, binary,
+                    CompilerHelper.getDisplayName(binary.Operator), "<method group>", "<method group>");
+            }
+            if (!leftIsMethod) {
+                lt = (li == null) ? null : ValidationHelper.getType(context, left);
+            }
+            if (!rightIsMethod) {
+                rt = (ri == null) ? null : ValidationHelper.getType(context, right);
+            }
 
             switch (binary.Operator) {
             case Divide:
@@ -597,10 +607,18 @@ package stab.tools.compiler {
                     binary.addOrReplaceUserData(info);
                 } else if ((lt != null && BytecodeHelper.isDelegateType(lt)) || (rt != null && BytecodeHelper.isDelegateType(rt))) {
                     if ((binary.Operator != BinaryOperator.Add && binary.Operator != BinaryOperator.Subtract)
-                    || (lt != null && rt != null && lt != rt)){
+                            || (lt != null && rt != null && lt != rt)){
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
                         info.Type = (lt == null) ? rt : lt;
+                        if (leftIsMethod) {
+                            li.Type = info.Type;
+                            MethodResolver.resolveDelegate(info.Type, left, li, left);
+                        }
+                        if (rightIsMethod) {
+                            ri.Type = info.Type;
+                            MethodResolver.resolveDelegate(info.Type, right, ri, right);
+                        }
                     }
                     binary.addOrReplaceUserData(info);
                 } else if ((lt != null && lt.FullName.equals("java/lang/String")) || (rt != null && rt.FullName.equals("java/lang/String"))) {
@@ -1285,10 +1303,8 @@ package stab.tools.compiler {
                     throw context.error(CompileErrorId.UnresolvedName, nameExpression, name);
                 }
             } else {
-                if (tinfo.Type == null && !tinfo.IsConstant && tinfo.Members != null) {
-                    if (tinfo.Members.all(p => p.MemberKind == MemberKind.Method)) {
-                        throw context.error(CompileErrorId.InvalidTargetForMemberAccess, memberAccess.TargetObject, name);
-                    }
+                if (ValidationHelper.isMethod(memberAccess.TargetObject)) {
+                    throw context.error(CompileErrorId.InvalidTargetForMemberAccess, memberAccess.TargetObject, name);
                 }
                 var ttype = ValidationHelper.getType(context, memberAccess.TargetObject);
                 var staticOnly = false;
@@ -1317,7 +1333,6 @@ package stab.tools.compiler {
                 memberAccess.addOrReplaceUserData(info);
                 if (targetType != null && BytecodeHelper.isDelegateType(targetType)) {
                     MethodResolver.resolveDelegate(targetType, memberAccess, tinfo, memberAccess);
-                    info.Type = targetType;
                 }
             }
             return null;
@@ -1374,26 +1389,24 @@ package stab.tools.compiler {
                         foreach (var mi in initializer.MemberInitializers) {
                             var property = context.getIdentifier(mi.NameOffset, mi.NameLength);
                             var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, type, property, true);
-                            MemberInfo prop = null;
+                            MemberInfo memb = null;
                             foreach (var m in members) {
-                                if (m.MemberKind == MemberKind.Property) {
-                                    if (context.CurrentType.canAccessMembers(m.DeclaringType, m.IsPublic, m.IsProtected, m.IsPrivate)) {
-                                        prop = m;
-                                        break;
-                                    }
+                                if (m.MemberKind == MemberKind.Property || m.MemberKind == MemberKind.Field) {
+                                    memb = m;
+                                    break;
                                 }
                             }
-                            if (prop == null) {
+                            if (memb == null) {
                                 throw context.error(CompileErrorId.NoAccessibleMembers, objectCreation,
                                     property, BytecodeHelper.getDisplayName(type));
                             }
-                            handleExpression(mi.Value, prop.Type, true);
-                            if (!ValidationHelper.isAssignable(context, prop.Type, mi.Value)) {
+                            handleExpression(mi.Value, memb.Type, true);
+                            if (!ValidationHelper.isAssignable(context, memb.Type, mi.Value)) {
                                 throw context.error(CompileErrorId.NoImplicitConversion, mi,
                                         BytecodeHelper.getDisplayName(info == null ? null : ValidationHelper.getType(context, mi.Value)),
-                                        BytecodeHelper.getDisplayName(prop.Type));
+                                        BytecodeHelper.getDisplayName(memb.Type));
                             }
-                            mi.addOrReplaceUserData(prop);
+                            mi.addOrReplaceUserData(memb);
                         }
                     } else {
                         var initializer = (CollectionInitializerExpressionNode)init;
@@ -1513,7 +1526,6 @@ package stab.tools.compiler {
                 simpleName.addOrReplaceUserData(info);
                 if (targetType != null && BytecodeHelper.isDelegateType(targetType)) {
                     MethodResolver.resolveDelegate(targetType, simpleName, info, simpleName);
-                    info.Type = targetType;
                 }
             }
             return null;

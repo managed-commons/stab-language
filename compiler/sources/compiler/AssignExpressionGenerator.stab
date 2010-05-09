@@ -141,7 +141,7 @@ package stab.tools.compiler {
                 var field = member.Field;
                 var type = field.getType();
                 emitRightExpression(field.IsStatic, null, type, nested);
-                emitFieldModification(field);
+                CompilerHelper.emitFieldModification(context, field);
                 return;
             }
             case Local: {
@@ -149,7 +149,7 @@ package stab.tools.compiler {
                 if (local.IsUsedFromLambda) {
                     var field = BytecodeGenerator.getLambdaScopeField(context, local);
                     emitRightExpression(false, local.Method, field.Type, nested);
-                    emitFieldModification(field);
+                    CompilerHelper.emitFieldModification(context, field);
                 } else {
                     emitLocalAssign(simpleName, local.Type, generator.getLocal(local.Name), nested);
                 }
@@ -159,7 +159,7 @@ package stab.tools.compiler {
                 var method = member.SetAccessor;
                 var type = member.Type;
                 emitRightExpression(method.IsStatic, null, type, nested);
-                emitPropertyOrIndexerModification(method);
+                CompilerHelper.emitPropertyOrIndexerModification(context, method);
                 return;
             }
             default:
@@ -458,7 +458,7 @@ package stab.tools.compiler {
                         generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
                     }
                 }
-                emitFieldModification(field);
+                CompilerHelper.emitFieldModification(context, field);
                 break;
             }
             case Property: {
@@ -478,7 +478,7 @@ package stab.tools.compiler {
                         generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
                     }
                 }
-                emitPropertyOrIndexerModification(method);
+                CompilerHelper.emitPropertyOrIndexerModification(context, method);
                 break;
             }
             default:
@@ -516,18 +516,18 @@ package stab.tools.compiler {
         
         private void emitFieldOperationAssign(JvmFieldInfo field, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
-            BytecodeGenerator.emitFieldAccess(context, field);
+            CompilerHelper.emitFieldAccess(context, field);
             BytecodeGenerator.emitGenericCast(context, field.Type, field.DeclaringType.OriginalTypeDefinition.getField(field.Name).Type);
             emitFieldOrPropertyOperation(generator, field.Type, nested, field.IsStatic);
-            emitFieldModification(field);
+            CompilerHelper.emitFieldModification(context, field);
         }
         
         private void emitPropertyOperationAssign(JvmMethodInfo getMethod, JvmMethodInfo setMethod, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
-            BytecodeGenerator.emitPropertyAccess(context, getMethod);
+            CompilerHelper.emitPropertyAccess(context, getMethod);
             BytecodeGenerator.emitGenericCast(context, getMethod.ReturnType, getMethod.OriginalMethodDefinition.ReturnType);
             emitFieldOrPropertyOperation(generator, getMethod.ReturnType, nested, getMethod.IsStatic);
-            emitPropertyOrIndexerModification(setMethod);
+            CompilerHelper.emitPropertyOrIndexerModification(context, setMethod);
         }
 
         private void emitFieldOrPropertyOperation(JvmCodeGenerator generator, JvmTypeInfo type, boolean nested, boolean isStatic) {
@@ -723,7 +723,7 @@ package stab.tools.compiler {
                         generator.emit((isCategory2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
                     }
                 }
-                emitPropertyOrIndexerModification(method);
+                CompilerHelper.emitPropertyOrIndexerModification(context, method);
                 if (method.ReturnType != JvmTypeInfo.VOID) {
                     generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
                 }
@@ -823,17 +823,7 @@ package stab.tools.compiler {
                 for (i = 0; i < fixedLength; i++) {
                     var p = it1.next();
                     var e = it2.next();
-                    var ei = e.getUserData(typeof(ExpressionInfo));
-                    if (ei != null && ei.Member != null && ei.Member.MemberKind == MemberKind.Method && ei.Method != null) {
-                        var thisExp = new ThisAccessExpressionNode();
-                        thisExp.addUserData(new ExpressionInfo(context.CurrentType));
-                        expressionGenerator.emitDelegateCreation(p.Type, ei.Method, thisExp, true);
-                    } else {
-                        expressionGenerator.handleExpression(e, null, true);
-                        if (p.Type.IsPrimitive) {
-                            BytecodeHelper.emitImplicitCast(generator, p.Type, e.getUserData(typeof(ExpressionInfo)).Type);
-                        }
-                    }
+                    expressionGenerator.emitNestedExpression(e, p.Type);
                     if (requireLocals) {
                         generator.emit((p.Type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
                         generator.emit(BytecodeHelper.getStoreOpcode(p.Type), generator.declareLocal(p.Type, "elementIndex$" + i));
@@ -849,9 +839,7 @@ package stab.tools.compiler {
                             generator.emit(JvmOpcode.Aconst_Null);
                         } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
                             expressionGenerator.handleExpression(e, null, true);
-                            if (paramType.IsPrimitive) {
-                                BytecodeHelper.emitImplicitCast(generator, paramType, e.getUserData(typeof(ExpressionInfo)).Type);
-                            }
+                            BytecodeGenerator.emitConversion(context, paramType, e);
                         } else {
                             BytecodeHelper.emitIntConstant(generator, 1);
                             expressionGenerator.emitArray(1, paramType, it2);
@@ -868,7 +856,7 @@ package stab.tools.compiler {
                 if (!requireLocals) {
                     generator.emit((isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup2);
                 }
-                BytecodeGenerator.emitIndexerAccess(context, method);
+                CompilerHelper.emitIndexerAccess(context, method);
                 if (requireLocals && nested && postAssign) {
                     generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
                     generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
@@ -1093,7 +1081,7 @@ package stab.tools.compiler {
                     }
                     generator.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), generator.getLocal("elementValue$0"));
                 }
-                emitPropertyOrIndexerModification(info.Member.SetAccessor);
+                CompilerHelper.emitPropertyOrIndexerModification(context, info.Member.SetAccessor);
                 if (requireLocals) {
                     if (nested) {
                         if (postAssign) {
@@ -1422,111 +1410,6 @@ package stab.tools.compiler {
                 }
                 generator.emit(opcode, local);
                 break;
-            }
-        }
-
-        private void emitFieldModification(JvmFieldInfo field) {
-            var generator = context.MethodGenerationContext.Generator;
-            if (BytecodeGenerator.requireAccessor(context, field.DeclaringType, field.IsPublic, field.IsProtected, field.IsPrivate)) {
-                var mutator = context.PrivateMutators[field];
-                if (mutator == null) {
-                    JvmTypeBuilder outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
-                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
-                        if (field.DeclaringType.isAssignableFrom(outerClass)) {
-                            break;
-                        }
-                    }
-                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
-                    var methodBuilder = outerClass.defineMethod("access$" + n);
-                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
-                    methodBuilder.setStatic(field.IsStatic);
-                    methodBuilder.setFinal(!field.IsStatic);
-                    methodBuilder.setSynthetic(true);
-                    var param = methodBuilder.addParameter(field.Type);
-                    param.setName(field.Name);
-                    var gen = methodBuilder.getCodeGenerator();
-                    gen.beginScope();
-                    if (field.IsStatic) {
-                        gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
-                        gen.emit(JvmOpcode.Putstatic, field);
-                    } else {
-                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                        gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
-                        gen.emit(JvmOpcode.Putfield, field);
-                    }
-                    gen.emit(JvmOpcode.Return);
-                    gen.endScope();
-                    mutator = methodBuilder;
-                    context.PrivateMutators[field] = mutator;
-                }
-                if (field.IsStatic) {
-                    generator.emit(JvmOpcode.Invokestatic, mutator);
-                } else {
-                    generator.emit(JvmOpcode.Invokevirtual, mutator);
-                }
-            } else if (field.IsStatic) {
-                generator.emit(JvmOpcode.Putstatic, field);
-            } else {
-                generator.emit(JvmOpcode.Putfield, field);
-            }
-        }
-        
-        private void emitPropertyOrIndexerModification(JvmMethodInfo method) {
-            var generator = context.MethodGenerationContext.Generator;
-            if (BytecodeGenerator.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
-                var mutator = context.PrivateMutators[method];
-                if (mutator == null) {
-                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
-                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
-                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
-                            break;
-                        }
-                    }
-                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
-                    var type = method.Parameters.first().Type;
-                    var methodBuilder = outerClass.defineMethod("access$" + n);
-                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
-                    methodBuilder.setStatic(method.IsStatic);
-                    methodBuilder.setFinal(!method.IsStatic);
-                    methodBuilder.setSynthetic(true);
-                    foreach (var p in method.Parameters) {
-                        var param = methodBuilder.addParameter(p.Type);
-                        param.setName(p.Name);
-                    }
-                    var param = methodBuilder.addParameter(type);
-                    param.setName("value");
-                    var gen = methodBuilder.CodeGenerator;
-                    gen.beginScope();
-                    if (method.IsStatic) {
-                        foreach (var p in method.Parameters) {
-                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-                        }
-                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
-                        gen.emit(JvmOpcode.Invokestatic, method);
-                    } else {
-                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                        foreach (var p in method.Parameters) {
-                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-                        }
-                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
-                        gen.emit(JvmOpcode.Invokevirtual, method);
-                    }
-                    gen.emit(JvmOpcode.Return);
-                    gen.endScope();
-                    mutator = methodBuilder;
-                    context.PrivateMutators[method] = mutator;
-                }
-                if (method.IsStatic) {
-                    generator.emit(JvmOpcode.Invokestatic, mutator);
-                } else {
-                    generator.emit(JvmOpcode.Invokevirtual, mutator);
-                }
-            } else if (method.IsStatic) {
-                generator.emit(JvmOpcode.Invokestatic, method);
-            } else if (method.DeclaringType.IsInterface) {
-                generator.emit(JvmOpcode.Invokeinterface, method);
-            } else {
-                generator.emit(JvmOpcode.Invokevirtual, method);
             }
         }
         

@@ -547,59 +547,6 @@ package stab.tools.compiler {
             }
         }
         
-        static void emitImplicitCast(JvmCodeGenerator generator, JvmTypeInfo target, JvmTypeInfo source) {
-            switch (target.TypeKind) {
-            case Long:
-                switch (source.TypeKind) {
-                case Byte:
-                case Short:
-                case Char:
-                case Int:
-                    generator.emit(JvmOpcode.I2l);
-                    break;
-                case Float:
-                    generator.emit(JvmOpcode.F2l);
-                    break;
-                case Double:
-                    generator.emit(JvmOpcode.D2l);
-                    break;
-                }
-                break;
-            case Float:
-                switch (source.TypeKind) {
-                case Byte:
-                case Short:
-                case Char:
-                case Int:
-                    generator.emit(JvmOpcode.I2f);
-                    break;
-                case Long:
-                    generator.emit(JvmOpcode.L2f);
-                    break;
-                case Double:
-                    generator.emit(JvmOpcode.D2f);
-                    break;
-                }
-                break;
-            case Double:
-                switch (source.TypeKind) {
-                case Byte:
-                case Short:
-                case Char:
-                case Int:
-                    generator.emit(JvmOpcode.I2d);
-                    break;
-                case Long:
-                    generator.emit(JvmOpcode.L2d);
-                    break;
-                case Float:
-                    generator.emit(JvmOpcode.F2d);
-                    break;
-                }
-                break;
-            }
-        }
-
         static void emitNumericConversion(JvmCodeGenerator generator, JvmTypeInfo fromType, JvmTypeInfo toType) {
             switch (fromType.NumericTypeKind) {
             case Byte:

@@ -82,7 +82,7 @@ package stab.tools.compiler {
         
         static boolean isMethod(ExpressionNode argNode) {
             var info = argNode.getUserData(typeof(ExpressionInfo));
-            if (info.Type != null) {
+            if (info == null || info.Type != null) {
                 return false;
             } else if (info.IsConstant) {
                 return false;

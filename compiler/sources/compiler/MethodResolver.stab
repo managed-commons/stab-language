@@ -341,6 +341,7 @@ package stab.tools.compiler {
                             }
                         }
                         if (targetInfo != null) {
+                            targetInfo.Type = type;
                             targetInfo.Method = meth;
                         }
                         continue;
@@ -358,8 +359,7 @@ package stab.tools.compiler {
                         if (foundMember != null) {
                             if (node != null) {
                                 throw context.error(CompileErrorId.AmbiguousMembers, node,
-                                    // TODO: utility method to get the display name of a member
-                                    BytecodeHelper.getDisplayName(member.DeclaringType) + "." + member.Name + "()",
+                                    BytecodeHelper.getDisplayName(member.DeclaringType) + "." + BytecodeHelper.getDisplayName(member.Method),
                                     BytecodeHelper.getDisplayName(foundMember.DeclaringType) + "." + foundMember.Name);
                             } else {
                                 return false;
@@ -368,6 +368,7 @@ package stab.tools.compiler {
                         foundMember = member;
                         ainfo.Member = member;
                         if (targetInfo != null) {
+                            targetInfo.Type = type;
                             targetInfo.Method = meth;
                         }
                         continue;

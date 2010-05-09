@@ -500,5 +500,485 @@ package stab.tools.compiler {
             return false;
         }
 
+        static JvmTypeInfo createDelegateType(CompilerContext context, JvmTypeInfo delegateType, JvmMethodInfo method) {
+            var invokeMethod = delegateType.Methods.where(p => p.Name.equals("invoke")).first();
+            
+            var currentType = (JvmTypeBuilder)context.CurrentType;
+            var prefix = currentType.FullName + "$delegate";
+            int n = currentType.NestedTypes.count(p => p.FullName.startsWith(prefix));
+            var typeBuilder = currentType.defineNestedType("delegate" + n);
+            context.TypeBuilders.add(typeBuilder);
+            typeBuilder.setSynthetic(true);
+            typeBuilder.setBaseType(delegateType);
+            
+            // invoke(...)
+            var methodBuilder = typeBuilder.defineMethod("invoke");
+            methodBuilder.setPublic(true);
+            methodBuilder.setFinal(true);
+            methodBuilder.setVarargs(invokeMethod.IsVarargs);
+            methodBuilder.setReturnType(invokeMethod.ReturnType);
+            foreach (var p in invokeMethod.Parameters) {
+                var pb = methodBuilder.addParameter(p.Type);
+                pb.setName(p.Name);
+            }
+            foreach (var t in invokeMethod.Exceptions) {
+                methodBuilder.addException(t);
+            }
+            context.MethodGenerationContext.enterLambda(methodBuilder);
+            
+            var delegateTypeInfo = context.TypeSystem.getType("stab/lang/Delegate");
+            
+            var gen = methodBuilder.CodeGenerator;
+            gen.beginScope();
+            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+            gen.emit(JvmOpcode.Getfield, delegateTypeInfo.getField("delegates"));
+            var elseLabel = gen.defineLabel();
+            gen.emit(JvmOpcode.Ifnull, elseLabel);
+            
+            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+            gen.emit(JvmOpcode.Getfield, delegateTypeInfo.getField("delegates"));
+            var td = gen.declareLocal(delegateTypeInfo.ArrayType, "td$0");
+            gen.emit(JvmOpcode.Astore, td);
+            JvmLocalInfo local = null;
+            if (method.ReturnType != JvmTypeInfo.VOID) {
+                local = gen.declareLocal(method.ReturnType, "result$0");
+            }
+            var idx = gen.declareLocal(JvmTypeInfo.INT, "i$0");
+            gen.emit(JvmOpcode.Iconst_0);
+            gen.emit(JvmOpcode.Istore, idx);
+            var startLabel = gen.defineLabel();
+            gen.markLabel(startLabel);
+            gen.emit(JvmOpcode.Aload, td);
+            gen.emit(JvmOpcode.Iload, idx);
+            gen.emit(JvmOpcode.Aaload);
+            gen.emit(JvmOpcode.Checkcast, delegateType);
+            foreach (var p in invokeMethod.Parameters) {
+                gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+            }
+            gen.emit(JvmOpcode.Invokevirtual, invokeMethod);
+            if (method.ReturnType != JvmTypeInfo.VOID) {
+                var m = invokeMethod.OriginalMethodDefinition;
+                BytecodeGenerator.emitGenericCast(context, invokeMethod.ReturnType, m.ReturnType);
+                gen.emit(BytecodeHelper.getStoreOpcode(method.ReturnType), local);
+            }
+            gen.emit(JvmOpcode.Iinc, idx, 1);
+            gen.emit(JvmOpcode.Iload, idx);
+            gen.emit(JvmOpcode.Aload, td);
+            gen.emit(JvmOpcode.Arraylength);
+            gen.emit(JvmOpcode.If_icmplt, startLabel);
+            if (method.ReturnType != JvmTypeInfo.VOID) {
+                gen.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), local);
+            }
+            gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
+            gen.markLabel(elseLabel);
+            if (!method.IsStatic) {
+                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                gen.emit(JvmOpcode.Invokevirtual, delegateTypeInfo.getMethod("getTarget", Query.empty<JvmTypeInfo>()));
+                gen.emit(JvmOpcode.Checkcast, method.DeclaringType);
+            }
+            foreach (var p in invokeMethod.Parameters) {
+                gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+            }
+            emitMethodAccess(context, method, false);
+            gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
+            gen.endScope();
+            context.MethodGenerationContext.leaveLambda();
+
+            if (invokeMethod.DeclaringType.GenericArguments.any()) {
+                BytecodeGenerator.emitBridgeMethod(context, typeBuilder, methodBuilder, invokeMethod);
+            }
+
+            // getMethodCore()
+            methodBuilder = typeBuilder.defineMethod("getMethodCore");
+            methodBuilder.setProtected(true);
+            methodBuilder.setFinal(true);
+            methodBuilder.setReturnType(context.TypeSystem.getType("java/lang/reflect/Method"));
+
+            gen = methodBuilder.CodeGenerator;
+            gen.beginScope();
+            var classType = context.TypeSystem.getType("java/lang/Class");
+            BytecodeHelper.emitTypeof(gen, context.TypeSystem, method.DeclaringType);
+            gen.emit(JvmOpcode.Ldc, method.Name);
+            BytecodeHelper.emitIntConstant(gen, invokeMethod.Parameters.count());
+            BytecodeHelper.emitNewarray(gen, 1, classType);
+
+            int i = 0;
+            foreach (var p in invokeMethod.Parameters) {
+                gen.emit(JvmOpcode.Dup);
+                BytecodeHelper.emitIntConstant(gen, i++);
+                BytecodeHelper.emitTypeof(gen, context.TypeSystem, p.Type);
+                gen.emit(JvmOpcode.Aastore);
+            }
+            
+            var argTypes = new ArrayList<JvmTypeInfo>();
+            argTypes.add(context.TypeSystem.getType("java/lang/String"));
+            argTypes.add(classType.getGenericType(Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD)).ArrayType);
+            gen.emit(JvmOpcode.Invokevirtual, classType.getMethod("getMethod", argTypes));
+            gen.emit(JvmOpcode.Areturn);
+            gen.endScope();
+            
+            // getMethodSignature()
+            methodBuilder = typeBuilder.defineMethod("getMethodSignature");
+            methodBuilder.setProtected(true);
+            methodBuilder.setFinal(true);
+            var objectType = context.TypeSystem.ObjectType;
+            methodBuilder.setReturnType(objectType);
+
+            gen = methodBuilder.CodeGenerator;
+            gen.beginScope();
+            gen.emit(JvmOpcode.Ldc, method.DeclaringType.FullName + "." + method.Name + method.Descriptor);
+            gen.emit(JvmOpcode.Areturn);
+            gen.endScope();
+            
+            // Constructor T(object)
+            methodBuilder = typeBuilder.defineMethod("<init>");
+            methodBuilder.setProtected(true);
+            methodBuilder.setReturnType(JvmTypeInfo.VOID);
+            if (!method.IsStatic) {
+                var parameterBuilder = methodBuilder.addParameter(objectType);
+                parameterBuilder.setName("target");
+            }
+
+            var baseConstructor = typeBuilder.BaseType.getMethod("<init>", Collections.singletonList(objectType));
+            gen = methodBuilder.CodeGenerator;
+            gen.beginScope();
+            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+            if (method.IsStatic) {
+                gen.emit(JvmOpcode.Aconst_Null);
+            } else {
+                gen.emit(JvmOpcode.Aload, gen.getLocal("target"));
+            }
+            gen.emit(JvmOpcode.Invokespecial, baseConstructor);
+            gen.emit(JvmOpcode.Return);
+            gen.endScope();
+            
+            return typeBuilder;
+        }
+        
+        static void emitMethodAccess(CompilerContext context, JvmMethodInfo method, boolean isSuperCall) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+                var accessor = context.PrivateAccessors[method];
+                if (accessor == null) {
+                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(method.ReturnType);
+                    methodBuilder.setStatic(method.IsStatic);
+                    methodBuilder.setFinal(!method.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    methodBuilder.setVarargs(method.IsVarargs);
+                    foreach (var p in method.Parameters) {
+                        var pb = methodBuilder.addParameter(p.Type);
+                        pb.setName(p.Name);
+                    }
+                    foreach (var t in method.Exceptions) {
+                        methodBuilder.addException(t);
+                    }
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    if (!method.IsStatic) {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                    }
+                    foreach (var p in method.Parameters) {
+                        gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                    }
+                    if (method.IsStatic) {
+                        gen.emit(JvmOpcode.Invokestatic, method);
+                    } else {
+                        gen.emit(JvmOpcode.Invokevirtual, method);
+                    }
+                    gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
+                    gen.endScope();
+                    accessor = methodBuilder;
+                    context.PrivateAccessors[method] = accessor;
+                }
+                method = accessor;
+            }
+            if (method.IsStatic) {
+                generator.emit(JvmOpcode.Invokestatic, method);
+            } else if (method.IsConstructor) {
+                generator.emit(JvmOpcode.Invokespecial, method);
+            } else if (method.DeclaringType.IsInterface) {
+                generator.emit(JvmOpcode.Invokeinterface, method);
+            } else {
+                if (isSuperCall) {
+                    generator.emit(JvmOpcode.Invokespecial, method);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, method);
+                }
+            }
+        }
+        
+        static void emitFieldAccess(CompilerContext context, JvmFieldInfo field) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (requireAccessor(context, field.DeclaringType, field.IsPublic, field.IsProtected, field.IsPrivate)) {
+                var accessor = context.PrivateAccessors[field];
+                if (accessor == null) {
+                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (field.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(field.Type);
+                    methodBuilder.setStatic(field.IsStatic);
+                    methodBuilder.setFinal(!field.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    if (field.IsStatic) {
+                        gen.emit(JvmOpcode.Getstatic, field);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        gen.emit(JvmOpcode.Getfield, field);
+                    }
+                    gen.emit(BytecodeHelper.getReturnOpcode(field.Type));
+                    gen.endScope();
+                    accessor = methodBuilder;
+                    context.PrivateAccessors[field] = accessor;
+                }
+                if (field.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, accessor);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, accessor);
+                }
+            } else if (field.IsStatic) {
+                generator.emit(JvmOpcode.Getstatic, field);
+            } else {
+                generator.emit(JvmOpcode.Getfield, field);
+            }
+        }
+
+        static void emitPropertyAccess(CompilerContext context, JvmMethodInfo method) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+                var accessor = context.PrivateAccessors[method];
+                if (accessor == null) {
+                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var type = method.getReturnType();
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(type);
+                    methodBuilder.setStatic(method.IsStatic);
+                    methodBuilder.setFinal(!method.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    if (method.IsStatic) {
+                        gen.emit(JvmOpcode.Invokestatic, method);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        gen.emit(JvmOpcode.Invokevirtual, method);
+                    }
+                    gen.emit(BytecodeHelper.getReturnOpcode(type));
+                    gen.endScope();
+                    accessor = methodBuilder;
+                    context.PrivateAccessors[method] = accessor;
+                }
+                if (method.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, accessor);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, accessor);
+                }
+            } else {
+                if (method.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, method);
+                } else if (method.DeclaringType.IsInterface) {
+                    generator.emit(JvmOpcode.Invokeinterface, method);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, method);
+                }
+            }
+        }
+
+        static void emitIndexerAccess(CompilerContext context, JvmMethodInfo method) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+                var accessor = context.PrivateAccessors[method];
+                if (accessor == null) {
+                    JvmTypeBuilder outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var type = method.ReturnType;
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(type);
+                    methodBuilder.setStatic(method.IsStatic);
+                    methodBuilder.setFinal(!method.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    foreach (var p in method.Parameters) {
+                        var pb = methodBuilder.addParameter(p.Type);
+                        pb.setName(p.Name);
+                    }
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    if (method.IsStatic) {
+                        foreach (var p in method.Parameters) {
+                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                        }
+                        gen.emit(JvmOpcode.Invokestatic, method);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        foreach (var p in method.Parameters) {
+                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                        }
+                        gen.emit(JvmOpcode.Invokevirtual, method);
+                    }
+                    gen.emit(BytecodeHelper.getReturnOpcode(type));
+                    gen.endScope();
+                    accessor = methodBuilder;
+                    context.PrivateAccessors[method] = accessor;
+                }
+                if (method.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, accessor);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, accessor);
+                }
+            } else {
+                if (method.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, method);
+                } else if (method.DeclaringType.IsInterface) {
+                    generator.emit(JvmOpcode.Invokeinterface, method);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, method);
+                }
+            }
+        }
+
+        static void emitFieldModification(CompilerContext context, JvmFieldInfo field) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (requireAccessor(context, field.DeclaringType, field.IsPublic, field.IsProtected, field.IsPrivate)) {
+                var mutator = context.PrivateMutators[field];
+                if (mutator == null) {
+                    JvmTypeBuilder outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (field.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    methodBuilder.setStatic(field.IsStatic);
+                    methodBuilder.setFinal(!field.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    var param = methodBuilder.addParameter(field.Type);
+                    param.setName(field.Name);
+                    var gen = methodBuilder.getCodeGenerator();
+                    gen.beginScope();
+                    if (field.IsStatic) {
+                        gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
+                        gen.emit(JvmOpcode.Putstatic, field);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        gen.emit(BytecodeHelper.getLoadOpcode(field.Type), gen.getLocal(field.Name));
+                        gen.emit(JvmOpcode.Putfield, field);
+                    }
+                    gen.emit(JvmOpcode.Return);
+                    gen.endScope();
+                    mutator = methodBuilder;
+                    context.PrivateMutators[field] = mutator;
+                }
+                if (field.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, mutator);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, mutator);
+                }
+            } else if (field.IsStatic) {
+                generator.emit(JvmOpcode.Putstatic, field);
+            } else {
+                generator.emit(JvmOpcode.Putfield, field);
+            }
+        }
+        
+        static void emitPropertyOrIndexerModification(CompilerContext context, JvmMethodInfo method) {
+            var generator = context.MethodGenerationContext.Generator;
+            if (requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+                var mutator = context.PrivateMutators[method];
+                if (mutator == null) {
+                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
+                            break;
+                        }
+                    }
+                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
+                    var type = method.Parameters.first().Type;
+                    var methodBuilder = outerClass.defineMethod("access$" + n);
+                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    methodBuilder.setStatic(method.IsStatic);
+                    methodBuilder.setFinal(!method.IsStatic);
+                    methodBuilder.setSynthetic(true);
+                    foreach (var p in method.Parameters) {
+                        var param = methodBuilder.addParameter(p.Type);
+                        param.setName(p.Name);
+                    }
+                    var param = methodBuilder.addParameter(type);
+                    param.setName("value");
+                    var gen = methodBuilder.CodeGenerator;
+                    gen.beginScope();
+                    if (method.IsStatic) {
+                        foreach (var p in method.Parameters) {
+                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                        }
+                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
+                        gen.emit(JvmOpcode.Invokestatic, method);
+                    } else {
+                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                        foreach (var p in method.Parameters) {
+                            gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                        }
+                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
+                        gen.emit(JvmOpcode.Invokevirtual, method);
+                    }
+                    gen.emit(JvmOpcode.Return);
+                    gen.endScope();
+                    mutator = methodBuilder;
+                    context.PrivateMutators[method] = mutator;
+                }
+                if (method.IsStatic) {
+                    generator.emit(JvmOpcode.Invokestatic, mutator);
+                } else {
+                    generator.emit(JvmOpcode.Invokevirtual, mutator);
+                }
+            } else if (method.IsStatic) {
+                generator.emit(JvmOpcode.Invokestatic, method);
+            } else if (method.DeclaringType.IsInterface) {
+                generator.emit(JvmOpcode.Invokeinterface, method);
+            } else {
+                generator.emit(JvmOpcode.Invokevirtual, method);
+            }
+        }
+        
+        static boolean requireAccessor(CompilerContext context, JvmTypeInfo declaringType,
+                boolean isPublic, boolean isProtected, boolean isPrivate) {
+            var currentType = context.MethodGenerationContext.CurrentMethod.DeclaringType;
+            if (isPublic || declaringType.OriginalTypeDefinition == currentType.OriginalTypeDefinition) {
+                return false;
+            }
+            if (isProtected && declaringType.isAssignableFrom(currentType)) {
+                return false;
+            }
+            if (!isPrivate && declaringType.PackageName.equals(currentType.PackageName)) {
+                return false;
+            }
+            return true;
+        }
     }
 }

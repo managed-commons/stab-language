@@ -26,6 +26,7 @@ package stab.tree {
         Invocation,
         Lambda,
         MethodCall,
+        NewObject,
         Parameter,
         Unary,
         Value
@@ -69,6 +70,10 @@ package stab.tree {
         
         public static LambdaExpression lambda(Class<?> type, ParameterExpression[] parameters, Statement body) {
             return new LambdaExpression(type, parameters, body);
+        }
+
+        public static NewObjectExpression newObject(Constructor<?> constructor, Expression[] arguments, MemberInitializer[] initializers) {
+            return new NewObjectExpression(constructor, arguments, initializers);
         }
         
         public static ParameterExpression parameter(Class<?> type, String name) {

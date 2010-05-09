@@ -1421,5 +1421,50 @@ package stab.tools.compiler.test {
 		public void lambdaAsArgument2() {
 			doTest("LambdaAsArgument2", new Class<?>[] {}, new Object[] {}, 2);
 		}
+		
+		[Test]
+		public void inferredReturnType() {
+			doTest("InferredReturnType", new Class<?>[] {}, new Object[] {}, "s2");
+		}
+		
+		[Test]
+		public void delegateField() {
+			doTest("DelegateField", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void anonymousObjectDelegate() {
+			doTest("AnonymousObjectDelegate", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void delegateAdd2() {
+			doTest("DelegateAdd2", new Class<?>[] {}, new Object[] {}, 5);
+		}
+		
+		[Test]
+		public void expressionTreeObjectCreation() {
+			doTest("ExpressionTreeObjectCreation", new Class<?>[] {}, new Object[] {}, "java.lang.Object");
+		}
+		
+		[Test]
+		public void expressionTreeObjectCreation2() {
+			doTest("ExpressionTreeObjectCreation2", new Class<?>[] {}, new Object[] {}, "field");
+		}
+		
+		[Test]
+		public void expressionTreeObjectCreation3() {
+			doTest("ExpressionTreeObjectCreation3", new Class<?>[] {}, new Object[] {}, "setProperty");
+		}
+		
+		[Test]
+		public void expressionTreeObjectCreation4() {
+			doTest("ExpressionTreeObjectCreation4", new Class<?>[] {}, new Object[] {}, "add");
+		}
+		
+		[Test]
+		public void objectInitializer2() {
+			doTest("ObjectInitializer2", new Class<?>[] {}, new Object[] {}, 3);
+		}
 	}
 }

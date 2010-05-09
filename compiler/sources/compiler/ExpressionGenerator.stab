@@ -105,6 +105,7 @@ package stab.tools.compiler {
                 TargetLabels labels, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             var type = anonymousObject.getUserData(typeof(ExpressionInfo)).Type;
+            var constructor = type.Methods.where(p => p.Name.equals("<init>")).first();
             generator.emit(JvmOpcode.New, type);
             if (nested) {
                 generator.emit(JvmOpcode.Dup);
@@ -112,7 +113,6 @@ package stab.tools.compiler {
             foreach (var decl in anonymousObject.MemberDeclarators) {
                 handleExpression(decl.Value, null, true);
             }
-            var constructor = type.Methods.where(p => p.Name.equals("<init>")).first();
             generator.emit(JvmOpcode.Invokespecial, constructor);
             return null;
         }
@@ -120,7 +120,7 @@ package stab.tools.compiler {
         protected override Void handleArrayCreation(ArrayCreationExpressionNode arrayCreation, TargetLabels labels, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             foreach (var e in arrayCreation.DimensionExpressions) {
-                handleExpression(e, null, true);
+                emitNestedExpression(e, JvmTypeInfo.INT);
             }
             var type = arrayCreation.getUserData(typeof(ExpressionInfo)).Type;
             var initializer = arrayCreation.Initializer;
@@ -741,7 +741,7 @@ package stab.tools.compiler {
                 }
                 var arguments = elementAccess.Indexes;
                 emitArguments(arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
-                BytecodeGenerator.emitIndexerAccess(context, method);
+                CompilerHelper.emitIndexerAccess(context, method);
                 BytecodeGenerator.emitGenericCast(context, method.ReturnType, method.OriginalMethodDefinition.ReturnType);
             } else {
                 handleExpression(target, null, true);
@@ -780,7 +780,7 @@ package stab.tools.compiler {
                 arguments.addAll(invocation.Arguments);
             }
             emitArguments(arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
-            emitMethodAccess(method, invocation.TargetObject.getUserData(typeof(ExpressionInfo)).IsSuperCall);
+            CompilerHelper.emitMethodAccess(context, method, invocation.TargetObject.getUserData(typeof(ExpressionInfo)).IsSuperCall);
             if (nested) {
                 var gm = method.OriginalMethodDefinition;
                 if (method != gm) {
@@ -869,7 +869,7 @@ package stab.tools.compiler {
                 if (!field.IsStatic) {
                     handleExpression(memberAccess.TargetObject, null, true);
                 }
-                BytecodeGenerator.emitFieldAccess(context, field);
+                CompilerHelper.emitFieldAccess(context, field);
                 BytecodeGenerator.emitGenericCast(context, field.Type, field.DeclaringType.OriginalTypeDefinition.getField(field.Name).Type);
                 emitBoxing(memberAccess);
                 emitTest(info, labels);
@@ -880,7 +880,7 @@ package stab.tools.compiler {
                 if (!method.IsStatic) {
                     handleExpression(memberAccess.TargetObject, null, true);
                 }
-                BytecodeGenerator.emitPropertyAccess(context, method);
+                CompilerHelper.emitPropertyAccess(context, method);
                 BytecodeGenerator.emitGenericCast(context, method.ReturnType, method.OriginalMethodDefinition.ReturnType);
                 emitBoxing(memberAccess);
                 emitTest(info, labels);
@@ -899,7 +899,7 @@ package stab.tools.compiler {
                 emitDelegateCreation(info.Type, method, objectCreation.Arguments[0], nested);
                 return null;
             }
-            if (BytecodeGenerator.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+            if (CompilerHelper.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
                 var accessor = context.PrivateAccessors[method];
                 if (accessor == null) {
                     var outerClass = (JvmTypeBuilder)context.CurrentType;
@@ -955,13 +955,20 @@ package stab.tools.compiler {
                 if (init.ExpressionKind == ExpressionKind.ObjectInitializer) {
                     var initializer = (ObjectInitializerExpressionNode)init;
                     foreach (var mi in initializer.MemberInitializers) {
-                        MemberInfo prop = mi.getUserData(typeof(MemberInfo));
-                        if (!prop.IsStatic) {
+                        MemberInfo memb = mi.getUserData(typeof(MemberInfo));
+                        if (!memb.IsStatic) {
                             generator.emit(JvmOpcode.Dup);
                         }
                         handleExpression(mi.Value, null, true);
                         emitBoxing(mi.Value);
-                        BytecodeGenerator.emitPropertyAccess(context, prop.SetAccessor);
+                        if (memb.MemberKind == MemberKind.Property) {
+                            CompilerHelper.emitPropertyOrIndexerModification(context, memb.SetAccessor);
+                            if (memb.SetAccessor.ReturnType != JvmTypeInfo.VOID) {
+                                generator.emit((memb.SetAccessor.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                            }
+                        } else {
+                            CompilerHelper.emitFieldModification(context, memb.Field);
+                        }
                     }
                 } else {
                     var initializer = (CollectionInitializerExpressionNode)init;
@@ -971,9 +978,9 @@ package stab.tools.compiler {
                         foreach (var e in args) {
                             handleExpression(e, null, true);
                         }
-                        generator.emit(JvmOpcode.Invokevirtual, addMethod);
+                        CompilerHelper.emitMethodAccess(context, addMethod, false);
                         if (addMethod.ReturnType != JvmTypeInfo.VOID) {
-                            generator.emit(JvmOpcode.Pop);
+                            generator.emit((addMethod.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
                         }
                     }
                 }
@@ -1004,7 +1011,7 @@ package stab.tools.compiler {
                 if (!field.IsStatic) {
                     BytecodeGenerator.emitThisAccess(context, generator);
                 }
-                BytecodeGenerator.emitFieldAccess(context, field);
+                CompilerHelper.emitFieldAccess(context, field);
                 BytecodeGenerator.emitGenericCast(context, field.Type, field.DeclaringType.OriginalTypeDefinition.getField(field.Name).Type);
                 emitBoxing(simpleName);
                 emitTest(info, labels);
@@ -1026,7 +1033,7 @@ package stab.tools.compiler {
                 if (!method.IsStatic) {
                     BytecodeGenerator.emitThisAccess(context, generator);
                 }
-                BytecodeGenerator.emitPropertyAccess(context, method);
+                CompilerHelper.emitPropertyAccess(context, method);
                 BytecodeGenerator.emitGenericCast(context, method.ReturnType, method.OriginalMethodDefinition.ReturnType);
                 emitBoxing(simpleName);
                 emitTest(info, labels);
@@ -1180,6 +1187,11 @@ package stab.tools.compiler {
             BytecodeGenerator.emitBoxing(context, expression);
         }
         
+        void emitNestedExpression(ExpressionNode expression, JvmTypeInfo targetType) {
+            handleExpression(expression, null, true);
+            BytecodeGenerator.emitConversion(context, targetType, expression);
+        }
+        
         void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int nparams, boolean varargs) {
             int fixedLength = (varargs) ?  nparams - 1 : nparams;
             var generator = context.MethodGenerationContext.Generator;
@@ -1189,17 +1201,7 @@ package stab.tools.compiler {
             for (i = 0; i < fixedLength; i++) {
                 var p = it1.next();
                 var e = it2.next();
-                var ei = e.getUserData(typeof(ExpressionInfo));
-                if (ei != null && ei.Member != null && ei.Member.MemberKind == MemberKind.Method && ei.Method != null) {
-                    var thisExp = new ThisAccessExpressionNode();
-                    thisExp.addUserData(new ExpressionInfo(context.CurrentType));
-                    emitDelegateCreation(p.Type, ei.Method, thisExp, true);
-                } else {
-                    handleExpression(e, null, true);
-                    if (p.Type.IsPrimitive) {
-                        BytecodeHelper.emitImplicitCast(generator, p.Type, e.getUserData(typeof(ExpressionInfo)).Type);
-                    }
-                }
+                emitNestedExpression(e, p.Type);
             }
             if (varargs) {
                 int nvarargs = arguments.size() - fixedLength;
@@ -1211,9 +1213,7 @@ package stab.tools.compiler {
                         generator.emit(JvmOpcode.Aconst_Null);
                     } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
                         handleExpression(e, null, true);
-                        if (paramType.IsPrimitive) {
-                            BytecodeHelper.emitImplicitCast(generator, paramType, e.getUserData(typeof(ExpressionInfo)).Type);
-                        }
+                        BytecodeGenerator.emitConversion(context, paramType, e);
                     } else {
                         BytecodeHelper.emitIntConstant(generator, 1);
                         bytecodeGenerator.emitArray(1, paramType, it2);
@@ -1225,8 +1225,7 @@ package stab.tools.compiler {
             }
         }
 
-        void emitDelegateCreation(JvmTypeInfo delegateType, JvmMethodInfo method, ExpressionNode arg,
-                boolean nested) {
+        void emitDelegateCreation(JvmTypeInfo delegateType, JvmMethodInfo method, ExpressionNode arg, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             if (arg != null) {
                 var argType = arg.getUserData(typeof(ExpressionInfo)).Type;
@@ -1236,236 +1235,17 @@ package stab.tools.compiler {
                 }
             }
             
-            JvmMethodInfo invokeMethod = delegateType.Methods.where(p => p.Name.equals("invoke")).first();
-            
-            //
-            // Delegate class creation
-            //
-            
-            var currentType = (JvmTypeBuilder)context.CurrentType;
-            var prefix = currentType.FullName + "$delegate";
-            int n = currentType.NestedTypes.count(p => p.FullName.startsWith(prefix));
-            var typeBuilder = currentType.defineNestedType("delegate" + n);
-            context.TypeBuilders.add(typeBuilder);
-            typeBuilder.setSynthetic(true);
-            typeBuilder.setBaseType(delegateType);
-            
-            // invoke(...)
-            var methodBuilder = typeBuilder.defineMethod("invoke");
-            methodBuilder.setPublic(true);
-            methodBuilder.setFinal(true);
-            methodBuilder.setVarargs(invokeMethod.IsVarargs);
-            methodBuilder.setReturnType(invokeMethod.ReturnType);
-            foreach (var p in invokeMethod.Parameters) {
-                var pb = methodBuilder.addParameter(p.Type);
-                pb.setName(p.Name);
-            }
-            foreach (var t in invokeMethod.Exceptions) {
-                methodBuilder.addException(t);
-            }
-            context.MethodGenerationContext.enterLambda(methodBuilder);
-            
-            var delegateTypeInfo = context.TypeSystem.getType("stab/lang/Delegate");
-            
-            var gen = methodBuilder.CodeGenerator;
-            gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, delegateTypeInfo.getField("delegates"));
-            var elseLabel = gen.defineLabel();
-            gen.emit(JvmOpcode.Ifnull, elseLabel);
-            
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, delegateTypeInfo.getField("delegates"));
-            var td = gen.declareLocal(delegateTypeInfo.ArrayType, "td$0");
-            gen.emit(JvmOpcode.Astore, td);
-            JvmLocalInfo local = null;
-            if (method.ReturnType != JvmTypeInfo.VOID) {
-                local = gen.declareLocal(method.ReturnType, "result$0");
-            }
-            var idx = gen.declareLocal(JvmTypeInfo.INT, "i$0");
-            gen.emit(JvmOpcode.Iconst_0);
-            gen.emit(JvmOpcode.Istore, idx);
-            var startLabel = gen.defineLabel();
-            gen.markLabel(startLabel);
-            gen.emit(JvmOpcode.Aload, td);
-            gen.emit(JvmOpcode.Iload, idx);
-            gen.emit(JvmOpcode.Aaload);
-            gen.emit(JvmOpcode.Checkcast, delegateType);
-            foreach (var p in invokeMethod.Parameters) {
-                gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-            }
-            gen.emit(JvmOpcode.Invokevirtual, invokeMethod);
-            if (method.ReturnType != JvmTypeInfo.VOID) {
-                var m = invokeMethod.OriginalMethodDefinition;
-                BytecodeGenerator.emitGenericCast(context, invokeMethod.ReturnType, m.ReturnType);
-                gen.emit(BytecodeHelper.getStoreOpcode(method.ReturnType), local);
-            }
-            gen.emit(JvmOpcode.Iinc, idx, 1);
-            gen.emit(JvmOpcode.Iload, idx);
-            gen.emit(JvmOpcode.Aload, td);
-            gen.emit(JvmOpcode.Arraylength);
-            gen.emit(JvmOpcode.If_icmplt, startLabel);
-            if (method.ReturnType != JvmTypeInfo.VOID) {
-                gen.emit(BytecodeHelper.getLoadOpcode(method.ReturnType), local);
-            }
-            gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
-            gen.markLabel(elseLabel);
-            if (!method.IsStatic) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Invokevirtual, delegateTypeInfo.getMethod("getTarget", Query.empty<JvmTypeInfo>()));
-                gen.emit(JvmOpcode.Checkcast, method.DeclaringType);
-            }
-            foreach (var p in invokeMethod.Parameters) {
-                gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-            }
-            emitMethodAccess(method, false);
-            gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
-            gen.endScope();
-            context.MethodGenerationContext.leaveLambda();
-
-            if (invokeMethod.DeclaringType.GenericArguments.any()) {
-                BytecodeGenerator.emitBridgeMethod(context, typeBuilder, methodBuilder, invokeMethod);
-            }
-
-            // getMethodCore()
-            methodBuilder = typeBuilder.defineMethod("getMethodCore");
-            methodBuilder.setProtected(true);
-            methodBuilder.setFinal(true);
-            methodBuilder.setReturnType(context.TypeSystem.getType("java/lang/reflect/Method"));
-
-            gen = methodBuilder.CodeGenerator;
-            gen.beginScope();
-            var classType = context.TypeSystem.getType("java/lang/Class");
-            BytecodeHelper.emitTypeof(gen, context.TypeSystem, method.DeclaringType);
-            gen.emit(JvmOpcode.Ldc, method.Name);
-            BytecodeHelper.emitIntConstant(gen, invokeMethod.Parameters.count());
-            BytecodeHelper.emitNewarray(gen, 1, classType);
-
-            int i = 0;
-            foreach (var p in invokeMethod.Parameters) {
-                gen.emit(JvmOpcode.Dup);
-                BytecodeHelper.emitIntConstant(gen, i++);
-                BytecodeHelper.emitTypeof(gen, context.TypeSystem, p.Type);
-                gen.emit(JvmOpcode.Aastore);
-            }
-            
-            var argTypes = new ArrayList<JvmTypeInfo>();
-            argTypes.add(context.TypeSystem.getType("java/lang/String"));
-            argTypes.add(classType.getGenericType(Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD)).ArrayType);
-            gen.emit(JvmOpcode.Invokevirtual, classType.getMethod("getMethod", argTypes));
-            gen.emit(JvmOpcode.Areturn);
-            gen.endScope();
-            
-            // getMethodSignature()
-            methodBuilder = typeBuilder.defineMethod("getMethodSignature");
-            methodBuilder.setProtected(true);
-            methodBuilder.setFinal(true);
-            var objectType = context.TypeSystem.ObjectType;
-            methodBuilder.setReturnType(objectType);
-
-            gen = methodBuilder.CodeGenerator;
-            gen.beginScope();
-            gen.emit(JvmOpcode.Ldc, method.DeclaringType.FullName + "." + method.Name + method.Descriptor);
-            gen.emit(JvmOpcode.Areturn);
-            gen.endScope();
-            
-            // Constructor T(object)
-            methodBuilder = typeBuilder.defineMethod("<init>");
-            methodBuilder.setProtected(true);
-            methodBuilder.setReturnType(JvmTypeInfo.VOID);
-            if (!method.IsStatic) {
-                var parameterBuilder = methodBuilder.addParameter(objectType);
-                parameterBuilder.setName("target");
-            }
-
-            var baseConstructor = typeBuilder.BaseType.getMethod("<init>", Collections.singletonList(objectType));
-            gen = methodBuilder.CodeGenerator;
-            gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            if (method.IsStatic) {
-                gen.emit(JvmOpcode.Aconst_Null);
-            } else {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("target"));
-            }
-            gen.emit(JvmOpcode.Invokespecial, baseConstructor);
-            gen.emit(JvmOpcode.Return);
-            gen.endScope();
-
-
-            //
-            // Delegate object creation
-            //
-            
-            generator.emit(JvmOpcode.New, typeBuilder);
+            var typeInfo = CompilerHelper.createDelegateType(context, delegateType, method);
+            generator.emit(JvmOpcode.New, typeInfo);
             if (nested) {
                 generator.emit(JvmOpcode.Dup);
             }
             if (!method.IsStatic) {
                 handleExpression(arg, null, true);
             }
-            generator.emit(JvmOpcode.Invokespecial, methodBuilder);
+            generator.emit(JvmOpcode.Invokespecial, typeInfo.Methods.where(p => p.Name.equals("<init>")).first());
         }
-        
-        void emitMethodAccess(JvmMethodInfo method, boolean isSuperCall) {
-            var generator = context.MethodGenerationContext.Generator;
-            if (BytecodeGenerator.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
-                var accessor = context.PrivateAccessors[method];
-                if (accessor == null) {
-                    var outerClass = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
-                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
-                        if (method.DeclaringType.isAssignableFrom(outerClass)) {
-                            break;
-                        }
-                    }
-                    int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
-                    var methodBuilder = outerClass.defineMethod("access$" + n);
-                    methodBuilder.setReturnType(method.ReturnType);
-                    methodBuilder.setStatic(method.IsStatic);
-                    methodBuilder.setFinal(!method.IsStatic);
-                    methodBuilder.setSynthetic(true);
-                    methodBuilder.setVarargs(method.IsVarargs);
-                    foreach (var p in method.Parameters) {
-                        var pb = methodBuilder.addParameter(p.Type);
-                        pb.setName(p.Name);
-                    }
-                    foreach (var t in method.Exceptions) {
-                        methodBuilder.addException(t);
-                    }
-                    var gen = methodBuilder.CodeGenerator;
-                    gen.beginScope();
-                    if (!method.IsStatic) {
-                        gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                    }
-                    foreach (var p in method.Parameters) {
-                        gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
-                    }
-                    if (method.IsStatic) {
-                        gen.emit(JvmOpcode.Invokestatic, method);
-                    } else {
-                        gen.emit(JvmOpcode.Invokevirtual, method);
-                    }
-                    gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
-                    gen.endScope();
-                    accessor = methodBuilder;
-                    context.PrivateAccessors[method] = accessor;
-                }
-                method = accessor;
-            }
-            if (method.IsStatic) {
-                generator.emit(JvmOpcode.Invokestatic, method);
-            } else if (method.IsConstructor) {
-                generator.emit(JvmOpcode.Invokespecial, method);
-            } else if (method.DeclaringType.IsInterface) {
-                generator.emit(JvmOpcode.Invokeinterface, method);
-            } else {
-                if (isSuperCall) {
-                    generator.emit(JvmOpcode.Invokespecial, method);
-                } else {
-                    generator.emit(JvmOpcode.Invokevirtual, method);
-                }
-            }
-        }
-        
+
         private void emitInterfaceCreation(JvmTypeInfo interfaceType, JvmMethodInfo method, ExpressionNode arg, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             var currentType = (JvmTypeBuilder)context.CurrentType;

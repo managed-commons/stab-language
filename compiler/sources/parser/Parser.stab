@@ -1957,11 +1957,11 @@ package stab.tools.parser {
                 if (nextLexicalUnit(false) == LexicalUnit.Lambda) {
                     var lambda = new LambdaExpressionNode();
                     setSavedScannerState(lambda);
+                    lambda.Parameters.add(new ParameterNode { NameOffset = sp, NameLength = len });
                     if (nextLexicalUnit(true) == LexicalUnit.OpenBrace) {
                         lambda.Body = parseBlockStatement();
                     } else {
                         lambda.Body = new ExpressionStatementNode { Expression = parseExpression() };
-                        lambda.Parameters.add(new ParameterNode { NameOffset = sp, NameLength = len });
                     }
                     return lambda;
                 }
@@ -2962,6 +2962,7 @@ package stab.tools.parser {
                 result = objectCreation;
                 while (lexicalUnit != LexicalUnit.CloseBrace) {
                     var memberDeclarator = new MemberInitializerNode();
+                    setScannerState(memberDeclarator);
                     if (isIdentifier(lexicalUnit)) {
                         var restorePoint = this.getRestorePoint();
                         int sp = scanner.StartPosition;

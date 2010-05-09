@@ -29,10 +29,13 @@ package stab.tools.compiler {
         private JvmTypeInfo statementType;
         private JvmTypeInfo binaryOperatorType;
         private JvmTypeInfo unaryOperatorType;
+        private JvmTypeInfo unboundedConstructorType;
+        private JvmTypeInfo memberInitializerType;
         private JvmMethodInfo expressionMethod;
         private JvmMethodInfo valueMethod;
         private JvmMethodInfo getDeclaredMethodMethod;
         private JvmMethodInfo getDeclaredFieldMethod;
+        private JvmMethodInfo getDeclaredConstructorMethod;
         private JvmMethodInfo callMethod;
         private JvmMethodInfo invokeMethod;
         private JvmMethodInfo parameterMethod;
@@ -42,6 +45,8 @@ package stab.tools.compiler {
         private JvmMethodInfo binaryMethod;
         private JvmMethodInfo unaryMethod;
         private JvmMethodInfo conditionalMethod;
+        private JvmMethodInfo newObjectMethod;
+        private JvmMethodInfo memberInitializerConstructor;
     
         ExpressionTreeGenerator(CompilerContext context)
             : super(true) {
@@ -87,6 +92,25 @@ package stab.tools.compiler {
             }
         }
         
+        JvmTypeInfo UnboundedConstructorType {
+            get {
+                if (unboundedConstructorType == null) {
+                    var type = context.TypeSystem.getType("java/lang/reflect/Constructor");
+                    unboundedConstructorType = type.getGenericType(Query.singleton(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                }
+                return unboundedConstructorType;
+            }
+        }
+        
+        JvmTypeInfo MemberInitializerType {
+            get {
+                if (memberInitializerType == null) {
+                    memberInitializerType = context.TypeSystem.getType("stab/tree/MemberInitializer");
+                }
+                return memberInitializerType;
+            }
+        }
+        
         JvmMethodInfo ExpressionMethod {
             get {
                 if (expressionMethod == null) {
@@ -109,7 +133,8 @@ package stab.tools.compiler {
         JvmMethodInfo GetDeclaredMethodMethod {
             get {
                 if (getDeclaredMethodMethod == null) {
-                    getDeclaredMethodMethod = context.TypeSystem.ClassType.Methods.where(p => p.Name.equals("getDeclaredMethod")).single();
+                    var parameters = Query.pair(context.TypeSystem.StringType, context.TypeSystem.UnboundedClassType.ArrayType);
+                    getDeclaredMethodMethod = context.TypeSystem.ClassType.getMethod("getDeclaredMethod", parameters);
                 }
                 return getDeclaredMethodMethod;
             }
@@ -122,6 +147,16 @@ package stab.tools.compiler {
                     getDeclaredFieldMethod = context.TypeSystem.ClassType.getMethod("getDeclaredField", parameters);
                 }
                 return getDeclaredFieldMethod;
+            }
+        }
+        
+        JvmMethodInfo GetDeclaredConstructorMethod {
+            get {
+                if (getDeclaredConstructorMethod == null) {
+                    var parameters = Query.singleton(context.TypeSystem.UnboundedClassType.ArrayType);
+                    getDeclaredConstructorMethod = context.TypeSystem.ClassType.getMethod("getDeclaredConstructor", parameters);
+                }
+                return getDeclaredConstructorMethod;
             }
         }
 
@@ -214,6 +249,26 @@ package stab.tools.compiler {
                 return conditionalMethod;
             }
         }
+
+        JvmMethodInfo NewObjectMethod {
+            get {
+                if (newObjectMethod == null) {
+                    var parameters = Query.triple(this.UnboundedConstructorType, this.ExpressionType.ArrayType,
+                            this.MemberInitializerType.ArrayType);
+                    newObjectMethod = this.ExpressionType.getMethod("newObject", parameters);
+                }
+                return newObjectMethod;
+            }
+        }
+
+        JvmMethodInfo MemberInitializerConstructor {
+            get {
+                if (memberInitializerConstructor == null) {
+                    memberInitializerConstructor = this.MemberInitializerType.Methods.where(p => p.Name.equals("<init>")).single();
+                }
+                return memberInitializerConstructor;
+            }
+        }
         
         #endregion
         
@@ -253,7 +308,7 @@ package stab.tools.compiler {
                 }
             }
         }
-        
+            
         private class ExpressionGenerator : ExpressionHandler<Void, Void> {
             private ExpressionTreeGenerator statementGenerator;
             private CompilerContext context;
@@ -367,7 +422,7 @@ package stab.tools.compiler {
                 var tinfo = target.getUserData(typeof(ExpressionInfo));
                 var ttype = tinfo.Type;
                 if (!ttype.IsArray) {
-                    var method = elementAccess.getUserData(typeof(ExpressionInfo)).Member.GetAccessor;
+                    var method = elementAccess.getUserData(typeof(ExpressionInfo)).Member.GetAccessor.OriginalMethodDefinition;
                     if (!method.IsStatic) {
                         handleExpression(target, null, true);
                     } else {
@@ -407,6 +462,7 @@ package stab.tools.compiler {
                 if (method.IsExcludedFromCompilation || CompilerHelper.shouldIgnoreCalls(context, method)) {
                     return null;
                 }
+                method = method.OriginalMethodDefinition;
                 var isDelegateInvocation = BytecodeHelper.isDelegateType(method.DeclaringType) && method.Name.equals("invoke");
                 if (!method.IsStatic) {
                     if (isDelegateInvocation) {
@@ -452,51 +508,6 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Invokestatic, statementGenerator.InvokeMethod);
                 }
                 return null;
-            }
-
-            void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int nparams, boolean varargs) {
-                int fixedLength = (varargs) ?  nparams - 1 : nparams;
-                var generator = context.MethodGenerationContext.Generator;
-                var it1 = parameters.iterator();
-                var it2 = arguments.iterator();
-                int i;
-                for (i = 0; i < fixedLength; i++) {
-                    var p = it1.next();
-                    var e = it2.next();
-                    generator.emit(JvmOpcode.Dup);
-                    BytecodeHelper.emitIntConstant(generator, i);
-                    handleExpression(e, null, true);
-                    generator.emit(JvmOpcode.Aastore);
-                }
-                if (varargs) {
-                    int nvarargs = arguments.size() - fixedLength;
-                   generator.emit(JvmOpcode.Dup);
-                    BytecodeHelper.emitIntConstant(generator, i);
-                    if (nvarargs == 1) {
-                        var paramType = it1.next().Type;
-                        var e = arguments[i];
-                        var ei = e.getUserData(typeof(ExpressionInfo));
-                        if (ei == null) {
-                            emitNull();
-                        } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
-                            handleExpression(e, null, true);
-                        } else {
-                            BytecodeHelper.emitIntConstant(generator, 1);
-                            statementGenerator.emitArray(1, paramType, it2);
-                        }
-                    } else {
-                        BytecodeHelper.emitIntConstant(generator, nvarargs);
-                        statementGenerator.emitArray(1, it1.next().Type, it2);
-                    }
-                    generator.emit(JvmOpcode.Aastore);
-                }
-            }
-                
-            void emitNull() {
-                var generator = context.MethodGenerationContext.Generator;
-                generator.emit(JvmOpcode.Aconst_Null);
-                generator.emit(JvmOpcode.Aconst_Null);
-                generator.emit(JvmOpcode.Invokestatic, statementGenerator.ValueMethod);
             }
             
             protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
@@ -544,7 +555,7 @@ package stab.tools.compiler {
                 var generator = context.MethodGenerationContext.Generator;
                 var info = memberAccess.getUserData(typeof(ExpressionInfo));
                 if (info.Method != null) {
-                    emitDelegateCreation(info.Type, info.Method, memberAccess);
+                    emitDelegateCreation(info.Type, info.Method, memberAccess, nested);
                     return null;
                 }
                 var member = info.Member;
@@ -589,6 +600,115 @@ package stab.tools.compiler {
                 return null;
             }
             
+            protected override Void handleObjectCreation(ObjectCreationExpressionNode objectCreation, Void source, boolean nested) {
+                var generator = context.MethodGenerationContext.Generator;
+                var info = objectCreation.getUserData(typeof(ExpressionInfo));
+                var method = info.Method;
+                if (BytecodeHelper.isDelegateType(info.Type)) {
+                    emitDelegateCreation(info.Type, method, objectCreation.Arguments[0], nested);
+                    return null;
+                }
+                int nparams = method.Parameters.count();
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+                BytecodeHelper.emitIntConstant(generator, nparams);
+                BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                int i = 0;
+                foreach (var p in method.Parameters) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, p.Type);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredConstructorMethod);
+                BytecodeHelper.emitIntConstant(generator, nparams);
+                BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                var arguments = objectCreation.Arguments;
+                emitArguments(arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
+                var init = objectCreation.Initializer;
+                if (init == null) {
+                    generator.emit(JvmOpcode.Aconst_Null);
+                } else {
+                    if (init.ExpressionKind == ExpressionKind.ObjectInitializer) {
+                        var initializer = (ObjectInitializerExpressionNode)init;
+                        BytecodeHelper.emitIntConstant(generator, initializer.MemberInitializers.size());
+                        BytecodeHelper.emitNewarray(generator, 1, statementGenerator.MemberInitializerType);
+                        i = 0;
+                        foreach (var mi in initializer.MemberInitializers) {
+                            generator.emit(JvmOpcode.Dup);
+                            BytecodeHelper.emitIntConstant(generator, i++);
+                            MemberInfo memb = mi.getUserData(typeof(MemberInfo));
+                            generator.emit(JvmOpcode.New, statementGenerator.MemberInitializerType);
+                            generator.emit(JvmOpcode.Dup);
+                            BytecodeHelper.emitTypeof(generator, context.TypeSystem, memb.DeclaringType);
+                            if (memb.MemberKind == MemberKind.Property) {
+                                var meth = memb.SetAccessor;
+                                generator.emit(JvmOpcode.Ldc, meth.getName());
+                                nparams = meth.Parameters.count();
+                                BytecodeHelper.emitIntConstant(generator, nparams);
+                                BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                                i = 0;
+                                foreach (var p in meth.Parameters) {
+                                    generator.emit(JvmOpcode.Dup);
+                                    BytecodeHelper.emitIntConstant(generator, i++);
+                                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, p.Type);
+                                    generator.emit(JvmOpcode.Aastore);
+                                }
+                                generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredMethodMethod);
+                            } else {
+                                generator.emit(JvmOpcode.Ldc, memb.Name);
+                                generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredFieldMethod);
+                            }
+                            BytecodeHelper.emitIntConstant(generator, 1);
+                            BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                            generator.emit(JvmOpcode.Dup);
+                            BytecodeHelper.emitIntConstant(generator, 0);
+                            handleExpression(mi.Value, null, true);
+                            generator.emit(JvmOpcode.Aastore);
+                            generator.emit(JvmOpcode.Invokespecial, statementGenerator.MemberInitializerConstructor);
+                            generator.emit(JvmOpcode.Aastore);
+                        }
+                    } else {
+                        var initializer = (CollectionInitializerExpressionNode)init;
+                        var addMethod = initializer.getUserData(typeof(JvmMethodInfo)).OriginalMethodDefinition;
+                        BytecodeHelper.emitIntConstant(generator, initializer.Values.size());
+                        BytecodeHelper.emitNewarray(generator, 1, statementGenerator.MemberInitializerType);
+                        i = 0;
+                        foreach (var args in initializer.Values) {
+                            generator.emit(JvmOpcode.Dup);
+                            BytecodeHelper.emitIntConstant(generator, i++);
+                            generator.emit(JvmOpcode.New, statementGenerator.MemberInitializerType);
+                            generator.emit(JvmOpcode.Dup);
+                            BytecodeHelper.emitTypeof(generator, context.TypeSystem, addMethod.DeclaringType);
+                            generator.emit(JvmOpcode.Ldc, addMethod.getName());
+                            nparams = addMethod.Parameters.count();
+                            BytecodeHelper.emitIntConstant(generator, nparams);
+                            BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                            i = 0;
+                            foreach (var p in addMethod.Parameters) {
+                                generator.emit(JvmOpcode.Dup);
+                                BytecodeHelper.emitIntConstant(generator, i++);
+                                BytecodeHelper.emitTypeof(generator, context.TypeSystem, p.Type);
+                                generator.emit(JvmOpcode.Aastore);
+                            }
+                            generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredMethodMethod);
+                            BytecodeHelper.emitIntConstant(generator, args.size());
+                            BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                            int j = 0;
+                            foreach (var e in args) {
+                                generator.emit(JvmOpcode.Dup);
+                                BytecodeHelper.emitIntConstant(generator, j++);
+                                handleExpression(e, null, true);
+                                generator.emit(JvmOpcode.Aastore);
+                            }
+                            generator.emit(JvmOpcode.Invokespecial, statementGenerator.MemberInitializerConstructor);
+                            generator.emit(JvmOpcode.Aastore);
+                        }
+                    }
+                }
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.NewObjectMethod);
+                return null;
+            }
+            
             protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 var info = simpleName.getUserData(typeof(ExpressionInfo));
@@ -629,7 +749,7 @@ package stab.tools.compiler {
                 }
                 case Method: {
                     if (info.Method != null) {
-                        emitDelegateCreation(info.Type, info.Method, simpleName);
+                        emitDelegateCreation(info.Type, info.Method, simpleName, nested);
                     } else {
                         statementGenerator.emitThisAccess(context, generator);
                     }
@@ -673,10 +793,6 @@ package stab.tools.compiler {
                 return null;
             }
             
-            private void emitDelegateCreation(JvmTypeInfo delegateType, JvmMethodInfo method, ExpressionNode argument) {
-                throw new Exception("TODO");
-            }
-            
             protected override Void handleTypeof(TypeofExpressionNode typeofExpression, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 BytecodeHelper.emitTypeof(generator, context.TypeSystem, context.TypeSystem.ClassType);
@@ -694,6 +810,86 @@ package stab.tools.compiler {
                 handleExpression(unary.Operand, null, true);
                 generator.emit(JvmOpcode.Invokestatic, statementGenerator.UnaryMethod);
                 return null;
+            }
+                
+            void emitNull() {
+                var generator = context.MethodGenerationContext.Generator;
+                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.ValueMethod);
+            }
+        
+            void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int nparams, boolean varargs) {
+                int fixedLength = (varargs) ?  nparams - 1 : nparams;
+                var generator = context.MethodGenerationContext.Generator;
+                var it1 = parameters.iterator();
+                var it2 = arguments.iterator();
+                int i;
+                for (i = 0; i < fixedLength; i++) {
+                    var p = it1.next();
+                    var e = it2.next();
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i);
+                    var ei = e.getUserData(typeof(ExpressionInfo));
+                    handleExpression(e, null, true);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                if (varargs) {
+                    int nvarargs = arguments.size() - fixedLength;
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i);
+                    if (nvarargs == 1) {
+                        var paramType = it1.next().Type;
+                        var e = arguments[i];
+                        var ei = e.getUserData(typeof(ExpressionInfo));
+                        if (ei == null) {
+                            emitNull();
+                        } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
+                            handleExpression(e, null, true);
+                        } else {
+                            BytecodeHelper.emitIntConstant(generator, 1);
+                            statementGenerator.emitArray(1, paramType, it2);
+                        }
+                    } else {
+                        BytecodeHelper.emitIntConstant(generator, nvarargs);
+                        statementGenerator.emitArray(1, it1.next().Type, it2);
+                    }
+                    generator.emit(JvmOpcode.Aastore);
+                }
+            }
+            
+            void emitDelegateCreation(JvmTypeInfo delegateType, JvmMethodInfo method, ExpressionNode argument, boolean nested) {
+                if (argument != null) {
+                    var argType = argument.getUserData(typeof(ExpressionInfo)).Type;
+                    if (argType != null && BytecodeHelper.isDelegateType(argType)) {
+                        handleExpression(argument, null, nested);
+                        return;
+                    }
+                }
+                
+                var generator = context.MethodGenerationContext.Generator;
+                var typeInfo = CompilerHelper.createDelegateType(context, delegateType, method);
+                var constructor = typeInfo.Methods.where(p => p.Name.equals("<init>")).first();
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, typeInfo);
+                BytecodeHelper.emitIntConstant(generator, constructor.Parameters.count());
+                BytecodeHelper.emitNewarray(generator, 1, context.TypeSystem.ClassType);
+                if (!method.IsStatic) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, 0);
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, constructor.Parameters.first().Type);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                generator.emit(JvmOpcode.Invokevirtual, statementGenerator.GetDeclaredConstructorMethod);
+                BytecodeHelper.emitIntConstant(generator, (method.IsStatic) ? 0 : 1);
+                BytecodeHelper.emitNewarray(generator, 1, statementGenerator.ExpressionType);
+                if (!method.IsStatic) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, 0);
+                    handleExpression(argument, null, true);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(JvmOpcode.Invokestatic, statementGenerator.NewObjectMethod);
             }
         }
     }
