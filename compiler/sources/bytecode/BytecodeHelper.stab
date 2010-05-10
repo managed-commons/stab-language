@@ -133,7 +133,6 @@ package stab.tools.bytecode {
                 foreach (var t in typeArguments) {
                     sb.append(t.FullName);
                     var first = true;
-                    int nBounds = t.GenericParameterBounds.count();
                     if (t.GenericParameterBounds.any()) {
                         foreach (var bound in t.GenericParameterBounds) {
                             sb.append(":");

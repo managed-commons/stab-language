@@ -5,6 +5,6 @@ using stab.tree;
 public class ExpressionTreeParameter {
     public static String test() {
         ExpressionTree<FunctionIntInt> expr = p => p;
-        return ((ParameterExpression)((ExpressionStatement)expr.Body).Expression).Name;
+        return ((VariableExpression)((ExpressionStatement)expr.Body).Expression).Name;
     }
 }

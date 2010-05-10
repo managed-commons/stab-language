@@ -143,7 +143,6 @@ package stab.tools.compiler {
         }
         
         protected override Void handleAssign(AssignExpressionNode assign, TargetLabels labels, boolean nested) {
-            var generator = context.MethodGenerationContext.Generator;
             new AssignExpressionGenerator(context, this).handleExpression(assign.Left, assign, nested);
             emitBoxing(assign);
             emitTest(assign.getUserData(typeof(ExpressionInfo)), labels);
@@ -852,7 +851,6 @@ package stab.tools.compiler {
         }
         
         protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, TargetLabels labels, boolean nested) {
-            var generator = context.MethodGenerationContext.Generator;
             var info = memberAccess.getUserData(typeof(ExpressionInfo));
             if (info.Method != null) {
                 emitDelegateCreation(info.Type, info.Method, memberAccess, nested);

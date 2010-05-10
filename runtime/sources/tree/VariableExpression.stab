@@ -18,9 +18,9 @@ using java.lang;
  
 package stab.tree {
 
-    public class ParameterExpression : Expression {
-        ParameterExpression(Class<?> type, String name)
-            : super(ExpressionKind.Parameter, type) {
+    public class VariableExpression : Expression {
+        VariableExpression(ExpressionKind expressionKind, Class<?> type, String name)
+            : super(expressionKind, type) {
             this.Name = name;
         }
         

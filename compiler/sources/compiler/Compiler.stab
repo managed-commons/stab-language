@@ -1764,7 +1764,6 @@ package stab.tools.compiler {
         
         private void defineInterfaceMethod(MethodDeclarationNode methodDeclaration, JvmTypeBuilder typeBuilder) {
             var packageName = typeBuilder.PackageName;
-            var paramTypes = new ArrayList<JvmTypeInfo>();
             var name = context.getIdentifier(methodDeclaration.NameOffset, methodDeclaration.NameLength);
             var methodBuilder = lookupMethod(typeBuilder, methodDeclaration.TypeParameters, methodDeclaration.Parameters, name);
             if (methodBuilder != null) {

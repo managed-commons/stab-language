@@ -53,6 +53,16 @@ package stab.tools.compiler {
         }
     }
 
+    class InitializedLocalInfo {
+        LocalInfo local;
+        LocalDeclarationStatementNode declaration;
+        
+        InitializedLocalInfo(LocalInfo local, LocalDeclarationStatementNode declaration) {
+            this.local = local;
+            this.declaration = declaration;
+        }
+    }
+    
     class UninitializedLocalInfo {
         LocalInfo local;
         LocalDeclarationStatementNode declaration;
@@ -70,6 +80,7 @@ package stab.tools.compiler {
         private ExpressionChecker expressionChecker;
         private UnreachableStatementsHandler unreachableStatementsHandler;
         private HashMap<LocalInfo, UninitializedLocalInfo> uninitializedLocals;
+        private HashMap<LocalInfo, InitializedLocalInfo> initializedLocals;
     
         ReachabilityChecker(CompilerContext context)
             : super(true) {
@@ -80,6 +91,7 @@ package stab.tools.compiler {
         
         Iterable<UninitializedLocalInfo> checkMethod(JvmMethodInfo method, BlockStatementNode body, boolean insertReturn) {
             uninitializedLocals = new HashMap<LocalInfo, UninitializedLocalInfo>();
+            initializedLocals = new HashMap<LocalInfo, InitializedLocalInfo>();
             
             var info = handleStatement(body, null);
             if (insertReturn && info.IsEndPointReachable) {
@@ -98,6 +110,10 @@ package stab.tools.compiler {
             info.YieldCount = context.CodeValidationContext.YieldCount;
             context.CodeValidationContext.YieldCount = 0;
 
+            foreach (var local in initializedLocals.values()) {
+                context.addWarning(CompileErrorId.VariableNeverUsed, local.declaration, local.local.Name);
+            }
+            
             unreachableStatementsHandler.handleStatement(body, null);
             return uninitializedLocals.values();
         }
@@ -449,10 +465,11 @@ package stab.tools.compiler {
             localDeclaration.addOrReplaceUserData(info);
             info.IsEndPointReachable = true;
             foreach (var decl in localDeclaration.Declarators) {
+                var local = decl.getUserData(typeof(LocalInfo));
                 if (decl.Value != null) {
+                    initializedLocals[local] = new InitializedLocalInfo(local, localDeclaration);
                     expressionChecker.handleExpression(decl.Value, null, true);
                 } else {
-                    var local = decl.getUserData(typeof(LocalInfo));
                     uninitializedLocals[local] = new UninitializedLocalInfo(local, localDeclaration);
                 }
             }
@@ -748,6 +765,9 @@ package stab.tools.compiler {
                         if (minfo != null) {
                             minfo.assignmentCount++;
                         }
+                        if (statementChecker.initializedLocals.containsKey(member)) {
+                            statementChecker.initializedLocals.remove(member);
+                        }
                     }
                 } else {
                     handleExpression(assign.Left, null, true);
@@ -852,6 +872,9 @@ package stab.tools.compiler {
                 var minfo = statementChecker.uninitializedLocals[info.Member];
                 if (minfo != null) {
                     minfo.referenceCount++;
+                }
+                if (statementChecker.initializedLocals.containsKey(info.Member)) {
+                    statementChecker.initializedLocals.remove(info.Member);
                 }
                 return null;
             }

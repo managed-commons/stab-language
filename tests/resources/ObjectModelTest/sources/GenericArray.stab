@@ -2,6 +2,7 @@ using java.lang;
 
 public class GenericArray<T> {
 	public static String test(String arg) {
+        #pragma warning disable 313
 		GenericArray<String> x = new GenericArray<String>();
 		x.set(arg);
 		return x.get();

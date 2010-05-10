@@ -19,646 +19,650 @@ using stab.lang;
 
 package stab.query {
 
-	class HashSet<T> {
-		private int count;
-		private int usedCount;
-		private EqualityTester<T> comparator;
-		private int[] indexes;
-		private int[] hashCodes;
-		private T[] elements;
-		private int[] nexts;
-		private int firstFree;
+    class HashSet<T> {
+        private int count;
+        private int usedCount;
+        private EqualityTester<T> comparator;
+        private int[] indexes;
+        private int[] hashCodes;
+        private T[] elements;
+        private int[] nexts;
+        private int firstFree;
 
-		HashSet(EqualityTester<T> comparator, int capacity) {
-			if (comparator == null) {
-				comparator = Query.getDefaultEqualityTester();
-			}
-			indexes = new int[capacity];
-			hashCodes = new int[capacity];
-			nexts = new int[capacity];
-			elements = new T[capacity];
-			firstFree = -1;
-			this.comparator = comparator;
-		}
-		
-		int count() {
-			return count;
-		}
-		
-		boolean add(T item) {
-			int c = count;
-			addCore(item);
-			return c < count;
-		}
+        HashSet(EqualityTester<T> comparator, int capacity) {
+            if (comparator == null) {
+                comparator = Query.getDefaultEqualityTester();
+            }
+            indexes = new int[capacity];
+            hashCodes = new int[capacity];
+            nexts = new int[capacity];
+            #pragma warning disable 313
+            elements = new T[capacity];
+            #pragma warning restore
+            firstFree = -1;
+            this.comparator = comparator;
+        }
+        
+        int count() {
+            return count;
+        }
+        
+        boolean add(T item) {
+            int c = count;
+            addCore(item);
+            return c < count;
+        }
 
-		boolean contains(T item) {
-			return find(item) != -1;
-		}
+        boolean contains(T item) {
+            return find(item) != -1;
+        }
 
-		boolean remove(T item) {
-			int c = count;
-			removeCore(item);
-			return c > count;
-		}
+        boolean remove(T item) {
+            int c = count;
+            removeCore(item);
+            return c > count;
+        }
 
-		int find(T item) {
-			return find(item, getHashCode(item));
-		}
+        int find(T item) {
+            return find(item, getHashCode(item));
+        }
 
-		int capacity() {
-			return sizeof(indexes);
-		}
+        int capacity() {
+            return sizeof(indexes);
+        }
 
-		int addCore(T item) {
-			int hashCode = getHashCode(item);
-			int i;
-			if ((i = find(item, hashCode)) != -1) {
-				return i;
-			} else {
-				int free;
-				if (firstFree >= 0) {
-					free = firstFree;
-					firstFree = nexts[firstFree];
-				} else {
-					if (usedCount == sizeof(indexes)) {
-						resize();
-					}
-					free = usedCount++;
-				}
-				int index = hashCode % sizeof(indexes);
-				hashCodes[free] = hashCode;
-				elements[free] = item;
-				nexts[free] = indexes[index] - 1;
-				indexes[index] = free + 1;
-				++count;
-				return free;
-			}
-		}
-		
-		private int find(T item, int hashCode) {
-			for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && comparator.equals(item, elements[i])) {
-					return i;
-				}
-			}
-			return -1;
-		}
+        int addCore(T item) {
+            int hashCode = getHashCode(item);
+            int i;
+            if ((i = find(item, hashCode)) != -1) {
+                return i;
+            } else {
+                int free;
+                if (firstFree >= 0) {
+                    free = firstFree;
+                    firstFree = nexts[firstFree];
+                } else {
+                    if (usedCount == sizeof(indexes)) {
+                        resize();
+                    }
+                    free = usedCount++;
+                }
+                int index = hashCode % sizeof(indexes);
+                hashCodes[free] = hashCode;
+                elements[free] = item;
+                nexts[free] = indexes[index] - 1;
+                indexes[index] = free + 1;
+                ++count;
+                return free;
+            }
+        }
+        
+        private int find(T item, int hashCode) {
+            for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && comparator.equals(item, elements[i])) {
+                    return i;
+                }
+            }
+            return -1;
+        }
 
-		private int removeCore(T item) {
-			int hashCode = getHashCode(item);
-			int index = hashCode % sizeof(indexes);
-			int prev = -1;
-			for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && comparator.equals(item, elements[i])) {
-					if (prev < 0) {
-						indexes[index] = nexts[i] + 1;
-					} else {
-						nexts[prev] = nexts[i];
-					}
-					hashCodes[i] = -1;
-					nexts[i] = firstFree;
-					firstFree = i;
-					--count;
-					return i;
-				}
-				prev = i;
-			}
-			return -1;
-		}
-		
-		private int getHashCode(T item) {
-			if (item != null) {
-				return comparator.getHashCode(item) & 0x7fffffff;
-			}
-			return 0;
-		}
+        private int removeCore(T item) {
+            int hashCode = getHashCode(item);
+            int index = hashCode % sizeof(indexes);
+            int prev = -1;
+            for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && comparator.equals(item, elements[i])) {
+                    if (prev < 0) {
+                        indexes[index] = nexts[i] + 1;
+                    } else {
+                        nexts[prev] = nexts[i];
+                    }
+                    hashCodes[i] = -1;
+                    nexts[i] = firstFree;
+                    firstFree = i;
+                    --count;
+                    return i;
+                }
+                prev = i;
+            }
+            return -1;
+        }
+        
+        private int getHashCode(T item) {
+            if (item != null) {
+                return comparator.getHashCode(item) & 0x7fffffff;
+            }
+            return 0;
+        }
 
-		private void resize() {
-			int nlen = sizeof(indexes) * 2 + 1;
-			int[] nindexes = new int[nlen];
-			int[] nhashCodes = new int[nlen];
-			int[] nnexts = new int[nlen];
-			T[] nelements = new T[nlen];
-			System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
-			System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
-			System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
-			for (int i = 0; i < usedCount; i++) {
-				int index = nhashCodes[i] % nlen;
-				nnexts[i] = nindexes[index] - 1;
-				nindexes[index] = i + 1;
-			}
-			indexes = nindexes;
-			hashCodes = nhashCodes;
-			nexts = nnexts;
-			elements = nelements;
-		}
-	}
-	
-	class IntHashSet {
-		private int count;
-		private int usedCount;
-		private int[] indexes;
-		private int[] hashCodes;
-		private int[] elements;
-		private int[] nexts;
-		private int firstFree;
+        private void resize() {
+            int nlen = sizeof(indexes) * 2 + 1;
+            int[] nindexes = new int[nlen];
+            int[] nhashCodes = new int[nlen];
+            int[] nnexts = new int[nlen];
+            #pragma warning disable 313
+            T[] nelements = new T[nlen];
+            #pragma warning restore
+            System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
+            System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
+            System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
+            for (int i = 0; i < usedCount; i++) {
+                int index = nhashCodes[i] % nlen;
+                nnexts[i] = nindexes[index] - 1;
+                nindexes[index] = i + 1;
+            }
+            indexes = nindexes;
+            hashCodes = nhashCodes;
+            nexts = nnexts;
+            elements = nelements;
+        }
+    }
+    
+    class IntHashSet {
+        private int count;
+        private int usedCount;
+        private int[] indexes;
+        private int[] hashCodes;
+        private int[] elements;
+        private int[] nexts;
+        private int firstFree;
 
-		IntHashSet(int capacity) {
-			indexes = new int[capacity];
-			hashCodes = new int[capacity];
-			nexts = new int[capacity];
-			elements = new int[capacity];
-			firstFree = -1;
-		}
-		
-		int count() {
-			return count;
-		}
-		
-		boolean add(int item) {
-			int c = count;
-			addCore(item);
-			return c < count;
-		}
+        IntHashSet(int capacity) {
+            indexes = new int[capacity];
+            hashCodes = new int[capacity];
+            nexts = new int[capacity];
+            elements = new int[capacity];
+            firstFree = -1;
+        }
+        
+        int count() {
+            return count;
+        }
+        
+        boolean add(int item) {
+            int c = count;
+            addCore(item);
+            return c < count;
+        }
 
-		boolean contains(int item) {
-			return find(item) != -1;
-		}
+        boolean contains(int item) {
+            return find(item) != -1;
+        }
 
-		boolean remove(int item) {
-			int c = count;
-			removeCore(item);
-			return c > count;
-		}
+        boolean remove(int item) {
+            int c = count;
+            removeCore(item);
+            return c > count;
+        }
 
-		int find(int item) {
-			return find(item, getHashCode(item));
-		}
+        int find(int item) {
+            return find(item, getHashCode(item));
+        }
 
-		int capacity() {
-			return sizeof(indexes);
-		}
+        int capacity() {
+            return sizeof(indexes);
+        }
 
-		int addCore(int item) {
-			int hashCode = getHashCode(item);
-			int i;
-			if ((i = find(item, hashCode)) != -1) {
-				return i;
-			} else {
-				int free;
-				if (firstFree >= 0) {
-					free = firstFree;
-					firstFree = nexts[firstFree];
-				} else {
-					if (usedCount == sizeof(indexes)) {
-						resize();
-					}
-					free = usedCount++;
-				}
-				int index = hashCode % sizeof(indexes);
-				hashCodes[free] = hashCode;
-				elements[free] = item;
-				nexts[free] = indexes[index] - 1;
-				indexes[index] = free + 1;
-				++count;
-				return free;
-			}
-		}
-		
-		private int find(int item, int hashCode) {
-			for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					return i;
-				}
-			}
-			return -1;
-		}
+        int addCore(int item) {
+            int hashCode = getHashCode(item);
+            int i;
+            if ((i = find(item, hashCode)) != -1) {
+                return i;
+            } else {
+                int free;
+                if (firstFree >= 0) {
+                    free = firstFree;
+                    firstFree = nexts[firstFree];
+                } else {
+                    if (usedCount == sizeof(indexes)) {
+                        resize();
+                    }
+                    free = usedCount++;
+                }
+                int index = hashCode % sizeof(indexes);
+                hashCodes[free] = hashCode;
+                elements[free] = item;
+                nexts[free] = indexes[index] - 1;
+                indexes[index] = free + 1;
+                ++count;
+                return free;
+            }
+        }
+        
+        private int find(int item, int hashCode) {
+            for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
 
-		private int removeCore(int item) {
-			int hashCode = getHashCode(item);
-			int index = hashCode % sizeof(indexes);
-			int prev = -1;
-			for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					if (prev < 0) {
-						indexes[index] = nexts[i] + 1;
-					} else {
-						nexts[prev] = nexts[i];
-					}
-					hashCodes[i] = -1;
-					nexts[i] = firstFree;
-					firstFree = i;
-					--count;
-					return i;
-				}
-				prev = i;
-			}
-			return -1;
-		}
-		
-		private int getHashCode(int item) {
-			return item & 0x7fffffff;
-		}
+        private int removeCore(int item) {
+            int hashCode = getHashCode(item);
+            int index = hashCode % sizeof(indexes);
+            int prev = -1;
+            for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    if (prev < 0) {
+                        indexes[index] = nexts[i] + 1;
+                    } else {
+                        nexts[prev] = nexts[i];
+                    }
+                    hashCodes[i] = -1;
+                    nexts[i] = firstFree;
+                    firstFree = i;
+                    --count;
+                    return i;
+                }
+                prev = i;
+            }
+            return -1;
+        }
+        
+        private int getHashCode(int item) {
+            return item & 0x7fffffff;
+        }
 
-		private void resize() {
-			int nlen = sizeof(indexes) * 2 + 1;
-			int[] nindexes = new int[nlen];
-			int[] nhashCodes = new int[nlen];
-			int[] nnexts = new int[nlen];
-			int[] nelements = new int[nlen];
-			System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
-			System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
-			System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
-			for (int i = 0; i < usedCount; i++) {
-				int index = nhashCodes[i] % nlen;
-				nnexts[i] = nindexes[index] - 1;
-				nindexes[index] = i + 1;
-			}
-			indexes = nindexes;
-			hashCodes = nhashCodes;
-			nexts = nnexts;
-			elements = nelements;
-		}
-	}
-	
-	class LongHashSet {
-		private int count;
-		private int usedCount;
-		private int[] indexes;
-		private int[] hashCodes;
-		private long[] elements;
-		private int[] nexts;
-		private int firstFree;
+        private void resize() {
+            int nlen = sizeof(indexes) * 2 + 1;
+            int[] nindexes = new int[nlen];
+            int[] nhashCodes = new int[nlen];
+            int[] nnexts = new int[nlen];
+            int[] nelements = new int[nlen];
+            System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
+            System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
+            System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
+            for (int i = 0; i < usedCount; i++) {
+                int index = nhashCodes[i] % nlen;
+                nnexts[i] = nindexes[index] - 1;
+                nindexes[index] = i + 1;
+            }
+            indexes = nindexes;
+            hashCodes = nhashCodes;
+            nexts = nnexts;
+            elements = nelements;
+        }
+    }
+    
+    class LongHashSet {
+        private int count;
+        private int usedCount;
+        private int[] indexes;
+        private int[] hashCodes;
+        private long[] elements;
+        private int[] nexts;
+        private int firstFree;
 
-		LongHashSet(int capacity) {
-			indexes = new int[capacity];
-			hashCodes = new int[capacity];
-			nexts = new int[capacity];
-			elements = new long[capacity];
-			firstFree = -1;
-		}
-		
-		int count() {
-			return count;
-		}
-		
-		boolean add(long item) {
-			int c = count;
-			addCore(item);
-			return c < count;
-		}
+        LongHashSet(int capacity) {
+            indexes = new int[capacity];
+            hashCodes = new int[capacity];
+            nexts = new int[capacity];
+            elements = new long[capacity];
+            firstFree = -1;
+        }
+        
+        int count() {
+            return count;
+        }
+        
+        boolean add(long item) {
+            int c = count;
+            addCore(item);
+            return c < count;
+        }
 
-		boolean contains(long item) {
-			return find(item) != -1;
-		}
+        boolean contains(long item) {
+            return find(item) != -1;
+        }
 
-		boolean remove(long item) {
-			int c = count;
-			removeCore(item);
-			return c > count;
-		}
+        boolean remove(long item) {
+            int c = count;
+            removeCore(item);
+            return c > count;
+        }
 
-		int find(long item) {
-			return find(item, getHashCode(item));
-		}
+        int find(long item) {
+            return find(item, getHashCode(item));
+        }
 
-		int capacity() {
-			return sizeof(indexes);
-		}
+        int capacity() {
+            return sizeof(indexes);
+        }
 
-		int addCore(long item) {
-			int hashCode = getHashCode(item);
-			int i;
-			if ((i = find(item, hashCode)) != -1) {
-				return i;
-			} else {
-				int free;
-				if (firstFree >= 0) {
-					free = firstFree;
-					firstFree = nexts[firstFree];
-				} else {
-					if (usedCount == sizeof(indexes)) {
-						resize();
-					}
-					free = usedCount++;
-				}
-				int index = hashCode % sizeof(indexes);
-				hashCodes[free] = hashCode;
-				elements[free] = item;
-				nexts[free] = indexes[index] - 1;
-				indexes[index] = free + 1;
-				++count;
-				return free;
-			}
-		}
-		
-		private int find(long item, int hashCode) {
-			for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					return i;
-				}
-			}
-			return -1;
-		}
+        int addCore(long item) {
+            int hashCode = getHashCode(item);
+            int i;
+            if ((i = find(item, hashCode)) != -1) {
+                return i;
+            } else {
+                int free;
+                if (firstFree >= 0) {
+                    free = firstFree;
+                    firstFree = nexts[firstFree];
+                } else {
+                    if (usedCount == sizeof(indexes)) {
+                        resize();
+                    }
+                    free = usedCount++;
+                }
+                int index = hashCode % sizeof(indexes);
+                hashCodes[free] = hashCode;
+                elements[free] = item;
+                nexts[free] = indexes[index] - 1;
+                indexes[index] = free + 1;
+                ++count;
+                return free;
+            }
+        }
+        
+        private int find(long item, int hashCode) {
+            for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
 
-		private int removeCore(long item) {
-			int hashCode = getHashCode(item);
-			int index = hashCode % sizeof(indexes);
-			int prev = -1;
-			for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					if (prev < 0) {
-						indexes[index] = nexts[i] + 1;
-					} else {
-						nexts[prev] = nexts[i];
-					}
-					hashCodes[i] = -1;
-					nexts[i] = firstFree;
-					firstFree = i;
-					--count;
-					return i;
-				}
-				prev = i;
-			}
-			return -1;
-		}
-		
-		private int getHashCode(long item) {
-			return (int)item & 0x7fffffff;
-		}
+        private int removeCore(long item) {
+            int hashCode = getHashCode(item);
+            int index = hashCode % sizeof(indexes);
+            int prev = -1;
+            for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    if (prev < 0) {
+                        indexes[index] = nexts[i] + 1;
+                    } else {
+                        nexts[prev] = nexts[i];
+                    }
+                    hashCodes[i] = -1;
+                    nexts[i] = firstFree;
+                    firstFree = i;
+                    --count;
+                    return i;
+                }
+                prev = i;
+            }
+            return -1;
+        }
+        
+        private int getHashCode(long item) {
+            return (int)item & 0x7fffffff;
+        }
 
-		private void resize() {
-			int nlen = sizeof(indexes) * 2 + 1;
-			int[] nindexes = new int[nlen];
-			int[] nhashCodes = new int[nlen];
-			int[] nnexts = new int[nlen];
-			long[] nelements = new long[nlen];
-			System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
-			System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
-			System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
-			for (int i = 0; i < usedCount; i++) {
-				int index = nhashCodes[i] % nlen;
-				nnexts[i] = nindexes[index] - 1;
-				nindexes[index] = i + 1;
-			}
-			indexes = nindexes;
-			hashCodes = nhashCodes;
-			nexts = nnexts;
-			elements = nelements;
-		}
-	}
+        private void resize() {
+            int nlen = sizeof(indexes) * 2 + 1;
+            int[] nindexes = new int[nlen];
+            int[] nhashCodes = new int[nlen];
+            int[] nnexts = new int[nlen];
+            long[] nelements = new long[nlen];
+            System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
+            System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
+            System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
+            for (int i = 0; i < usedCount; i++) {
+                int index = nhashCodes[i] % nlen;
+                nnexts[i] = nindexes[index] - 1;
+                nindexes[index] = i + 1;
+            }
+            indexes = nindexes;
+            hashCodes = nhashCodes;
+            nexts = nnexts;
+            elements = nelements;
+        }
+    }
 
-	class FloatHashSet {
-		private int count;
-		private int usedCount;
-		private int[] indexes;
-		private int[] hashCodes;
-		private float[] elements;
-		private int[] nexts;
-		private int firstFree;
+    class FloatHashSet {
+        private int count;
+        private int usedCount;
+        private int[] indexes;
+        private int[] hashCodes;
+        private float[] elements;
+        private int[] nexts;
+        private int firstFree;
 
-		FloatHashSet(int capacity) {
-			indexes = new int[capacity];
-			hashCodes = new int[capacity];
-			nexts = new int[capacity];
-			elements = new float[capacity];
-			firstFree = -1;
-		}
-		
-		int count() {
-			return count;
-		}
-		
-		boolean add(float item) {
-			int c = count;
-			addCore(item);
-			return c < count;
-		}
+        FloatHashSet(int capacity) {
+            indexes = new int[capacity];
+            hashCodes = new int[capacity];
+            nexts = new int[capacity];
+            elements = new float[capacity];
+            firstFree = -1;
+        }
+        
+        int count() {
+            return count;
+        }
+        
+        boolean add(float item) {
+            int c = count;
+            addCore(item);
+            return c < count;
+        }
 
-		boolean contains(float item) {
-			return find(item) != -1;
-		}
+        boolean contains(float item) {
+            return find(item) != -1;
+        }
 
-		boolean remove(float item) {
-			int c = count;
-			removeCore(item);
-			return c > count;
-		}
+        boolean remove(float item) {
+            int c = count;
+            removeCore(item);
+            return c > count;
+        }
 
-		int find(float item) {
-			return find(item, getHashCode(item));
-		}
+        int find(float item) {
+            return find(item, getHashCode(item));
+        }
 
-		int capacity() {
-			return sizeof(indexes);
-		}
+        int capacity() {
+            return sizeof(indexes);
+        }
 
-		int addCore(float item) {
-			int hashCode = getHashCode(item);
-			int i;
-			if ((i = find(item, hashCode)) != -1) {
-				return i;
-			} else {
-				int free;
-				if (firstFree >= 0) {
-					free = firstFree;
-					firstFree = nexts[firstFree];
-				} else {
-					if (usedCount == sizeof(indexes)) {
-						resize();
-					}
-					free = usedCount++;
-				}
-				int index = hashCode % sizeof(indexes);
-				hashCodes[free] = hashCode;
-				elements[free] = item;
-				nexts[free] = indexes[index] - 1;
-				indexes[index] = free + 1;
-				++count;
-				return free;
-			}
-		}
-		
-		private int find(float item, int hashCode) {
-			for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					return i;
-				}
-			}
-			return -1;
-		}
+        int addCore(float item) {
+            int hashCode = getHashCode(item);
+            int i;
+            if ((i = find(item, hashCode)) != -1) {
+                return i;
+            } else {
+                int free;
+                if (firstFree >= 0) {
+                    free = firstFree;
+                    firstFree = nexts[firstFree];
+                } else {
+                    if (usedCount == sizeof(indexes)) {
+                        resize();
+                    }
+                    free = usedCount++;
+                }
+                int index = hashCode % sizeof(indexes);
+                hashCodes[free] = hashCode;
+                elements[free] = item;
+                nexts[free] = indexes[index] - 1;
+                indexes[index] = free + 1;
+                ++count;
+                return free;
+            }
+        }
+        
+        private int find(float item, int hashCode) {
+            for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
 
-		private int removeCore(float item) {
-			int hashCode = getHashCode(item);
-			int index = hashCode % sizeof(indexes);
-			int prev = -1;
-			for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					if (prev < 0) {
-						indexes[index] = nexts[i] + 1;
-					} else {
-						nexts[prev] = nexts[i];
-					}
-					hashCodes[i] = -1;
-					nexts[i] = firstFree;
-					firstFree = i;
-					--count;
-					return i;
-				}
-				prev = i;
-			}
-			return -1;
-		}
-		
-		private int getHashCode(float item) {
-			return (int)item & 0x7fffffff;
-		}
+        private int removeCore(float item) {
+            int hashCode = getHashCode(item);
+            int index = hashCode % sizeof(indexes);
+            int prev = -1;
+            for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    if (prev < 0) {
+                        indexes[index] = nexts[i] + 1;
+                    } else {
+                        nexts[prev] = nexts[i];
+                    }
+                    hashCodes[i] = -1;
+                    nexts[i] = firstFree;
+                    firstFree = i;
+                    --count;
+                    return i;
+                }
+                prev = i;
+            }
+            return -1;
+        }
+        
+        private int getHashCode(float item) {
+            return (int)item & 0x7fffffff;
+        }
 
-		private void resize() {
-			int nlen = sizeof(indexes) * 2 + 1;
-			int[] nindexes = new int[nlen];
-			int[] nhashCodes = new int[nlen];
-			int[] nnexts = new int[nlen];
-			float[] nelements = new float[nlen];
-			System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
-			System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
-			System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
-			for (int i = 0; i < usedCount; i++) {
-				int index = nhashCodes[i] % nlen;
-				nnexts[i] = nindexes[index] - 1;
-				nindexes[index] = i + 1;
-			}
-			indexes = nindexes;
-			hashCodes = nhashCodes;
-			nexts = nnexts;
-			elements = nelements;
-		}
-	}
-	
-	class DoubleHashSet {
-		private int count;
-		private int usedCount;
-		private int[] indexes;
-		private int[] hashCodes;
-		private double[] elements;
-		private int[] nexts;
-		private int firstFree;
+        private void resize() {
+            int nlen = sizeof(indexes) * 2 + 1;
+            int[] nindexes = new int[nlen];
+            int[] nhashCodes = new int[nlen];
+            int[] nnexts = new int[nlen];
+            float[] nelements = new float[nlen];
+            System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
+            System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
+            System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
+            for (int i = 0; i < usedCount; i++) {
+                int index = nhashCodes[i] % nlen;
+                nnexts[i] = nindexes[index] - 1;
+                nindexes[index] = i + 1;
+            }
+            indexes = nindexes;
+            hashCodes = nhashCodes;
+            nexts = nnexts;
+            elements = nelements;
+        }
+    }
+    
+    class DoubleHashSet {
+        private int count;
+        private int usedCount;
+        private int[] indexes;
+        private int[] hashCodes;
+        private double[] elements;
+        private int[] nexts;
+        private int firstFree;
 
-		DoubleHashSet(int capacity) {
-			indexes = new int[capacity];
-			hashCodes = new int[capacity];
-			nexts = new int[capacity];
-			elements = new double[capacity];
-			firstFree = -1;
-		}
-		
-		final int count() {
-			return count;
-		}
-		
-		final boolean add(double item) {
-			int c = count;
-			addCore(item);
-			return c < count;
-		}
+        DoubleHashSet(int capacity) {
+            indexes = new int[capacity];
+            hashCodes = new int[capacity];
+            nexts = new int[capacity];
+            elements = new double[capacity];
+            firstFree = -1;
+        }
+        
+        final int count() {
+            return count;
+        }
+        
+        final boolean add(double item) {
+            int c = count;
+            addCore(item);
+            return c < count;
+        }
 
-		final boolean contains(double item) {
-			return find(item) != -1;
-		}
+        final boolean contains(double item) {
+            return find(item) != -1;
+        }
 
-		final boolean remove(double item) {
-			int c = count;
-			removeCore(item);
-			return c > count;
-		}
+        final boolean remove(double item) {
+            int c = count;
+            removeCore(item);
+            return c > count;
+        }
 
-		final int find(double item) {
-			return find(item, getHashCode(item));
-		}
+        final int find(double item) {
+            return find(item, getHashCode(item));
+        }
 
-		final int capacity() {
-			return sizeof(indexes);
-		}
+        final int capacity() {
+            return sizeof(indexes);
+        }
 
-		int addCore(double item) {
-			int hashCode = getHashCode(item);
-			int i;
-			if ((i = find(item, hashCode)) != -1) {
-				return i;
-			} else {
-				int free;
-				if (firstFree >= 0) {
-					free = firstFree;
-					firstFree = nexts[firstFree];
-				} else {
-					if (usedCount == sizeof(indexes)) {
-						resize();
-					}
-					free = usedCount++;
-				}
-				int index = hashCode % sizeof(indexes);
-				hashCodes[free] = hashCode;
-				elements[free] = item;
-				nexts[free] = indexes[index] - 1;
-				indexes[index] = free + 1;
-				++count;
-				return free;
-			}
-		}
-		
-		private int find(double item, int hashCode) {
-			for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					return i;
-				}
-			}
-			return -1;
-		}
+        int addCore(double item) {
+            int hashCode = getHashCode(item);
+            int i;
+            if ((i = find(item, hashCode)) != -1) {
+                return i;
+            } else {
+                int free;
+                if (firstFree >= 0) {
+                    free = firstFree;
+                    firstFree = nexts[firstFree];
+                } else {
+                    if (usedCount == sizeof(indexes)) {
+                        resize();
+                    }
+                    free = usedCount++;
+                }
+                int index = hashCode % sizeof(indexes);
+                hashCodes[free] = hashCode;
+                elements[free] = item;
+                nexts[free] = indexes[index] - 1;
+                indexes[index] = free + 1;
+                ++count;
+                return free;
+            }
+        }
+        
+        private int find(double item, int hashCode) {
+            for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
 
-		private final int removeCore(double item) {
-			int hashCode = getHashCode(item);
-			int index = hashCode % sizeof(indexes);
-			int prev = -1;
-			for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
-				if (hashCodes[i] == hashCode && item == elements[i]) {
-					if (prev < 0) {
-						indexes[index] = nexts[i] + 1;
-					} else {
-						nexts[prev] = nexts[i];
-					}
-					hashCodes[i] = -1;
-					nexts[i] = firstFree;
-					firstFree = i;
-					--count;
-					return i;
-				}
-				prev = i;
-			}
-			return -1;
-		}
-		
-		private int getHashCode(double item) {
-			return (int)item & 0x7fffffff;
-		}
+        private final int removeCore(double item) {
+            int hashCode = getHashCode(item);
+            int index = hashCode % sizeof(indexes);
+            int prev = -1;
+            for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
+                if (hashCodes[i] == hashCode && item == elements[i]) {
+                    if (prev < 0) {
+                        indexes[index] = nexts[i] + 1;
+                    } else {
+                        nexts[prev] = nexts[i];
+                    }
+                    hashCodes[i] = -1;
+                    nexts[i] = firstFree;
+                    firstFree = i;
+                    --count;
+                    return i;
+                }
+                prev = i;
+            }
+            return -1;
+        }
+        
+        private int getHashCode(double item) {
+            return (int)item & 0x7fffffff;
+        }
 
-		private void resize() {
-			int nlen = sizeof(indexes) * 2 + 1;
-			int[] nindexes = new int[nlen];
-			int[] nhashCodes = new int[nlen];
-			int[] nnexts = new int[nlen];
-			double[] nelements = new double[nlen];
-			System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
-			System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
-			System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
-			for (int i = 0; i < usedCount; i++) {
-				int index = nhashCodes[i] % nlen;
-				nnexts[i] = nindexes[index] - 1;
-				nindexes[index] = i + 1;
-			}
-			indexes = nindexes;
-			hashCodes = nhashCodes;
-			nexts = nnexts;
-			elements = nelements;
-		}
-	}
+        private void resize() {
+            int nlen = sizeof(indexes) * 2 + 1;
+            int[] nindexes = new int[nlen];
+            int[] nhashCodes = new int[nlen];
+            int[] nnexts = new int[nlen];
+            double[] nelements = new double[nlen];
+            System.arraycopy(hashCodes, 0, nhashCodes, 0, sizeof(indexes));
+            System.arraycopy(nexts, 0, nnexts, 0, sizeof(indexes));
+            System.arraycopy(elements, 0, nelements, 0, sizeof(indexes));
+            for (int i = 0; i < usedCount; i++) {
+                int index = nhashCodes[i] % nlen;
+                nnexts[i] = nindexes[index] - 1;
+                nindexes[index] = i + 1;
+            }
+            indexes = nindexes;
+            hashCodes = nhashCodes;
+            nexts = nnexts;
+            elements = nelements;
+        }
+    }
 }

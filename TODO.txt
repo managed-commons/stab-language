@@ -17,16 +17,6 @@ Issues ================================
 - check that #define/#undef is used before any lexical unit
 
 Errors ================================
-
-public class C<T> {
-	private T[] t;
-	public C() {
-		t = new T[1];
-	}
-}
-
-=> Warning: generic type array creation is unsafe.
-==============================
 using java.lang;
 
 public class ArrayInitializerAutoboxing {

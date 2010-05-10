@@ -20,13 +20,13 @@ using stab.query;
 package stab.tree {
 
     public class LambdaExpression : Expression {
-        LambdaExpression(Class<?> type, ParameterExpression[] parameters, Statement body)
+        LambdaExpression(Class<?> type, VariableExpression[] parameters, Statement body)
             : super(ExpressionKind.Lambda, type) {
-            this.Parameters = Query.asIterable((ParameterExpression[])parameters.clone());
+            this.Parameters = Query.asIterable((VariableExpression[])parameters.clone());
             this.Body = body;
         }
         
-        public Iterable<ParameterExpression> Parameters {
+        public Iterable<VariableExpression> Parameters {
             get;
             private set;
         }

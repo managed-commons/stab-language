@@ -45,6 +45,7 @@ package stab.tools.compiler {
         private JvmMethodInfo getDeclaredConstructorMethod;
         private JvmMethodInfo callMethod;
         private JvmMethodInfo invokeMethod;
+        private JvmMethodInfo localMethod;
         private JvmMethodInfo parameterMethod;
         private JvmMethodInfo lambdaMethod;
         private JvmMethodInfo treeMethod;
@@ -251,6 +252,16 @@ package stab.tools.compiler {
             }
         }
         
+        JvmMethodInfo LocalMethod {
+            get {
+                if (localMethod == null) {
+                    var parameters = Query.pair(context.TypeSystem.UnboundedClassType, context.TypeSystem.StringType);
+                    localMethod = this.ExpressionType.getMethod("local", parameters);
+                }
+                return localMethod;
+            }
+        }
+        
         JvmMethodInfo ParameterMethod {
             get {
                 if (parameterMethod == null) {
@@ -264,7 +275,9 @@ package stab.tools.compiler {
         JvmMethodInfo LambdaMethod {
             get {
                 if (lambdaMethod == null) {
-                    lambdaMethod = this.ExpressionType.Methods.where(p => p.Name.equals("lambda")).single();
+                    var parameters = Query.triple(context.TypeSystem.UnboundedClassType, this.ParameterMethod.ReturnType.ArrayType,
+                            this.StatementType);
+                    lambdaMethod = this.ExpressionType.getMethod("lambda", parameters);
                 }
                 return lambdaMethod;
             }
@@ -430,6 +443,35 @@ package stab.tools.compiler {
             return null;
         }
 
+         
+        protected override Void handleLocalDeclaration(LocalDeclarationStatementNode localDeclaration, Void source) {
+            var info = localDeclaration.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            
+            foreach (var decl in localDeclaration.Declarators) {
+                var linfo = decl.getUserData(typeof(LocalInfo));
+                var type = linfo.Type;
+                var local = generator.declareLocal(type, "tree$local" + context.MethodGenerationContext.nextGeneratedLocal());
+                context.MethodGenerationContext.TreeLocals[linfo] = local;
+                BytecodeHelper.emitTypeof(generator, context.TypeSystem, type);
+                generator.emit(JvmOpcode.Ldc, linfo.Name);
+                generator.emit(JvmOpcode.Invokestatic, this.LocalMethod);
+                generator.emit(JvmOpcode.Astore, local);
+                if (decl.Value != null) {
+                    var vinfo = decl.Value.getUserData(typeof(ExpressionInfo));
+                    BytecodeHelper.emitTypeof(generator, context.TypeSystem, vinfo.Type);
+                    generator.emit(JvmOpcode.Aload, local);
+                    generator.emit(JvmOpcode.Getstatic, this.BinaryOperatorType.getField("Assign"));
+                    expressionGenerator.handleExpression(decl.Value, null, true);
+                    generator.emit(JvmOpcode.Invokestatic, this.BinaryMethod);
+                }
+            }
+            return null;
+        }
+        
         protected override Void handleReturn(ReturnStatementNode returnStatement, Void source) {
             var info = returnStatement.getUserData(typeof(StatementInfo));
             if (info == null) {

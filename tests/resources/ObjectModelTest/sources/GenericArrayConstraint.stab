@@ -10,6 +10,7 @@ public class GenericArrayConstraint<T> where T : java.lang.CharSequence {
 	private T[] data;
 	
 	public GenericArrayConstraint() {
+        #pragma warning disable 313
 		data = new T[1];
 	}
 	

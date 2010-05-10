@@ -284,6 +284,9 @@ package stab.tools.compiler {
             JvmTypeInfo type = null;
             if (typeRef != null) {
                 type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, typeRef);
+                if (type.IsGenericParameter) {
+                    context.addWarning(CompileErrorId.GenericArrayCreation, arrayCreation);
+                }
                 for (int i = arrayCreation.Dimensions - 1; i >= 0; --i) {
                     type = type.ArrayType;
                 }
