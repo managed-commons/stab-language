@@ -409,8 +409,7 @@ package stab.tools.compiler {
             generator.emit(JvmOpcode.Astore, local2);
             generator.emit(JvmOpcode.Iconst_0);
             generator.emit(JvmOpcode.Iload, local1);
-            meth = context.TypeSystem.getType("java/lang/System").Methods.where(p => p.Name.equals("arraycopy")).first();
-            generator.emit(JvmOpcode.Invokestatic, meth);
+            generator.emit(JvmOpcode.Invokestatic, context.SystemArraycopyMethod);
             generator.emit(JvmOpcode.Aload, local2);
             generator.emit(JvmOpcode.Areturn);
             generator.endScope();
@@ -1648,16 +1647,16 @@ package stab.tools.compiler {
             return null;
         }
         
-        static void emitStringBuilderAppend(CompilerContext context, JvmTypeInfo stringBuilderType, ExpressionInfo info) {
+        static void emitStringBuilderAppend(CompilerContext context, ExpressionInfo info) {
             var generator = context.MethodGenerationContext.Generator;
             var argType = (info == null) ? context.TypeSystem.StringType : info.Type;
             Iterable<JvmTypeInfo> argList;
             if (argType.IsPrimitive) {
-                argList = Collections.singletonList(argType);
+                argList = Query.singleton(argType);
             } else {
-                argList = Collections.singletonList(context.TypeSystem.ObjectType);
+                argList = Query.singleton(context.TypeSystem.ObjectType);
             }
-            generator.emit(JvmOpcode.Invokevirtual, stringBuilderType.getMethod("append", argList));
+            generator.emit(JvmOpcode.Invokevirtual, context.StringBuilderType.getMethod("append", argList));
         }
 
         static void emitLoadLambdaScope(CompilerContext context, JvmCodeGenerator generator, JvmMethodInfo localMethod) {

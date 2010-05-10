@@ -67,7 +67,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -92,7 +92,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -117,7 +117,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -142,7 +142,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -167,7 +167,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -192,7 +192,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -217,7 +217,7 @@ package stab.tools.compiler {
                     case Double:
                         return Double.valueOf(left + ((Double)ri.Value).doubleValue());
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -242,7 +242,7 @@ package stab.tools.compiler {
                     case Double:
                         return left + ((Double)ri.Value).doubleValue();
                     default:
-                        if (ri.Type.FullName.equals("java/lang/String")) {
+                        if (ri.Type == context.TypeSystem.StringType) {
                             return left + ((String)ri.Value);
                         }
                         break;
@@ -2132,12 +2132,12 @@ package stab.tools.compiler {
             }
             case String: {
                 info.Value = ParserHelper.unescapeString(context.Text, literal.ValueOffset + 1, literal.ValueLength - 2);
-                info.Type = context.TypeSystem.getType("java/lang/String");
+                info.Type = context.TypeSystem.StringType;
                 break;
             }
             case VerbatimString: {
                 info.Value = ParserHelper.unescapeVerbatimString(context.Text, literal.ValueOffset + 2, literal.ValueLength - 3);
-                info.Type = context.TypeSystem.getType("java/lang/String");
+                info.Type = context.TypeSystem.StringType;
                 break;
             }
             case DecimalInteger: {

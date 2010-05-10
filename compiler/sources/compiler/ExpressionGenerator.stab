@@ -164,26 +164,25 @@ package stab.tools.compiler {
                 var stringType = context.TypeSystem.StringType;
                 if (info.Type == stringType) {
                     var isBuildingString = context.MethodGenerationContext.IsBuildingString;
-                    var stringBuilderType = context.TypeSystem.getType("java/lang/StringBuilder");
                     if (!isBuildingString) {
-                        generator.emit(JvmOpcode.New, stringBuilderType);
+                        generator.emit(JvmOpcode.New, context.StringBuilderType);
                         generator.emit(JvmOpcode.Dup);
-                        generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                        generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
                     }
                     var isStringAdd = left.ExpressionKind == ExpressionKind.Binary && li != null && li.Type == stringType;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     handleExpression(left, null, true);
                     if (!isStringAdd) {
-                        BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, li);
+                        BytecodeGenerator.emitStringBuilderAppend(context, li);
                     }
                     isStringAdd = right.ExpressionKind == ExpressionKind.Binary && ri != null && ri.Type == stringType;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     handleExpression(right, null, true);
                     if (!isStringAdd) {
-                        BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, ri);
+                        BytecodeGenerator.emitStringBuilderAppend(context, ri);
                     }
                     if (!isBuildingString) {
-                        generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                        generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
                     }
                     context.MethodGenerationContext.IsBuildingString = isBuildingString;
                 } else {

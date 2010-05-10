@@ -764,6 +764,9 @@ package stab.tools.compiler {
                         var minfo = statementChecker.uninitializedLocals[member];
                         if (minfo != null) {
                             minfo.assignmentCount++;
+                            if (assign.Operator != AssignOperator.Assign) {
+                                minfo.referenceCount++;
+                            }
                         }
                         if (statementChecker.initializedLocals.containsKey(member)) {
                             statementChecker.initializedLocals.remove(member);

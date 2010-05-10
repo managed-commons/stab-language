@@ -25,6 +25,53 @@ using stab.tools.syntaxtree;
 package stab.tools.compiler {
 
     class CompilerContext {
+        #region Reflection cache
+        private JvmTypeInfo stringBuilderType;
+        private JvmMethodInfo stringBuilderConstructor;
+        private JvmMethodInfo objectToStringMethod;
+        private JvmMethodInfo systemArraycopyMethod;
+        
+        JvmTypeInfo StringBuilderType {
+            get {
+                if (stringBuilderType == null) {
+                    stringBuilderType = this.TypeSystem.getType("java/lang/StringBuilder");
+                }
+                return stringBuilderType;
+            }
+        }
+        
+        JvmMethodInfo StringBuilderConstructor {
+            get {
+                if (stringBuilderConstructor == null) {
+                    stringBuilderConstructor = this.StringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>());
+                }
+                return stringBuilderConstructor;
+            }
+        }
+        
+        JvmMethodInfo ObjectToStringMethod {
+            get {
+                if (objectToStringMethod == null) {
+                    objectToStringMethod = this.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>());
+                }
+                return objectToStringMethod;
+            }
+        }
+        
+        JvmMethodInfo SystemArraycopyMethod {
+            get {
+                if (systemArraycopyMethod == null) {
+                    var objectType = this.TypeSystem.ObjectType;
+                    var intType = JvmTypeInfo.INT;
+                    var parameters = new ArrayList<JvmTypeInfo> { objectType, intType, objectType, intType, intType };
+                    systemArraycopyMethod = this.TypeSystem.getType("java/lang/System").getMethod("arraycopy", parameters);
+                }
+                return systemArraycopyMethod;
+            }
+        }
+        
+        #endregion
+    
         CompilerContext(CompilerParameters parameters, CompilerResults results) {
             this.Parameters = parameters;
             this.Results = results;

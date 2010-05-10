@@ -278,29 +278,28 @@ package stab.tools.compiler {
                 }
                 emitIntOperator();
                 emitStore(nested, JvmOpcode.Istore, local, false);
-            } else if (local.Type.FullName.equals("java/lang/String")) {
+            } else if (local.Type == context.TypeSystem.StringType) {
                 emitLoad(nested, JvmOpcode.Aload, local, false);
-                var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
-                var stringType = context.getTypeSystem().getType("java/lang/String");
-                generator.emit(JvmOpcode.New, stringBuilderType);
+                var stringType = context.TypeSystem.StringType;
+                generator.emit(JvmOpcode.New, context.StringBuilderType);
                 generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
                 if (rightInfo.Type.IsCategory2) {
                     generator.emit(JvmOpcode.Dup_X2);
                     generator.emit(JvmOpcode.Pop);
                 } else {
                     generator.emit(JvmOpcode.Swap);
                 }
-                BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                BytecodeGenerator.emitStringBuilderAppend(context, null);
                 var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
                     && rightInfo != null && rightInfo.Type == stringType;
                 context.MethodGenerationContext.IsBuildingString = isStringAdd;
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 if (!isStringAdd) {
-                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                    BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                 }
                 context.MethodGenerationContext.IsBuildingString = false;
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
                 emitStore(nested, JvmOpcode.Astore, local, false);
             } else if (BytecodeHelper.isDelegateType(local.Type)) {
                 emitLoad(nested, JvmOpcode.Aload, local, false);
@@ -542,29 +541,28 @@ package stab.tools.compiler {
                 emitIntOperator();
                 generator.emit(JvmOpcode.I2b);
                 emitBox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
-            } else if (type.FullName.equals("java/lang/String")) {
+            } else if (type == context.TypeSystem.StringType) {
                 emitUnbox(nested, type, isStatic, false);
-                var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
-                var stringType = context.getTypeSystem().getType("java/lang/String");
-                generator.emit(JvmOpcode.New, stringBuilderType);
+                var stringType = context.TypeSystem.StringType;
+                generator.emit(JvmOpcode.New, context.StringBuilderType);
                 generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
                 if (rightInfo.Type.IsCategory2) {
                     generator.emit(JvmOpcode.Dup_X2);
                     generator.emit(JvmOpcode.Pop);
                 } else {
                     generator.emit(JvmOpcode.Swap);
                 }
-                BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                BytecodeGenerator.emitStringBuilderAppend(context, null);
                 var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
                     && rightInfo != null && rightInfo.Type == stringType;
                 context.MethodGenerationContext.IsBuildingString = isStringAdd;
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 if (!isStringAdd) {
-                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                    BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                 }
                 context.MethodGenerationContext.IsBuildingString = false;
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
                 emitBox(nested, type, isStatic, false);
             } else if (BytecodeHelper.isDelegateType(type)) {
                 emitUnbox(nested, type, isStatic, false);
@@ -879,31 +877,30 @@ package stab.tools.compiler {
                     if (!requireLocals && nested && !postAssign) {
                         generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
                     }
-                } else if (method.getReturnType().getFullName().equals("java/lang/String")) {
+                } else if (method.ReturnType == context.TypeSystem.StringType) {
                     if (!requireLocals && nested && postAssign) {
                         generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
                     }
-                    var stringBuilderType = context.getTypeSystem().getType("java/lang/StringBuilder");
-                    var stringType = context.getTypeSystem().getType("java/lang/String");
-                    generator.emit(JvmOpcode.New, stringBuilderType);
+                    var stringType = context.TypeSystem.StringType;
+                    generator.emit(JvmOpcode.New, context.StringBuilderType);
                     generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                    generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
                     if (rightInfo.Type.IsCategory2) {
                         generator.emit(JvmOpcode.Dup_X2);
                         generator.emit(JvmOpcode.Pop);
                     } else {
                         generator.emit(JvmOpcode.Swap);
                     }
-                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                    BytecodeGenerator.emitStringBuilderAppend(context, null);
                     boolean isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
                         && rightInfo != null && rightInfo.Type == stringType;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     if (!isStringAdd) {
-                        BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                        BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                     }
                     context.MethodGenerationContext.IsBuildingString = false;
-                    generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                    generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
                     if (!requireLocals && nested && !postAssign) {
                         generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
                     }
@@ -1115,32 +1112,31 @@ package stab.tools.compiler {
                         generator.emit(JvmOpcode.Dup_X2);
                     }
                     generator.emit(JvmOpcode.Bastore);
-                } else if (ttype.ElementType.FullName.equals("java/lang/String")) {
+                } else if (ttype.ElementType == context.TypeSystem.StringType) {
                     generator.emit(JvmOpcode.Aaload);
                     if (nested && postAssign) {
                         generator.emit(JvmOpcode.Dup_X2);
                     }
-                    var stringBuilderType = context.TypeSystem.getType("java/lang/StringBuilder");
-                    var stringType = context.TypeSystem.getType("java/lang/String");
-                    generator.emit(JvmOpcode.New, stringBuilderType);
+                    var stringType = context.TypeSystem.StringType;
+                    generator.emit(JvmOpcode.New, context.StringBuilderType);
                     generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Invokespecial, stringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
+                    generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
                     if (rightInfo.getType().IsCategory2) {
                         generator.emit(JvmOpcode.Dup_X2);
                         generator.emit(JvmOpcode.Pop);
                     } else {
                         generator.emit(JvmOpcode.Swap);
                     }
-                    BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, null);
+                    BytecodeGenerator.emitStringBuilderAppend(context, null);
                     var isStringAdd = rightExpression.getExpressionKind() == ExpressionKind.Binary
                         && rightInfo != null && rightInfo.getType() == stringType;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     if (!isStringAdd) {
-                        BytecodeGenerator.emitStringBuilderAppend(context, stringBuilderType, rightExpression.getUserData(typeof(ExpressionInfo)));
+                        BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                     }
                     context.MethodGenerationContext.IsBuildingString = false;
-                    generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>()));
+                    generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
                     if (nested && !postAssign) {
                         generator.emit(JvmOpcode.Dup_X2);
                     }

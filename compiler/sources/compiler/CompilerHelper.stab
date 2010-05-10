@@ -611,7 +611,7 @@ package stab.tools.compiler {
             }
             
             var argTypes = new ArrayList<JvmTypeInfo>();
-            argTypes.add(context.TypeSystem.getType("java/lang/String"));
+            argTypes.add(context.TypeSystem.StringType);
             argTypes.add(classType.getGenericType(Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD)).ArrayType);
             gen.emit(JvmOpcode.Invokevirtual, classType.getMethod("getMethod", argTypes));
             gen.emit(JvmOpcode.Areturn);

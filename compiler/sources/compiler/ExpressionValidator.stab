@@ -393,7 +393,7 @@ package stab.tools.compiler {
                 break;
                 
             case Add:
-                if (lt.FullName.equals("java/lang/String")) {
+                if (lt == context.TypeSystem.StringType) {
                     ValidationHelper.getType(context, right);
                     break;
                 }
@@ -522,7 +522,7 @@ package stab.tools.compiler {
                             info.Type = JvmTypeInfo.INT;
                         }
                     } else {
-                        info.Type = context.TypeSystem.getType("java/lang/String");
+                        info.Type = context.TypeSystem.StringType;
                     }
                     break;
                     
@@ -632,7 +632,7 @@ package stab.tools.compiler {
                         }
                     }
                     binary.addOrReplaceUserData(info);
-                } else if ((lt != null && lt.FullName.equals("java/lang/String")) || (rt != null && rt.FullName.equals("java/lang/String"))) {
+                } else if (lt == context.TypeSystem.StringType || rt == context.TypeSystem.StringType) {
                     info.Type = context.TypeSystem.StringType;
                     binary.addOrReplaceUserData(info);
                 } else {
