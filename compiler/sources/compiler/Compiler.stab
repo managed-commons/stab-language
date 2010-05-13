@@ -896,7 +896,7 @@ package stab.tools.compiler {
 
         private void setDelegateBaseTypes(DelegateDeclarationNode delegateDeclaration) {
             var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
-            typeBuilder.setBaseType(context.TypeSystem.getType("stab/lang/Delegate"));
+            typeBuilder.setBaseType(context.getType("stab/lang/Delegate", delegateDeclaration));
         }
         
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -1270,7 +1270,7 @@ package stab.tools.compiler {
                             if (i > 0) {
                                 context.addError(CompileErrorId.ThisNotFirst, parameter);
                             }
-                            methodBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/ExtensionMethod"), false);
+                            methodBuilder.addAnnotation(context.getType("stab/lang/ExtensionMethod", parameter), false);
                         }
                         i++;
                     }
@@ -1555,7 +1555,7 @@ package stab.tools.compiler {
                     setPropertyOrIndexerModifiers(get, indexerDeclaration.getModifiers(), methodBuilder);
                 }
                 methodBuilder.setReturnType(type);
-                methodBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/IndexerGet"), false);
+                methodBuilder.addAnnotation(context.getType("stab/lang/IndexerGet", get), false);
                 for (i = 0; i < sizeof(paramTypes); i++) {
                     var paramBuilder = methodBuilder.addParameter(paramTypes[i]);
                     paramBuilder.setName(paramNames[i]);
@@ -1581,7 +1581,7 @@ package stab.tools.compiler {
                 }
                 var paramBuilder = methodBuilder.addParameter(type);
                 paramBuilder.setName("value");
-                methodBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/IndexerSet"), false);
+                methodBuilder.addAnnotation(context.getType("stab/lang/IndexerSet", set), false);
             }
         }
 
@@ -1629,7 +1629,7 @@ package stab.tools.compiler {
                     setPropertyOrIndexerModifiers(get, propertyDeclaration.getModifiers(), methodBuilder);
                 }
                 methodBuilder.setReturnType(type);
-                methodBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/PropertyGet"), false);
+                methodBuilder.addAnnotation(context.getType("stab/lang/PropertyGet", get), false);
             }
             if (set != null) {
                 var methodBuilder = typeBuilder.defineMethod("set" + name);
@@ -1643,7 +1643,7 @@ package stab.tools.compiler {
                 methodBuilder.setReturnType(JvmTypeInfo.VOID);
                 var paramBuilder = methodBuilder.addParameter(type);
                 paramBuilder.setName("value");
-                methodBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/PropertySet"), false);
+                methodBuilder.addAnnotation(context.getType("stab/lang/PropertySet", set), false);
             }
         }
         
@@ -2035,7 +2035,7 @@ package stab.tools.compiler {
                 validateAnnotationSection(classDeclaration.Annotations, ElementType.TYPE);
                 bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
                 if (classDeclaration.Modifiers.contains(Modifier.Static)) {
-                    typeBuilder.addAnnotation(context.TypeSystem.getType("stab/lang/StaticClass"), false);
+                    typeBuilder.addAnnotation(context.getType("stab/lang/StaticClass", classDeclaration), false);
                 }
             }
             

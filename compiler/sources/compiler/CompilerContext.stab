@@ -183,6 +183,13 @@ package stab.tools.compiler {
             private set;
         }
         
+        JvmTypeInfo getType(String fullName, SyntaxNode node) {
+            if (!this.TypeSystem.typeExists(fullName)) {
+                throw error(CompileErrorId.TypeNotFound, node, fullName.replace('/', '.').replace('$', '.'));
+            }
+            return this.TypeSystem.getType(fullName);
+        }
+        
         String getText(int offset, int length) {
             return new String(this.Text, offset, length);
         }
