@@ -305,7 +305,12 @@ package stab.tools.bytecode {
         private void initializeBootClasses(String[] bootClasses) {
             var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
             var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
-            
+            if (!rtJarFile.exists()) {
+                // Probably Mac OS
+                jreLibPath = PathHelper.combine(PathHelper.getDirectoryName(System.getProperty("java.home")), "Classes");
+                rtJarFile = new File(PathHelper.combine(jreLibPath, "classes.jar"));
+            }
+
             if (bootClasses != null) {
                 foreach (var s in bootClasses) {
                     classFiles.put(s, rtJarFile);

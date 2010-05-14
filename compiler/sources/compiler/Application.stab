@@ -368,6 +368,11 @@ package stab.tools.compiler {
         private void setBootClasses() {
             var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
             var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
+            if (!rtJarFile.exists()) {
+                // Probably Mac OS
+                jreLibPath = PathHelper.combine(PathHelper.getDirectoryName(System.getProperty("java.home")), "Classes");
+                rtJarFile = new File(PathHelper.combine(jreLibPath, "classes.jar"));
+            }
             var stabPath = PathHelper.combine(System.getProperty("user.home"), ".stab");
             var stabDir = new File(stabPath);
             if (!stabDir.exists()) {
