@@ -16,19 +16,13 @@
  */
 package stab.tree {
 
-    public class LoopStatement : Statement {
-        LoopStatement(StatementKind statementKind, Expression condition, Statement body)
-            : super(statementKind) {
-            this.Condition = condition;
-            this.Body = body;
+    public class GotoStatement : Statement {
+        GotoStatement(Label label)
+            : super(StatementKind.Goto) {
+            this.Label = label;
         }
         
-        public Expression Condition {
-            get;
-            private set;
-        }
-        
-        public Statement Body {
+        public Label Label {
             get;
             private set;
         }

@@ -729,7 +729,7 @@ package stab.tools.compiler {
             var isArraySource = sinfo.Type.IsArray;
             var local = foreachStatement.getUserData(typeof(LocalInfo));
             
-            expressionGenerator.handleExpression(foreachStatement.getSource(), null, true);
+            expressionGenerator.handleExpression(foreachStatement.Source, null, true);
             
             if (isArraySource) {
                 var arrayType = sinfo.Type;

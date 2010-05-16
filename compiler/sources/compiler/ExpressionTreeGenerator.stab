@@ -37,6 +37,12 @@ package stab.tools.compiler {
         private JvmMethodInfo makeDoMethod;
         private JvmMethodInfo emptyMethod;
         private JvmMethodInfo expressionMethod;
+        private JvmMethodInfo makeForMethod;
+        private JvmMethodInfo makeForeachMethod;
+        private JvmMethodInfo makeGotoMethod;
+        private JvmMethodInfo makeIfMethod;
+        private JvmMethodInfo labelMethod;
+        private JvmMethodInfo labeledMethod;
         private JvmMethodInfo makeReturnMethod;
         private JvmMethodInfo makeWhileMethod;
         private JvmMethodInfo valueMethod;
@@ -173,6 +179,62 @@ package stab.tools.compiler {
                 return expressionMethod;
             }
         }
+        
+        JvmMethodInfo MakeForMethod {
+            get {
+                if (makeForMethod == null) {
+                    makeForMethod = this.StatementType.getMethod("makeFor", Query.quadruple(this.StatementType.ArrayType, this.ExpressionType,
+                            this.StatementType.ArrayType, this.StatementType));
+                }
+                return makeForMethod;
+            }
+        }
+        
+        JvmMethodInfo MakeForeachMethod {
+            get {
+                if (makeForeachMethod == null) {
+                    makeForeachMethod = this.StatementType.getMethod("makeForeach", Query.triple(this.LocalMethod.ReturnType, this.ExpressionType,
+                            this.StatementType));
+                }
+                return makeForeachMethod;
+            }
+        }
+
+        JvmMethodInfo MakeGotoMethod {
+            get {
+                if (makeGotoMethod == null) {
+                    makeGotoMethod = this.StatementType.getMethod("makeGoto", Query.singleton(this.LabelMethod.ReturnType));
+                }
+                return makeGotoMethod;
+            }
+        }
+        
+        JvmMethodInfo MakeIfMethod {
+            get {
+                if (makeIfMethod == null) {
+                    makeIfMethod = this.StatementType.getMethod("makeIf", Query.triple(this.ExpressionType, this.StatementType, this.StatementType));
+                }
+                return makeIfMethod;
+            }
+        }
+
+        JvmMethodInfo LabelMethod {
+            get {
+                if (labelMethod == null) {
+                    labelMethod = this.StatementType.getMethod("label", Query.singleton(context.TypeSystem.StringType));
+                }
+                return labelMethod;
+            }
+        }
+
+        JvmMethodInfo LabeledMethod {
+            get {
+                if (labeledMethod == null) {
+                    labeledMethod = this.StatementType.getMethod("labeled", Query.pair(this.LabelMethod.ReturnType, this.StatementType));
+                }
+                return labeledMethod;
+            }
+        }
 
         JvmMethodInfo MakeReturnMethod {
             get {
@@ -186,7 +248,7 @@ package stab.tools.compiler {
         JvmMethodInfo MakeWhileMethod {
             get {
                 if (makeWhileMethod == null) {
-                    makeWhileMethod = this.StatementType.getMethod("makeDo", Query.pair(this.ExpressionType, this.StatementType));
+                    makeWhileMethod = this.StatementType.getMethod("makeWhile", Query.pair(this.ExpressionType, this.StatementType));
                 }
                 return makeWhileMethod;
             }
@@ -443,7 +505,125 @@ package stab.tools.compiler {
             return null;
         }
 
-         
+        protected override Void handleFor(ForStatementNode forStatement, Void source) {
+            var info = forStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            if (forStatement.Initializer == null) {
+                generator.emit(JvmOpcode.Aconst_Null);
+            } else {
+                BytecodeHelper.emitIntConstant(generator, forStatement.Initializer.size());
+                BytecodeHelper.emitNewarray(generator, 1, this.StatementType);
+                int i = 0;
+                foreach (var s in forStatement.Initializer) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    handleStatement(s, source);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+            }
+            if (forStatement.Condition == null) {
+                generator.emit(JvmOpcode.Aconst_Null);
+            } else {
+                expressionGenerator.handleExpression(forStatement.Condition, null, true);
+            }
+            if (forStatement.Iterator == null) {
+                generator.emit(JvmOpcode.Aconst_Null);
+            } else {
+                BytecodeHelper.emitIntConstant(generator, forStatement.Iterator.size());
+                BytecodeHelper.emitNewarray(generator, 1, this.StatementType);
+                int i = 0;
+                foreach (var s in forStatement.Iterator) {
+                    generator.emit(JvmOpcode.Dup);
+                    BytecodeHelper.emitIntConstant(generator, i++);
+                    handleStatement(s, source);
+                    generator.emit(JvmOpcode.Aastore);
+                }
+            }
+            handleStatement(forStatement.Statement, null);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeForMethod);
+            return null;
+        }
+        
+        protected override Void handleForeach(ForeachStatementNode foreachStatement, Void source) {
+            var info = foreachStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            var linfo = foreachStatement.getUserData(typeof(LocalInfo));
+            var type = linfo.Type;
+            var local = generator.declareLocal(type, "tree$local" + context.MethodGenerationContext.nextGeneratedLocal());
+            context.MethodGenerationContext.TreeLocals[linfo] = local;
+            BytecodeHelper.emitTypeof(generator, context.TypeSystem, type);
+            generator.emit(JvmOpcode.Ldc, linfo.Name);
+            generator.emit(JvmOpcode.Invokestatic, this.LocalMethod);
+            generator.emit(JvmOpcode.Dup);
+            generator.emit(JvmOpcode.Astore, local);
+            expressionGenerator.handleExpression(foreachStatement.Source, null, true);
+            handleStatement(foreachStatement.Statement, null);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeForeachMethod);
+            return null;
+        }
+
+        protected override Void handleGoto(GotoStatementNode gotoStatement, Void source) {
+            var info = gotoStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            var local = context.MethodGenerationContext.TreeLabels[info.Target];
+            if (local == null) {
+                local = generator.declareLocal(this.LabelMethod.ReturnType, "tree$local" + context.MethodGenerationContext.nextGeneratedLocal());
+                generator.emit(JvmOpcode.Ldc, context.getIdentifier(gotoStatement.LabelOffset, gotoStatement.LabelLength));
+                generator.emit(JvmOpcode.Invokestatic, this.LabelMethod);
+                generator.emit(JvmOpcode.Astore, local);
+                context.MethodGenerationContext.TreeLabels[info.Target] = local;
+            }
+            generator.emit(JvmOpcode.Aload, local);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeGotoMethod);
+            return null;
+        }
+        
+        protected override Void handleIf(IfStatementNode ifStatement, Void source) {
+            var info = ifStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            expressionGenerator.handleExpression(ifStatement.Condition, null, true);
+            handleStatement(ifStatement.IfTrue, null);
+            if (ifStatement.IfFalse != null) {
+                handleStatement(ifStatement.IfFalse, null);
+            } else {
+                generator.emit(JvmOpcode.Aconst_Null);
+            }
+            generator.emit(JvmOpcode.Invokestatic, this.MakeIfMethod);
+            return null;
+        }
+
+        protected override Void handleLabeled(LabeledStatementNode labeled, Void source) {
+            var info = labeled.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            var local = context.MethodGenerationContext.TreeLabels[labeled];
+            if (local == null) {
+                local = generator.declareLocal(this.LabelMethod.ReturnType, "tree$local" + context.MethodGenerationContext.nextGeneratedLocal());
+                generator.emit(JvmOpcode.Ldc, context.getIdentifier(labeled.NameOffset, labeled.NameLength));
+                generator.emit(JvmOpcode.Invokestatic, this.LabelMethod);
+                generator.emit(JvmOpcode.Astore, local);
+                context.MethodGenerationContext.TreeLabels[labeled] = local;
+            }
+            generator.emit(JvmOpcode.Aload, local);
+            handleStatement(labeled.Statement, null);
+            generator.emit(JvmOpcode.Invokestatic, this.LabeledMethod);
+            return null;
+        }
+        
         protected override Void handleLocalDeclaration(LocalDeclarationStatementNode localDeclaration, Void source) {
             var info = localDeclaration.getUserData(typeof(StatementInfo));
             if (info == null) {

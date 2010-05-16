@@ -16,14 +16,20 @@
  */
 package stab.tree {
 
-    public class LoopStatement : Statement {
-        LoopStatement(StatementKind statementKind, Expression condition, Statement body)
-            : super(statementKind) {
-            this.Condition = condition;
+    public class ForeachStatement : Statement {
+        ForeachStatement(VariableExpression variable, Expression expression, Statement body)
+            : super(StatementKind.Foreach) {
+            this.Variable = variable;
+            this.Expression = expression;
             this.Body = body;
         }
+
+        public VariableExpression Variable {
+            get;
+            private set;
+        }
         
-        public Expression Condition {
+        public Expression Expression {
             get;
             private set;
         }

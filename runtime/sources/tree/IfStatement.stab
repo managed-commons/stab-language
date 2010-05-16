@@ -16,11 +16,12 @@
  */
 package stab.tree {
 
-    public class LoopStatement : Statement {
-        LoopStatement(StatementKind statementKind, Expression condition, Statement body)
-            : super(statementKind) {
+    public class IfStatement : Statement {
+        IfStatement(Expression condition, Statement ifTrue, Statement ifFalse)
+            : super(StatementKind.If) {
             this.Condition = condition;
-            this.Body = body;
+            this.IfTrue = ifTrue;
+            this.IfFalse = ifFalse;
         }
         
         public Expression Condition {
@@ -28,7 +29,12 @@ package stab.tree {
             private set;
         }
         
-        public Statement Body {
+        public Statement IfTrue {
+            get;
+            private set;
+        }
+        
+        public Statement IfFalse {
             get;
             private set;
         }

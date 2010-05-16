@@ -14,16 +14,31 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using java.lang;
+using stab.query;
+ 
 package stab.tree {
 
-    public class LoopStatement : Statement {
-        LoopStatement(StatementKind statementKind, Expression condition, Statement body)
-            : super(statementKind) {
+    public class ForStatement : Statement {
+        ForStatement(Statement[] initializer, Expression condition, Statement[] iterator, Statement body)
+            : super(StatementKind.For) {
+            this.Initializer = (initializer == null) ? Query.empty<Statement>() : Query.asIterable(initializer);
             this.Condition = condition;
+            this.Iterator = (iterator == null) ? Query.empty<Statement>() : Query.asIterable(iterator);
             this.Body = body;
+        }
+
+        public Iterable<Statement> Initializer {
+            get;
+            private set;
         }
         
         public Expression Condition {
+            get;
+            private set;
+        }
+
+        public Iterable<Statement> Iterator {
             get;
             private set;
         }

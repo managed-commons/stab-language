@@ -14,6 +14,8 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using java.lang;
+ 
 package stab.tree {
 
     public enum StatementKind {
@@ -23,6 +25,11 @@ package stab.tree {
         Do,
         Empty,
         Expression,
+        For,
+        Foreach,
+        Goto,
+        If,
+        Labeled,
         Return,
         While
     }
@@ -49,8 +56,8 @@ package stab.tree {
             return new SimpleStatement(StatementKind.Continue);
         }
         
-        public static LoopStatement makeDo(Statement statement, Expression condition) {
-            return new LoopStatement(StatementKind.Do, condition, statement);
+        public static LoopStatement makeDo(Statement body, Expression condition) {
+            return new LoopStatement(StatementKind.Do, condition, body);
         }
 
         public static Statement empty() {
@@ -61,12 +68,36 @@ package stab.tree {
             return new ExpressionStatement(expression);
         }
         
+        public static GotoStatement gotoStatement(Label label) {
+            return new GotoStatement(label);
+        }
+
+        public static Label label(String name) {
+            return new Label(name);
+        }
+        
+        public static LabeledStatement labeled(Label label, Statement target) {
+            return new LabeledStatement(label, target);
+        }
+        
+        public static IfStatement makeIf(Expression condition, Statement ifTrue, Statement ifFalse) {
+            return new IfStatement(condition, ifTrue, ifFalse);
+        }
+        
+        public static ForStatement makeFor(Statement[] initializer, Expression condition, Statement[] iterator, Statement body) {
+            return new ForStatement(initializer, condition, iterator, body);
+        }
+        
+        public static ForeachStatement makeForeach(VariableExpression variable, Expression expression, Statement body) {
+            return new ForeachStatement(variable, expression, body);
+        }
+        
         public static ReturnStatement makeReturn(Expression value) {
             return new ReturnStatement(value);
         }
         
-        public static LoopStatement makeWhile(Statement statement, Expression condition) {
-            return new LoopStatement(StatementKind.While, condition, statement);
+        public static LoopStatement makeWhile(Expression condition, Statement body) {
+            return new LoopStatement(StatementKind.While, condition, body);
         }
     }
     

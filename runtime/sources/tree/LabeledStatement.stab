@@ -14,21 +14,34 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using java.lang;
+ 
 package stab.tree {
 
-    public class LoopStatement : Statement {
-        LoopStatement(StatementKind statementKind, Expression condition, Statement body)
-            : super(statementKind) {
-            this.Condition = condition;
-            this.Body = body;
+    public class Label {
+        Label(String name) {
+            this.Name = name;
         }
         
-        public Expression Condition {
+        public String Name {
+            get;
+            private set;
+        }
+    }
+
+    public class LabeledStatement : Statement {
+        LabeledStatement(Label label, Statement target)
+            : super(StatementKind.Labeled) {
+            this.Label = label;
+            this.Target = target;
+        }
+        
+        public Label Label {
             get;
             private set;
         }
         
-        public Statement Body {
+        public Statement Target {
             get;
             private set;
         }

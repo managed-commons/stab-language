@@ -355,6 +355,7 @@ package stab.tools.compiler {
             this.ParametersUsedInLambda = new ArrayList<LocalInfo>();
             this.CatchVariables = new ArrayList<JvmLocalInfo>();
             this.TreeLocals = new HashMap<LocalInfo, JvmLocalInfo>();
+            this.TreeLabels = new HashMap<StatementNode, JvmLocalInfo>();
         }
         
         void initialize(JvmMethodBuilder methodBuilder, JvmTypeBuilder lambdaScope) {
@@ -364,6 +365,7 @@ package stab.tools.compiler {
             this.ParametersUsedInLambda.clear();
             this.CatchVariables.clear();
             this.TreeLocals.clear();
+            this.TreeLabels.clear();
             
             this.methods.add(methodBuilder);
             this.LambdaScope = lambdaScope;
@@ -505,6 +507,11 @@ package stab.tools.compiler {
         }
         
         Map<LocalInfo, JvmLocalInfo> TreeLocals {
+            get;
+            private set;
+        }
+        
+        Map<StatementNode, JvmLocalInfo> TreeLabels {
             get;
             private set;
         }
