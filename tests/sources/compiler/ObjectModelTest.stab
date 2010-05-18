@@ -685,5 +685,25 @@ package stab.tools.compiler.test {
 		public void indexerVarargs() {
 			doTest("IndexerVarargs", new Class<?>[] {}, new Object[] {}, 6);
 		}
+		
+		[Test]
+		public void longConstField() {
+			doTest("LongConstField", new Class<?>[] {}, new Object[] {}, 2L);
+		}
+		
+		[Test]
+		public void floatConstField() {
+			doTest("FloatConstField", new Class<?>[] {}, new Object[] {}, 2f);
+		}
+		
+		[Test]
+		public void doubleConstField() {
+			doTest("DoubleConstField", new Class<?>[] {}, new Object[] {}, 2d);
+		}
+		
+		[Test]
+		public void byteConstField() {
+			doTest("ByteConstField", new Class<?>[] {}, new Object[] {}, (byte)2);
+		}
 	}
 }
