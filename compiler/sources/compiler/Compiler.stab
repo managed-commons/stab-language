@@ -2180,10 +2180,24 @@ package stab.tools.compiler {
             bytecodeGenerator.emitAccessorAnnotations(get, indexerDeclaration.Annotations);
             bytecodeGenerator.emitAccessorAnnotations(set, indexerDeclaration.Annotations);
             if (get != null) {
-                setExceptions(get.getUserData(typeof(JvmMethodBuilder)), get);
+                var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
+                if (!methodBuilder.IsStatic) {
+                    var typeInfo = methodBuilder.DeclaringType;
+                    if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                        context.addError(CompileErrorId.StaticClassInstanceMember, get);
+                    }
+                }
+                setExceptions(methodBuilder, get);
             }
             if (set != null) {
-                setExceptions(set.getUserData(typeof(JvmMethodBuilder)), set);
+                var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
+                if (!methodBuilder.IsStatic) {
+                    var typeInfo = methodBuilder.DeclaringType;
+                    if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                        context.addError(CompileErrorId.StaticClassInstanceMember, set);
+                    }
+                }
+                setExceptions(methodBuilder, set);
             }
         }
 
@@ -2203,10 +2217,24 @@ package stab.tools.compiler {
             bytecodeGenerator.emitAccessorAnnotations(get, propertyDeclaration.Annotations);
             bytecodeGenerator.emitAccessorAnnotations(set, propertyDeclaration.Annotations);
             if (get != null) {
-                setExceptions(get.getUserData(typeof(JvmMethodBuilder)), get);
+                var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
+                if (!methodBuilder.IsStatic) {
+                    var typeInfo = methodBuilder.DeclaringType;
+                    if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                        context.addError(CompileErrorId.StaticClassInstanceMember, get);
+                    }
+                }
+                setExceptions(methodBuilder, get);
             }
             if (set != null) {
-                setExceptions(set.getUserData(typeof(JvmMethodBuilder)), set);
+                var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
+                if (!methodBuilder.IsStatic) {
+                    var typeInfo = methodBuilder.DeclaringType;
+                    if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                        context.addError(CompileErrorId.StaticClassInstanceMember, set);
+                    }
+                }
+                setExceptions(methodBuilder, set);
             }
         }
 
@@ -2250,6 +2278,12 @@ package stab.tools.compiler {
                 }
             }
             var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            if (!methodBuilder.IsStatic) {
+                var typeInfo = methodBuilder.DeclaringType;
+                if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                    context.addError(CompileErrorId.StaticClassInstanceMember, methodDeclaration);
+                }
+            }
             bytecodeGenerator.generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
             setExceptions(methodBuilder, methodDeclaration);
         }
@@ -2261,6 +2295,12 @@ package stab.tools.compiler {
             validateAnnotationSection(fieldDeclaration.Annotations, ElementType.FIELD);
             foreach (var decl in fieldDeclaration.Declarators) {
                 var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                if (!fieldBuilder.IsStatic) {
+                    var typeInfo = fieldBuilder.DeclaringType;
+                    if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                        context.addError(CompileErrorId.StaticClassInstanceMember, fieldDeclaration);
+                    }
+                }
                 bytecodeGenerator.generateAnnotationsBytecode(fieldDeclaration.Annotations, fieldBuilder);
             }
         }

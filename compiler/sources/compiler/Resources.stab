@@ -175,7 +175,8 @@ package stab.tools.compiler {
         ExternalLocalAssignment,
         GenericArrayCreation,
         TypeNotFound,
-        StaticClassConstructor
+        StaticClassConstructor,
+        StaticClassInstanceMember
     }
 
     class Resources {

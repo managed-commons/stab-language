@@ -79,7 +79,7 @@ package stab.tools.syntaxtree {
             return target;
         }
         
-        private static class SourceInfo {
+        private class SourceInfo {
             String filename;
             int line;
             IntIterable disabledWarnings;
