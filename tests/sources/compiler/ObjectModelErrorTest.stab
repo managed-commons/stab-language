@@ -182,5 +182,12 @@ package stab.tools.compiler.test {
 				"NestedStaticAccess.stab (5, 15) error 231: Type 'C' does not contain an accessible 'm' member" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void staticClassConstructor() {
+			doTest("StaticClassConstructor", new String[]{
+				"StaticClassConstructor.stab (2, 12) error 315: Static classes cannot have instance constructors" },
+				new String[] {});
+		}
 	}
 }

@@ -16,6 +16,10 @@ Issues ================================
 - test partial methods
 - check that #define/#undef is used before any lexical unit
 
+class C {
+    public static long CONST = 0; // invalid bytecode
+}
+
 Errors ================================
 using java.lang;
 

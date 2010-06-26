@@ -174,7 +174,8 @@ package stab.tools.compiler {
         NestedMethodSuperAccess,
         ExternalLocalAssignment,
         GenericArrayCreation,
-        TypeNotFound
+        TypeNotFound,
+        StaticClassConstructor
     }
 
     class Resources {

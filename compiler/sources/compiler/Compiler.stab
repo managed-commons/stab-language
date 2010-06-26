@@ -1049,7 +1049,7 @@ package stab.tools.compiler {
                         defineClassProperty((PropertyDeclarationNode)member, typeBuilder);
                         break;
                     case Constructor:
-                        defineClassConstructor((ConstructorDeclarationNode)member, typeBuilder);
+                        defineClassConstructor((ConstructorDeclarationNode)member, classDeclaration.Modifiers.contains(Modifier.Static), typeBuilder);
                         break;
                     case Destructor:
                         defineClassDestructor((DestructorDeclarationNode)member, typeBuilder);
@@ -1647,7 +1647,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void defineClassConstructor(ConstructorDeclarationNode constructorDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineClassConstructor(ConstructorDeclarationNode constructorDeclaration, boolean isStaticClass, JvmTypeBuilder typeBuilder) {
             var name = context.getIdentifier(constructorDeclaration.NameOffset, constructorDeclaration.NameLength);
             if (!name.equals(typeBuilder.Name)) {
                 context.addError(CompileErrorId.MethodWithoutReturnType, constructorDeclaration, name);
@@ -1664,6 +1664,9 @@ package stab.tools.compiler {
                 clinit.setReturnType(JvmTypeInfo.VOID);
                 constructorDeclaration.addUserData(clinit);
             } else {
+                if (isStaticClass) {
+                    context.addError(CompileErrorId.StaticClassConstructor, constructorDeclaration);
+                }
                 var methodBuilder = lookupMethod(typeBuilder, constructorDeclaration.TypeParameters, constructorDeclaration.Parameters, "<init>");
                 if (methodBuilder != null) {
                     context.addError(CompileErrorId.AlreadyDefinedConstructor, constructorDeclaration,
