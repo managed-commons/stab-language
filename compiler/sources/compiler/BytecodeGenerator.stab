@@ -1925,6 +1925,18 @@ package stab.tools.compiler {
             }
         }
 
+        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmParameterBuilder parameterBuilder) {
+            foreach (var section in annotations) {
+                foreach (var annotation in section.Annotations) {
+                    var type = annotation.getUserData(typeof(JvmTypeInfo));
+                    var retentionPolicy = BytecodeHelper.getRetentionPolicy(type);
+                    if (retentionPolicy != RetentionPolicy.SOURCE) {
+                        generateAnnotationBytecode(annotation, parameterBuilder.addAnnotation(type, retentionPolicy == RetentionPolicy.RUNTIME));
+                    }
+                }
+            }
+        }
+
         private void generateAnnotationBytecode(AnnotationCreationNode annotation, JvmAnnotationValueBuilder annotationBuilder) {
             var e = annotation.Initializer;
             if (e != null) {

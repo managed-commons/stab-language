@@ -2285,6 +2285,11 @@ package stab.tools.compiler {
                 }
             }
             bytecodeGenerator.generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
+            var it = methodBuilder.Parameters.iterator();
+            foreach (var p in methodDeclaration.Parameters) {
+                validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+            }
             setExceptions(methodBuilder, methodDeclaration);
         }
         

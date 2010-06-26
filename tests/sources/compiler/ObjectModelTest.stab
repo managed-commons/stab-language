@@ -705,5 +705,10 @@ package stab.tools.compiler.test {
 		public void byteConstField() {
 			doTest("ByteConstField", new Class<?>[] {}, new Object[] {}, (byte)2);
 		}
-	}
+
+		[Test]
+		public void parameterAnnotation() {
+			doTest("ParameterAnnotation", new Class<?>[] {}, new Object[] {}, true);
+		}
+    }
 }
