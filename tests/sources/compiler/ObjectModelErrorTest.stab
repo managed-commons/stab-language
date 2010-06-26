@@ -196,5 +196,12 @@ package stab.tools.compiler.test {
 				"StaticClassConstructor2.stab (5, 12) error 315: Static classes cannot have instance constructors" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void ambiguousExtensionMethods() {
+			doTest("AmbiguousExtensionMethods", new String[]{
+				"AmbiguousExtensionMethods.stab (18, 20) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				new String[] {});
+		}
 	}
 }

@@ -1018,7 +1018,7 @@ package stab.tools.compiler {
                         if (!xmethods.any()) {
                             throw context.error(CompileErrorId.NoInvocationTargetFound, invocation);
                         }
-                        method = MethodResolver.resolveMethod(xmethods, arguments, targetType);
+                        method = MethodResolver.resolveMethod(xmethods, arguments, targetType, true);
                         if (method != null) {
                             isExtension = true;
                         }

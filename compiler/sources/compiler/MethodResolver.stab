@@ -30,8 +30,13 @@ package stab.tools.compiler {
             this.expressionValidator = expressionValidator;
             this.context = context;
         }
-        
+
         JvmMethodInfo resolveMethod(Iterable<JvmMethodInfo> methods, Iterable<ExpressionNode> arguments, JvmTypeInfo returnType) {
+            return resolveMethod(methods, arguments, returnType, false);
+        }
+        
+        JvmMethodInfo resolveMethod(Iterable<JvmMethodInfo> methods, Iterable<ExpressionNode> arguments,
+                JvmTypeInfo returnType, boolean extensionMethods) {
             var candidates = new ArrayList<CandidateMethodInfo>();
             var hasLambda = false;
             
@@ -257,7 +262,10 @@ package stab.tools.compiler {
 
             CandidateMethodInfo result;
             if (candidates.size() > 1) {
-                result = resolveOverloading(candidates);
+                result = resolveOverloading(candidates, extensionMethods);
+                if (result == null) {
+                    return null;
+                }
             } else {
                 result = candidates[0];
             }
@@ -789,46 +797,48 @@ package stab.tools.compiler {
         // Overload resolution
         //
 
-        private CandidateMethodInfo resolveOverloading(List<CandidateMethodInfo> methodInfos) {
-            //
-            // Filter the methods from base types and nested types
-            //
+        private CandidateMethodInfo resolveOverloading(List<CandidateMethodInfo> methodInfos, boolean extensionMethods) {
+            if (!extensionMethods) {
+                //
+                // Filter the methods from base types and outer types
+                //
 
-            JvmTypeInfo mostNestedType = null;
-            foreach (var i in methodInfos) {
-                var type = i.method.DeclaringType;
-                if (mostNestedType == null) {
-                    mostNestedType = type;
-                } else {
-                    var t = type;
-                    while ((t = t.DeclaringType) != null) {
-                        if (mostNestedType.isAssignableFrom(t)) {
-                            mostNestedType = type;
-                            break;
+                JvmTypeInfo mostNestedType = null;
+                foreach (var i in methodInfos) {
+                    var type = i.method.DeclaringType;
+                    if (mostNestedType == null) {
+                        mostNestedType = type;
+                    } else {
+                        var t = type;
+                        while ((t = t.DeclaringType) != null) {
+                            if (mostNestedType.isAssignableFrom(t)) {
+                                mostNestedType = type;
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            var mostDerivedType = mostNestedType;
-            foreach (var i in methodInfos) {
-                var type = i.method.getDeclaringType();
-                if (mostDerivedType == null) {
-                    mostDerivedType = type;
-                } else if (mostDerivedType.isAssignableFrom(type)) {
-                    mostDerivedType = type;
+                var mostDerivedType = mostNestedType;
+                foreach (var i in methodInfos) {
+                    var type = i.method.getDeclaringType();
+                    if (mostDerivedType == null) {
+                        mostDerivedType = type;
+                    } else if (mostDerivedType.isAssignableFrom(type)) {
+                        mostDerivedType = type;
+                    }
                 }
-            }
-            var filteredMethods = new ArrayList<CandidateMethodInfo>();
-            foreach (var i in methodInfos) {
-                if (i.method.DeclaringType == mostDerivedType) {
-                    filteredMethods.add(i);
+                var filteredMethods = new ArrayList<CandidateMethodInfo>();
+                foreach (var i in methodInfos) {
+                    if (i.method.DeclaringType == mostDerivedType) {
+                        filteredMethods.add(i);
+                    }
                 }
-            }
-            if (filteredMethods.size() > 0) {
-                if (filteredMethods.size() == 1) {
-                    return filteredMethods[0];
-                } else {
-                    methodInfos = filteredMethods;
+                if (filteredMethods.size() > 0) {
+                    if (filteredMethods.size() == 1) {
+                        return filteredMethods[0];
+                    } else {
+                        methodInfos = filteredMethods;
+                    }
                 }
             }
             
