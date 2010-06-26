@@ -1049,7 +1049,7 @@ package stab.tools.compiler {
                         defineClassProperty((PropertyDeclarationNode)member, typeBuilder);
                         break;
                     case Constructor:
-                        defineClassConstructor((ConstructorDeclarationNode)member, classDeclaration.Modifiers.contains(Modifier.Static), typeBuilder);
+                        defineClassConstructor((ConstructorDeclarationNode)member, typeBuilder);
                         break;
                     case Destructor:
                         defineClassDestructor((DestructorDeclarationNode)member, typeBuilder);
@@ -1647,7 +1647,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void defineClassConstructor(ConstructorDeclarationNode constructorDeclaration, boolean isStaticClass, JvmTypeBuilder typeBuilder) {
+        private void defineClassConstructor(ConstructorDeclarationNode constructorDeclaration, JvmTypeBuilder typeBuilder) {
             var name = context.getIdentifier(constructorDeclaration.NameOffset, constructorDeclaration.NameLength);
             if (!name.equals(typeBuilder.Name)) {
                 context.addError(CompileErrorId.MethodWithoutReturnType, constructorDeclaration, name);
@@ -1664,9 +1664,6 @@ package stab.tools.compiler {
                 clinit.setReturnType(JvmTypeInfo.VOID);
                 constructorDeclaration.addUserData(clinit);
             } else {
-                if (isStaticClass) {
-                    context.addError(CompileErrorId.StaticClassConstructor, constructorDeclaration);
-                }
                 var methodBuilder = lookupMethod(typeBuilder, constructorDeclaration.TypeParameters, constructorDeclaration.Parameters, "<init>");
                 if (methodBuilder != null) {
                     context.addError(CompileErrorId.AlreadyDefinedConstructor, constructorDeclaration,
@@ -2133,7 +2130,7 @@ package stab.tools.compiler {
         }
 
         private void generateDestructorAnnotations(DestructorDeclarationNode destructorDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(destructorDeclaration.Annotations, ElementType.METHOD);
@@ -2143,17 +2140,23 @@ package stab.tools.compiler {
         }
 
         private void generateConstructorAnnotations(ConstructorDeclarationNode constructorDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(constructorDeclaration.Annotations, ElementType.METHOD);
             var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            if (!methodBuilder.IsStatic) {
+                var typeInfo = methodBuilder.DeclaringType;
+                if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
+                    context.addError(CompileErrorId.StaticClassConstructor, constructorDeclaration);
+                }
+            }
             bytecodeGenerator.generateAnnotationsBytecode(constructorDeclaration.Annotations, methodBuilder);
             setExceptions(methodBuilder, constructorDeclaration);
         }
 
         private void generateEnumConstantAnnotations(EnumConstantDeclarationNode enumConstant, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(enumConstant.Annotations, ElementType.FIELD);
@@ -2162,7 +2165,7 @@ package stab.tools.compiler {
         }
 
         private void generateIndexerAnnotations(IndexerDeclarationNode indexerDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(indexerDeclaration.Annotations, ElementType.METHOD);
@@ -2185,7 +2188,7 @@ package stab.tools.compiler {
         }
 
         private void generatePropertyAnnotations(PropertyDeclarationNode propertyDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(propertyDeclaration.Annotations, ElementType.METHOD);
@@ -2209,7 +2212,7 @@ package stab.tools.compiler {
 
                 
         private void generateInterfaceMethodAnnotations(MethodDeclarationNode methodDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
@@ -2223,7 +2226,7 @@ package stab.tools.compiler {
         }
 
         private void generateDelegateAnnotations(DelegateDeclarationNode delegateDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(delegateDeclaration.Annotations, ElementType.TYPE);
@@ -2232,7 +2235,7 @@ package stab.tools.compiler {
         }
 
         private void generateMethodAnnotations(MethodDeclarationNode methodDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
@@ -2252,7 +2255,7 @@ package stab.tools.compiler {
         }
         
         private void generateFieldAnnotations(FieldDeclarationNode fieldDeclaration, boolean annotationTypesOnly) {
-            if (!annotationTypesOnly) {
+            if (annotationTypesOnly) {
                 return;
             }
             validateAnnotationSection(fieldDeclaration.Annotations, ElementType.FIELD);

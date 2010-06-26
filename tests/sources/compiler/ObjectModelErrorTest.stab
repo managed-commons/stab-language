@@ -189,5 +189,12 @@ package stab.tools.compiler.test {
 				"StaticClassConstructor.stab (2, 12) error 315: Static classes cannot have instance constructors" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void staticClassConstructor2() {
+			doTest("StaticClassConstructor2", new String[]{
+				"StaticClassConstructor2.stab (5, 12) error 315: Static classes cannot have instance constructors" },
+				new String[] {});
+		}
 	}
 }
