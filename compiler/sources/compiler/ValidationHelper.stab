@@ -185,8 +185,8 @@ package stab.tools.compiler {
         
 		private static boolean isInDeprecatedContext(CompilerContext context) {
 			if (!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CurrentType)) {
-				var method = context.CodeValidationContext.RootMethod;
-				if (method == null ||  !BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, method)) {
+				if (!context.CodeValidationContext.IsInMethod || !BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem,
+						context.CodeValidationContext.RootMethod)) {
 					return false;
 				}
 			}

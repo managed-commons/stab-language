@@ -1035,7 +1035,8 @@ package stab.tools.compiler {
             var info = new ExpressionInfo(method.ReturnType) { Method = method, IsExtension = isExtension };
             invocation.addOrReplaceUserData(info);
             if (!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CurrentType)
-                    && !BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CodeValidationContext.RootMethod)
+                    && (!context.CodeValidationContext.IsInMethod ||
+						!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CodeValidationContext.RootMethod))
                     && (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, method))) {
                 context.addWarning(CompileErrorId.DeprecatedMethod, invocation,
                         BytecodeHelper.getDisplayName(method.DeclaringType), BytecodeHelper.getDisplayName(method));
@@ -1403,7 +1404,8 @@ package stab.tools.compiler {
                 var info = new ExpressionInfo(type) { Method = constructor };
                 objectCreation.addOrReplaceUserData(info);
                 if (!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CurrentType)
-                        && !BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CodeValidationContext.RootMethod)
+						&& (!context.CodeValidationContext.IsInMethod ||
+							!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CodeValidationContext.RootMethod))
                         && (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, constructor))) {
                     context.addWarning(CompileErrorId.DeprecatedMethod, objectCreation.Type,
                             BytecodeHelper.getDisplayName(constructor.DeclaringType), BytecodeHelper.getDisplayName(constructor));
