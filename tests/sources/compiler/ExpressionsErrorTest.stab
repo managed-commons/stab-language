@@ -134,5 +134,12 @@ package stab.tools.compiler.test {
 				"ExpressionTreeAssign.stab (10, 36) error 312: Cannot modify a variable defined outside the current scope from an expression tree" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void nullMemberAccess() {
+			doTest("NullMemberAccess", new String[]{
+				"NullMemberAccess.stab (5, 16) error 322: Cannot access members of 'null'" },
+				new String[] {});
+		}
 	}
 }

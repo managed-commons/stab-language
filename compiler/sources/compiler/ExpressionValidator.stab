@@ -1290,6 +1290,9 @@ package stab.tools.compiler {
             handleExpression(memberAccess.TargetObject, null, true);
             var typeArgs = getTypeArguments(nameExpression.TypeArguments);
             var tinfo = memberAccess.TargetObject.getUserData(typeof(ExpressionInfo));
+			if (tinfo == null) {
+				throw context.error(CompileErrorId.NullMemberAccess, memberAccess);
+			}
             if (tinfo.PackageName != null) {
                 var packageName = tinfo.PackageName;
                 var found = false;
