@@ -2912,9 +2912,14 @@ package stab.tools.compiler {
                     context.addError(CompileErrorId.MissingOverride, node, BytecodeHelper.getDisplayName(method.DeclaringType),
                             BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
                 }
+                if (!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, method.DeclaringType)
+                        && BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, superMethod)) {
+                    context.addWarning(CompileErrorId.OverridingDeprecated, node, BytecodeHelper.getDisplayName(method.DeclaringType),
+                            BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
+                }
             } else if (modifiers.contains(Modifier.Override)) {
                 context.addError(CompileErrorId.NoMethodToOverride, node,
-                    BytecodeHelper.getDisplayName(method.DeclaringType), BytecodeHelper.getDisplayName(method));
+                        BytecodeHelper.getDisplayName(method.DeclaringType), BytecodeHelper.getDisplayName(method));
             }
         }
         

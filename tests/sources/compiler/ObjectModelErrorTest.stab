@@ -203,5 +203,17 @@ package stab.tools.compiler.test {
 				"AmbiguousExtensionMethods.stab (18, 20) error 237: Cannot apply invocation to any method, delegate or extension method" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void deprecatedMethodOverride() {
+			doTest("DeprecatedMethodOverride", new String[] {},
+				new String[] { "DeprecatedMethodOverride.stab (10, 26) warning 317: 'B.m()' is overriding a deprecated method of type 'A'" });
+		}
+		
+		[Test]
+		public void deprecatedMethodUsage() {
+			doTest("DeprecatedMethodUsage", new String[] {},
+				new String[] { "DeprecatedMethodUsage.stab (12, 12) warning 318: Usage of deprecated method 'A.m()'" });
+		}
 	}
 }

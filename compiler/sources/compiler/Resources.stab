@@ -176,7 +176,12 @@ package stab.tools.compiler {
         GenericArrayCreation,
         TypeNotFound,
         StaticClassConstructor,
-        StaticClassInstanceMember
+        StaticClassInstanceMember,
+        OverridingDeprecated,
+        DeprecatedMethod,
+        DeprecatedField,
+        DeprecatedType,
+        DeprecatedProperty,
     }
 
     class Resources {

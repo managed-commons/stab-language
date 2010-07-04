@@ -117,19 +117,56 @@ package stab.tools.compiler {
                         }
                         info.Member = member;
                         info.Type = member.Type;
+                        if (!isInDeprecatedContext(context)) {
+							if (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, field)) {
+								context.addWarning(CompileErrorId.DeprecatedField, expression,
+										BytecodeHelper.getDisplayName(field.DeclaringType), field.Name);
+							}
+                        }
                         return member.Type;
                         
-                    case Indexer:
-                    case Property:
                     case Type:
                         info.Member = member;
                         info.Type = member.Type;
+                        if (!isInDeprecatedContext(context)) {
+							if (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, info.Type)) {
+								context.addWarning(CompileErrorId.DeprecatedType, expression,
+										BytecodeHelper.getDisplayName(info.Type));
+							}
+						}
+                        return member.Type;
+						
+                    case Indexer:
+                    case Property:
+                        info.Member = member;
+                        info.Type = member.Type;
+                        if (!isInDeprecatedContext(context)) {
+							if (member.GetAccessor != null) {
+								if (member.SetAccessor == null) {
+									if (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, member.GetAccessor)) {
+										context.addWarning(CompileErrorId.DeprecatedProperty, expression,
+												BytecodeHelper.getDisplayName(member.DeclaringType), member.Name);
+									}
+								} else {
+									if (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, member.GetAccessor) &&
+											BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, member.SetAccessor)) {
+										context.addWarning(CompileErrorId.DeprecatedProperty, expression,
+												BytecodeHelper.getDisplayName(member.DeclaringType), member.Name);
+									}
+								}
+							} else if (member.SetAccessor != null) {
+								if (BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, member.SetAccessor)) {
+									context.addWarning(CompileErrorId.DeprecatedProperty, expression,
+											BytecodeHelper.getDisplayName(member.DeclaringType), member.Name);
+								}
+							}
+						}
                         return member.Type;
                         
                     case Local:
                         var currentMethod = context.CodeValidationContext.CurrentMethod;
                         if (currentMethod != member.Method && currentMethod.DeclaringType.FullName.indexOf('#') == -1) {
-                            ((LocalInfo)member).IsUsedFromLambda = true;
+                            member.IsUsedFromLambda = true;
                         }
                         info.Member = member;
                         info.Type = member.Type;
@@ -146,6 +183,16 @@ package stab.tools.compiler {
             throw new Exception("Internal error line " + (expression.getLine() + 1));
         }
         
+		private static boolean isInDeprecatedContext(CompilerContext context) {
+			if (!BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, context.CurrentType)) {
+				var method = context.CodeValidationContext.RootMethod;
+				if (method == null ||  !BytecodeHelper.isDeprecated(context.AnnotatedTypeSystem, method)) {
+					return false;
+				}
+			}
+			return true;
+		}
+		
         static boolean isAssignable(CompilerContext context, JvmTypeInfo type, ExpressionNode expression) {
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info == null) {

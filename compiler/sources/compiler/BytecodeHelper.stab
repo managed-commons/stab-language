@@ -704,6 +704,26 @@ package stab.tools.compiler {
             return method.Annotations;
         }
 
+        public static boolean isDeprecated(JvmTypeSystem typeSystem, JvmTypeInfo type) {
+            return containsDeprecated(getAnnotations(typeSystem, type));
+        }
+        
+        public static boolean isDeprecated(JvmTypeSystem typeSystem, JvmMethodInfo method) {
+            return containsDeprecated(getAnnotations(typeSystem, method));
+        }
+        
+        public static boolean isDeprecated(JvmTypeSystem typeSystem, JvmFieldInfo field) {
+            return containsDeprecated(field.Annotations);
+        }
+        
+        public static boolean isDeprecated(JvmTypeSystem typeSystem, JvmParameterInfo parameter) {
+            return containsDeprecated(parameter.Annotations);
+        }
+        
+        private static boolean containsDeprecated(Iterable<JvmAnnotationValue> annotations) {
+            return annotations.any(p => p.Type.FullName.equals("java/lang/Deprecated"));
+        }
+        
         public static boolean isConditional(JvmAnnotationValue annotation) {
             return annotation.Type.FullName.equals("stab/lang/Conditional");
         }
