@@ -227,6 +227,8 @@ package stab.tools.compiler {
                 default: {
                     String left = (String)li.Value;
                     switch (ri.Type.TypeKind) {
+					case Boolean:
+                        return left + ((Boolean)ri.Value).booleanValue();
                     case Byte:
                         return left + ((Byte)ri.Value).intValue();
                     case Short:

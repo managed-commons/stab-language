@@ -1491,5 +1491,10 @@ package stab.tools.compiler.test {
 		public void expressionTreeReturn() {
 			doTest("ExpressionTreeReturn", new Class<?>[] {}, new Object[] {}, 1);
 		}
+		
+		[Test]
+		public void addStringBoolean() {
+			doTest("AddStringBoolean", new Class<?>[] {}, new Object[] {}, "true");
+		}
 	}
 }
