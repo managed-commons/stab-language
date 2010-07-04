@@ -455,5 +455,10 @@ package stab.tools.compiler.test {
 		public void using3() {
 			doTest("Using3", new Class<?>[] {}, new Object[] {}, 4);
 		}
+		
+		[Test]
+		public void ifFalse() {
+			doTest("IfFalse", new Class<?>[] {}, new Object[] {}, 1);
+		}
 	}
 }

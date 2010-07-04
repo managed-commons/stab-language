@@ -434,8 +434,12 @@ package stab.tools.compiler {
                     var tinfo = handleStatement(ifTrue, null);
                     info.IsEndPointReachable = tinfo.IsEndPointReachable;
                 } else {
-                    var finfo = handleStatement(ifFalse, null);
-                    info.IsEndPointReachable = finfo.IsEndPointReachable;
+					if (ifFalse != null) {
+						var finfo = handleStatement(ifFalse, null);
+						info.IsEndPointReachable = finfo.IsEndPointReachable;
+					} else {
+						info.IsEndPointReachable = true;
+					}
                 }
             } else {
                 expressionChecker.handleExpression(condition, null, true);
