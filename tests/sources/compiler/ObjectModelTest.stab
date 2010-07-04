@@ -715,5 +715,10 @@ package stab.tools.compiler.test {
 		public void parameterAnnotations() {
 			doTest("ParameterAnnotations", new Class<?>[] {}, new Object[] {}, true);
 		}
+
+		[Test]
+		public void parameterAnnotationConstructor() {
+			doTest("ParameterAnnotationConstructor", new Class<?>[] {}, new Object[] {}, true);
+		}
     }
 }

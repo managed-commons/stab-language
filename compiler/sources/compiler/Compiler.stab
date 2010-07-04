@@ -2152,6 +2152,11 @@ package stab.tools.compiler {
                 }
             }
             bytecodeGenerator.generateAnnotationsBytecode(constructorDeclaration.Annotations, methodBuilder);
+            var it = methodBuilder.Parameters.iterator();
+            foreach (var p in constructorDeclaration.Parameters) {
+                validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+            }
             setExceptions(methodBuilder, constructorDeclaration);
         }
 
@@ -2187,6 +2192,11 @@ package stab.tools.compiler {
                         context.addError(CompileErrorId.StaticClassInstanceMember, get);
                     }
                 }
+				var it = methodBuilder.Parameters.iterator();
+				foreach (var p in indexerDeclaration.Parameters) {
+					validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
+					bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+				}
                 setExceptions(methodBuilder, get);
             }
             if (set != null) {
@@ -2197,6 +2207,11 @@ package stab.tools.compiler {
                         context.addError(CompileErrorId.StaticClassInstanceMember, set);
                     }
                 }
+				var it = methodBuilder.Parameters.iterator();
+				foreach (var p in indexerDeclaration.Parameters) {
+					validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
+					bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+				}
                 setExceptions(methodBuilder, set);
             }
         }
@@ -2250,6 +2265,11 @@ package stab.tools.compiler {
             }
             var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
             bytecodeGenerator.generateInterfaceMethodAnnotations(methodDeclaration);
+            var it = methodBuilder.Parameters.iterator();
+            foreach (var p in methodDeclaration.Parameters) {
+                validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+            }
             setExceptions(methodBuilder, methodDeclaration);
         }
 
@@ -2259,7 +2279,13 @@ package stab.tools.compiler {
             }
             validateAnnotationSection(delegateDeclaration.Annotations, ElementType.TYPE);
             var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
-             bytecodeGenerator.generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
+            bytecodeGenerator.generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
+			var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethods().first(p => p.Name.equals("invoke"));
+            var it = methodBuilder.Parameters.iterator();
+            foreach (var p in delegateDeclaration.Parameters) {
+                validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+            }
         }
 
         private void generateMethodAnnotations(MethodDeclarationNode methodDeclaration, boolean annotationTypesOnly) {
