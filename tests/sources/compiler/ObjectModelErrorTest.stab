@@ -222,5 +222,20 @@ package stab.tools.compiler.test {
 				"BaseClassAfterInterface.stab (1, 20) error 323: Base class 'B' must come before any interfaces" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void thisAccessInInitializer() {
+			doTest("ThisAccessInInitializer", new String[] {
+				"ThisAccessInInitializer.stab (6, 16) error 262: Keyword 'this' is not valid in a static context"},
+				new String[] {});
+		}
+		
+		[Test]
+		public void superAccessInInitializer() {
+			doTest("SuperAccessInInitializer", new String[] {
+				"SuperAccessInInitializer.stab (6, 22) error 261: Keyword 'super' is not valid in a static context"},
+				new String[] {});
+		}
+		
 	}
 }

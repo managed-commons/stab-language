@@ -2672,6 +2672,7 @@ package stab.tools.compiler {
                 var initializer = constructorDeclaration.Initializer;
                 var isStatic = constructorDeclaration.Modifiers.contains(Modifier.Static);
                 if (initializer != null) {
+					context.CodeValidationContext.IsStatic = true;
                     var initType = (initializer.IsSuper) ? typeBuilder.BaseType : typeBuilder;
                     var constructors = initType.Methods.where(p => p.Name.equals("<init>"));
                     foreach (var arg in initializer.Arguments) {
@@ -2679,6 +2680,7 @@ package stab.tools.compiler {
                             expressionValidator.handleExpression(arg, null, true);
                         }
                     }
+					context.CodeValidationContext.IsStatic = false;
                     var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, initializer.Arguments, JvmTypeInfo.VOID);
                     var info = new ExpressionInfo(initType);
                     info.Method = constructor;
