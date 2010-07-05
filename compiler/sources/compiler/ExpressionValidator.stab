@@ -738,6 +738,12 @@ package stab.tools.compiler {
                     }
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(JvmTypeInfo.BOOLEAN);
+				} else if (lt.IsEnum) {
+					if (lt != rt) {
+                        addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
+					}
+                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                    binary.addOrReplaceUserData(lt);
                 } else {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(context.TypeSystem.ObjectType);

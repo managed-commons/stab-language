@@ -1848,7 +1848,7 @@ package stab.tools.compiler {
                 case Long:
                 case Float:
                 case Double:
-                    if (type.TypeKind != targetType.NumericTypeKind) {
+                    if (type.TypeKind != targetType.TypeKind) {
                         BytecodeHelper.emitNumericConversion(generator, type, targetType);
                     }
                     break;

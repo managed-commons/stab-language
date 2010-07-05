@@ -141,5 +141,12 @@ package stab.tools.compiler.test {
 				"NullMemberAccess.stab (5, 16) error 322: Cannot access members of 'null'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void enumEquals() {
+			doTest("EnumEquals", new String[]{
+				"EnumEquals.stab (6, 16) error 175: Operator '==' cannot applied to operand of type 'C.E1' and 'C.E2'" },
+				new String[] {});
+		}
 	}
 }
