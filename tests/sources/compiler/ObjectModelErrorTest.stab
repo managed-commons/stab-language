@@ -215,5 +215,12 @@ package stab.tools.compiler.test {
 			doTest("DeprecatedMethodUsage", new String[] {},
 				new String[] { "DeprecatedMethodUsage.stab (12, 12) warning 318: Usage of deprecated method 'A.m()'" });
 		}
+		
+		[Test]
+		public void baseClassAfterInterface() {
+			doTest("BaseClassAfterInterface", new String[] {
+				"BaseClassAfterInterface.stab (1, 20) error 323: Base class 'B' must come before any interfaces" },
+				new String[] {});
+		}
 	}
 }

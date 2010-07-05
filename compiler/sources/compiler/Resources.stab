@@ -183,6 +183,7 @@ package stab.tools.compiler {
         DeprecatedType,
         DeprecatedProperty,
 		NullMemberAccess,
+		BaseClassBeforeInterfaces,
     }
 
     class Resources {

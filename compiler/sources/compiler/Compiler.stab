@@ -825,10 +825,15 @@ package stab.tools.compiler {
                         }
                     } else {
                         if (!type.IsInterface) {
-                            context.addError(CompileErrorId.MultipleBaseClass, typeReference,
-                                BytecodeHelper.getDisplayName(typeBuilder),
-                                BytecodeHelper.getDisplayName(type),
-                                BytecodeHelper.getDisplayName(typeBuilder.BaseType));
+							if (typeBuilder.BaseType != null) {
+								context.addError(CompileErrorId.MultipleBaseClass, typeReference,
+									BytecodeHelper.getDisplayName(typeBuilder),
+									BytecodeHelper.getDisplayName(type),
+									BytecodeHelper.getDisplayName(typeBuilder.BaseType));
+							} else {
+								context.addError(CompileErrorId.BaseClassBeforeInterfaces, typeReference,
+									BytecodeHelper.getDisplayName(type));
+							}
                         }
                         typeBuilder.addInterface(type);
                     }
