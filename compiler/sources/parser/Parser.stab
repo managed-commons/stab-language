@@ -56,16 +56,20 @@ package stab.tools.parser {
         }
 
         private CompilationUnitNode parseCompilationUnit() {
-            return new CompilationUnitNode(scanner.getText()) { Body = parsePackageBody(true) };
+            CompilationUnitNode compilationUnit = new CompilationUnitNode(scanner.getText()) { Body = parsePackageBody(true, 0) };
+			compilationUnit.StartPosition = 0;
+			compilationUnit.EndPosition = sizeof(compilationUnit.Text);
+			return compilationUnit;
         }
 
-        private PackageBodyNode parsePackageBody(boolean global) {
-            var result = new PackageBodyNode();
+        private PackageBodyNode parsePackageBody(boolean global, int startPosition) {
+            var result = new PackageBodyNode { StartPosition = startPosition };
+			startPosition = scanner.StartPosition;
             while (lexicalUnit == LexicalUnit.Keyword && scanner.Keyword == Keyword.Using) {
                 if (!isIdentifier(nextLexicalUnit(true))) {
                     throw error(ParseErrorId.IdentifierExpected);
                 }
-                var usingDirective = new UsingDirectiveNode();
+                var usingDirective = new UsingDirectiveNode { StartPosition = startPosition };
                 setScannerState(usingDirective);
                 result.UsingDirectives.add(usingDirective);
                 int sp = scanner.StartPosition;
@@ -79,6 +83,7 @@ package stab.tools.parser {
                     restore(restorePoint);
                 }
                 usingDirective.TypeOrPackage = parsePackageOrTypeName(true);
+				usingDirective.EndPosition = scanner.EndPosition;
                 parseSemiColon(false, false);
             }
 
@@ -95,7 +100,7 @@ package stab.tools.parser {
                             addError(ParseErrorId.PackageWithModifiers);
                             modifiers.clear();
                         }
-                        var ns = new PackageDeclarationNode();
+                        var ns = new PackageDeclarationNode { StartPosition = scanner.StartPosition };
                         if (docCommentEndPosition > 0) {
                             ns.DocumentationOffset = docCommentStartPosition;
                             ns.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -115,74 +120,101 @@ package stab.tools.parser {
                         if (lexicalUnit != LexicalUnit.OpenBrace) {
                             throw error(ParseErrorId.OpenBraceExpected);
                         }
+						startPosition = scanner.StartPosition;
                         if (nextLexicalUnit(true) != LexicalUnit.CloseBrace) {
-                            ns.setBody(parsePackageBody(false));
+                            ns.setBody(parsePackageBody(false, startPosition));
                         }
                         if (lexicalUnit != LexicalUnit.CloseBrace) {
                             throw error(ParseErrorId.CloseBraceExpected);
                         }
+						ns.EndPosition = scanner.EndPosition;
                         if (nextLexicalUnit(false) == LexicalUnit.SemiColon) {
+							ns.EndPosition = scanner.EndPosition;
                             nextLexicalUnit(false);
-                        }
+						}
                         result.Members.add(ns);
                         break;
 
                     case Public:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Public);
                         nextLexicalUnit(true);
                         break;
 
                     case Protected:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Protected);
                         nextLexicalUnit(true);
                         break;
 
                     case Private:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Private);
                         nextLexicalUnit(true);
                         break;
 
                     case Abstract:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Abstract);
                         nextLexicalUnit(true);
                         break;
 
                     case Final:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Final);
                         nextLexicalUnit(true);
                         break;
 
                     case Static:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Static);
                         nextLexicalUnit(true);
                         break;
 
                     case Strictfp:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         addModifier(modifiers, Modifier.Strictfp);
                         nextLexicalUnit(true);
                         break;
 
                     case Partial:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         switch (nextLexicalUnit(true)) {
                         case Keyword:
                             switch (scanner.Keyword) {
                             case Class:
                                 nextLexicalUnit(true);
-                                result.Members.add(parseClass(annotations, modifiers, false, true));
+                                result.Members.add(parseClass(annotations, modifiers, false, true, startPosition));
                                 modifiers.clear();
                                 annotations.clear();
                                 break;
 
                             case Interface:
                                 nextLexicalUnit(true);
-                                result.Members.add(parseInterface(annotations, modifiers, true));
+                                result.Members.add(parseInterface(annotations, modifiers, true, startPosition));
                                 modifiers.clear();
                                 annotations.clear();
                                 break;
 
                             case Enum:
                                 nextLexicalUnit(true);
-                                result.Members.add(parseClass(annotations, modifiers, true, true));
+                                result.Members.add(parseClass(annotations, modifiers, true, true, startPosition));
                                 modifiers.clear();
                                 annotations.clear();
                                 break;
@@ -198,29 +230,41 @@ package stab.tools.parser {
                         break;
 
                     case Class:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         nextLexicalUnit(true);
-                        result.Members.add(parseClass(annotations, modifiers, false, false));
+                        result.Members.add(parseClass(annotations, modifiers, false, false, startPosition));
                         modifiers.clear();
                         annotations.clear();
                         break;
 
                     case Interface:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         nextLexicalUnit(true);
-                        result.Members.add(parseInterface(annotations, modifiers, false));
+                        result.Members.add(parseInterface(annotations, modifiers, false, startPosition));
                         modifiers.clear();
                         annotations.clear();
                         break;
 
                     case Enum:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         nextLexicalUnit(true);
-                        result.Members.add(parseClass(annotations, modifiers, true, false));
+                        result.Members.add(parseClass(annotations, modifiers, true, false, startPosition));
                         modifiers.clear();
                         annotations.clear();
                         break;
 
                     case Delegate:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         nextLexicalUnit(true);
-                        result.Members.add(parseDelegate(annotations, modifiers));
+                        result.Members.add(parseDelegate(annotations, modifiers, startPosition));
                         modifiers.clear();
                         annotations.clear();
                         break;
@@ -263,16 +307,17 @@ package stab.tools.parser {
                     throw error(ParseErrorId.NoPackageMembers);
                 }
             } while (!done);
+			result.EndPosition = scanner.EndPosition;
             return result;
         }
 
         private ClassDeclarationNode parseClass(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean isEnum,
-                boolean partial) {
+                boolean partial, int startPosition) {
             if (!isIdentifier(lexicalUnit)) {
                 throw error(ParseErrorId.IdentifierExpected);
             }
             var result = new ClassDeclarationNode { IsEnum = isEnum, IsPartial = partial,
-                    NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+                    NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength(), StartPosition = startPosition };
             if (docCommentEndPosition > 0) {
                 result.DocumentationOffset = docCommentStartPosition;
                 result.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -292,15 +337,16 @@ package stab.tools.parser {
             if (lexicalUnit != LexicalUnit.OpenBrace) {
                 throw error(ParseErrorId.OpenBraceExpected);
             }
-            parseClassBody(annotations, modifiers, isEnum, result.Members);
+            result.EndPosition = parseClassBody(annotations, modifiers, isEnum, result.Members);
             if (lexicalUnit == LexicalUnit.SemiColon) {
                 nextLexicalUnit(false);
             }
             return result;
         }
 
-        private void parseClassBody(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean isEnum,
+        private int parseClassBody(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean isEnum,
                 List<ITypeMember> members) {
+			int startPosition = 0;
             if (nextLexicalUnit(true, LexicalUnit.CloseBrace) != LexicalUnit.CloseBrace) {
                 var done = false;
                 modifiers.clear();
@@ -317,18 +363,20 @@ package stab.tools.parser {
                         switch (lexicalUnit) {
                         case Comma:
                             if (nextLexicalUnit(true) == LexicalUnit.CloseBrace) {
+								int result = scanner.EndPosition;
                                 if (nextLexicalUnit(false) == LexicalUnit.SemiColon) {
                                     nextLexicalUnit(false);
                                 }
-                                return;
+                                return result;
                             }
                             break;
                             
                         case CloseBrace:
+							int result = scanner.EndPosition;
                             if (nextLexicalUnit(false) == LexicalUnit.SemiColon) {
                                 nextLexicalUnit(false);
                             }
-                            return;
+                            return result;
                             
                         case SemiColon:
                             done = true;
@@ -342,91 +390,131 @@ package stab.tools.parser {
                     while (lexicalUnit == LexicalUnit.OpenBracket) {
                         annotations.add(parseAnnotationSection());
                     }
+					startPosition = scanner.StartPosition;
                     switch (lexicalUnit) {
                     case Keyword:
                     case ContextualKeyword:
                         switch (scanner.Keyword) {
                         case Public:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Public);
                             nextLexicalUnit(true);
                             break;
 
                         case Protected:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Protected);
                             nextLexicalUnit(true);
                             break;
 
                         case Private:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Private);
                             nextLexicalUnit(true);
                             break;
 
                         case Abstract:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Abstract);
                             nextLexicalUnit(true);
                             break;
 
                         case Override:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Override);
                             nextLexicalUnit(true);
                             break;
 
                         case Virtual:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Virtual);
                             nextLexicalUnit(true);
                             break;
 
                         case Native:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Native);
                             nextLexicalUnit(true);
                             break;
 
                         case Final:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Final);
                             nextLexicalUnit(true);
                             break;
 
                         case Static:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Static);
                             nextLexicalUnit(true);
                             break;
 
                         case Synchronized:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Synchronized);
                             nextLexicalUnit(true);
                             break;
 
                         case Transient:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Transient);
                             nextLexicalUnit(true);
                             break;
 
                         case Volatile:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             addModifier(modifiers, Modifier.Volatile);
                             nextLexicalUnit(true);
                             break;
 
                         case Partial:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             switch (nextLexicalUnit(true)) {
                             case Keyword:
                                 switch (scanner.Keyword) {
                                 case Class:
                                     nextLexicalUnit(true);
-                                    members.add(parseClass(annotations, modifiers, false, true));
+                                    members.add(parseClass(annotations, modifiers, false, true, startPosition));
                                     modifiers.clear();
                                     annotations.clear();
                                     break;
 
                                 case Interface:
                                     nextLexicalUnit(true);
-                                    members.add(parseInterface(annotations, modifiers, true));
+                                    members.add(parseInterface(annotations, modifiers, true, startPosition));
                                     modifiers.clear();
                                     annotations.clear();
                                     break;
 
                                 case Enum:
                                     nextLexicalUnit(true);
-                                    members.add(parseClass(annotations, modifiers, true, true));
+                                    members.add(parseClass(annotations, modifiers, true, true, startPosition));
                                     modifiers.clear();
                                     annotations.clear();
                                     break;
@@ -437,7 +525,7 @@ package stab.tools.parser {
                                 break;
 
                             default:
-                                members.add(parseClassMember(annotations, modifiers, true));
+                                members.add(parseClassMember(annotations, modifiers, true, startPosition));
                                 modifiers.clear();
                                 annotations.clear();
                                 break;
@@ -446,34 +534,34 @@ package stab.tools.parser {
 
                         case Class:
                             nextLexicalUnit(true);
-                            members.add(parseClass(annotations, modifiers, false, false));
+                            members.add(parseClass(annotations, modifiers, false, false, startPosition));
                             modifiers.clear();
                             annotations.clear();
                             break;
 
                         case Interface:
                             nextLexicalUnit(true);
-                            members.add(parseInterface(annotations, modifiers, false));
+                            members.add(parseInterface(annotations, modifiers, false, startPosition));
                             modifiers.clear();
                             annotations.clear();
                             break;
 
                         case Delegate:
                             nextLexicalUnit(true);
-                            members.add(parseDelegate(annotations, modifiers));
+                            members.add(parseDelegate(annotations, modifiers, startPosition));
                             modifiers.clear();
                             annotations.clear();
                             break;
 
                         case Enum:
                             nextLexicalUnit(true);
-                            members.add(parseClass(annotations, modifiers, true, false));
+                            members.add(parseClass(annotations, modifiers, true, false, startPosition));
                             modifiers.clear();
                             annotations.clear();
                             break;
 
                         default:
-                            members.add(parseClassMember(annotations, modifiers, false));
+                            members.add(parseClassMember(annotations, modifiers, false, startPosition));
                             modifiers.clear();
                             annotations.clear();
                             break;
@@ -495,7 +583,7 @@ package stab.tools.parser {
                         break;
 
                     case Identifier:
-                        members.add(parseClassMember(annotations, modifiers, false));
+                        members.add(parseClassMember(annotations, modifiers, false, startPosition));
                         modifiers.clear();
                         annotations.clear();
                         break;
@@ -509,7 +597,9 @@ package stab.tools.parser {
                 throw error(ParseErrorId.CloseBraceExpected);
             }
             docCommentEndPosition = 0;
+			int result = scanner.EndPosition;
             nextLexicalUnit(false);
+			return result;
         }
 
         private void addModifier(EnumSet<Modifier> modifiers, Modifier modifier) {
@@ -520,7 +610,7 @@ package stab.tools.parser {
             }
         }
 
-        private ITypeMember parseClassMember(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean partial) {
+        private ITypeMember parseClassMember(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean partial, int startPosition) {
             var restorePoint = this.getRestorePoint();
             int sp = scanner.StartPosition;
             int len = getLexicalUnitLength();
@@ -529,12 +619,12 @@ package stab.tools.parser {
             case OpenParenthesis:
                 nextLexicalUnit(true);
                 return parseConstructorDeclaration(annotations, modifiers, partial, sp, len,
-                    Collections.emptyList<SimpleNameTypeReferenceNode>());
+                    Collections.emptyList<SimpleNameTypeReferenceNode>(), startPosition);
             case LessThan:
                 var typeParameters = new ArrayList<SimpleNameTypeReferenceNode>();
                 if (parseTypeParameters(typeParameters, false)) {
                     if (lexicalUnit == LexicalUnit.OpenParenthesis) {
-                        return parseConstructorDeclaration(annotations, modifiers, partial, sp, len, typeParameters);
+                        return parseConstructorDeclaration(annotations, modifiers, partial, sp, len, typeParameters, startPosition);
                     }
                 }
                 goto default;
@@ -545,19 +635,19 @@ package stab.tools.parser {
                 if (lexicalUnit == LexicalUnit.Keyword && scanner.Keyword == Keyword.This) {
                     saveScannerState();
                     nextLexicalUnit(true);
-                    return parseIndexerDeclaration(annotations, modifiers, partial, type, false);
+                    return parseIndexerDeclaration(annotations, modifiers, partial, type, false, startPosition);
                 }
-                return parseFieldOrPropertyOrMethod(annotations, modifiers, partial, type);
+                return parseFieldOrPropertyOrMethod(annotations, modifiers, partial, type, startPosition);
             }
         }
 
         private InterfaceDeclarationNode parseInterface(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers,
-                boolean partial) {
+                boolean partial, int startPosition) {
             if (!isIdentifier(lexicalUnit)) {
                 throw error(ParseErrorId.IdentifierExpected);
             }
             var declaration = new InterfaceDeclarationNode { IsPartial = partial,
-                NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+                NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength(), StartPosition = startPosition };
             if (docCommentEndPosition > 0) {
                 declaration.DocumentationOffset = docCommentStartPosition;
                 declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -592,7 +682,7 @@ package stab.tools.parser {
                     case Keyword:
                     case ContextualKeyword:
                     case Identifier:
-                        declaration.Members.add(parseInterfaceMember(annotations, modifiers));
+                        declaration.Members.add(parseInterfaceMember(annotations, modifiers, startPosition));
                         modifiers.clear();
                         annotations.clear();
                         break;
@@ -606,14 +696,16 @@ package stab.tools.parser {
                 throw error(ParseErrorId.CloseBraceExpected);
             }
             docCommentEndPosition = 0;
+			declaration.EndPosition = scanner.EndPosition;
             if (nextLexicalUnit(false) == LexicalUnit.SemiColon) {
+				declaration.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
             }
             return declaration;
         }
         
         private ITypeMember parseFieldOrPropertyOrMethod(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers,
-                boolean partial, TypeReferenceNode type) {
+                boolean partial, TypeReferenceNode type, int startPosition) {
             if (!isIdentifier(lexicalUnit)) {
                 throw error(ParseErrorId.IdentifierExpected);
             }
@@ -625,7 +717,8 @@ package stab.tools.parser {
             parseTypeParameters(typeParameters);
             switch (lexicalUnit) {
             case OpenParenthesis:
-                var methodDeclaration = new MethodDeclarationNode { IsPartial = partial, ReturnType = type, NameOffset = sp, NameLength = len };
+                var methodDeclaration = new MethodDeclarationNode { IsPartial = partial, ReturnType = type, NameOffset = sp, NameLength = len,
+						StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     methodDeclaration.DocumentationOffset = docCommentStartPosition;
                     methodDeclaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -650,9 +743,11 @@ package stab.tools.parser {
                 switch (lexicalUnit) {
                 case OpenBrace:
                     methodDeclaration.Body = parseBlockStatement();
+					methodDeclaration.EndPosition = methodDeclaration.Body.EndPosition;
                     break;
 
                 case SemiColon:
+					methodDeclaration.EndPosition = scanner.EndPosition;
                     nextLexicalUnit(true);
                     break;
 
@@ -662,7 +757,8 @@ package stab.tools.parser {
                 return methodDeclaration;
 
             case OpenBrace:
-                var propertyDeclaration = new PropertyDeclarationNode { Type = type, NameOffset = sp, NameLength = len };
+                var propertyDeclaration = new PropertyDeclarationNode { Type = type, NameOffset = sp, NameLength = len,
+						StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     propertyDeclaration.DocumentationOffset = docCommentStartPosition;
                     propertyDeclaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -676,11 +772,12 @@ package stab.tools.parser {
                     parseAccessorDeclaration(propertyDeclaration, false);
                 }
                 docCommentEndPosition = 0;
+				propertyDeclaration.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
                 return propertyDeclaration;
 
             case Assign: {
-                var declaration = new FieldDeclarationNode { Type = type };
+                var declaration = new FieldDeclarationNode { Type = type, StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     declaration.DocumentationOffset = docCommentStartPosition;
                     declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -706,12 +803,13 @@ package stab.tools.parser {
                     }
                 }
                 docCommentEndPosition = 0;
+				declaration.EndPosition = scanner.StartPosition;
                 parseSemiColon(false, false);
                 return declaration;
             }
 
             case Comma: {
-                var declaration = new FieldDeclarationNode { Type = type };
+                var declaration = new FieldDeclarationNode { Type = type, StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     declaration.DocumentationOffset = docCommentStartPosition;
                     declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -736,12 +834,13 @@ package stab.tools.parser {
                     }
                 } while (lexicalUnit == LexicalUnit.Comma);
                 docCommentEndPosition = 0;
+				declaration.EndPosition = scanner.StartPosition;
                 parseSemiColon(false, false);
                 return declaration;
             }
 
             case SemiColon: {
-                var declaration = new FieldDeclarationNode { Type = type };
+                var declaration = new FieldDeclarationNode { Type = type, StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     declaration.DocumentationOffset = docCommentStartPosition;
                     declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -754,6 +853,7 @@ package stab.tools.parser {
                 setSavedScannerState(decl);
                 declaration.getDeclarators().add(decl);
                 docCommentEndPosition = 0;
+				declaration.EndPosition = scanner.StartPosition;
                 nextLexicalUnit(false);
                 return declaration;
             }
@@ -773,7 +873,8 @@ package stab.tools.parser {
         }
 
         private ITypeMember parseEnumConstant(List<AnnotationSectionNode> annotations) {
-            var result = new EnumConstantDeclarationNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+            var result = new EnumConstantDeclarationNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength(),
+					StartPosition = scanner.StartPosition };
             if (docCommentEndPosition > 0) {
                 result.DocumentationOffset = docCommentStartPosition;
                 result.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -791,12 +892,13 @@ package stab.tools.parser {
             if (lexicalUnit == LexicalUnit.OpenBrace) {
                 parseClassBody(annotations, EnumSet.noneOf(typeof(Modifier)), false, result.Members);
             }
+			result.EndPosition = scanner.StartPosition;
             return result;
         }
         
         private ITypeMember parseConstructorDeclaration(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers,
-                boolean partial, int startPosition, int length, List<SimpleNameTypeReferenceNode> typeParameters) {
-            var declaration = new ConstructorDeclarationNode { NameOffset = startPosition, NameLength = length };
+                boolean partial, int position, int length, List<SimpleNameTypeReferenceNode> typeParameters, int startPosition) {
+            var declaration = new ConstructorDeclarationNode { NameOffset = position, NameLength = length, StartPosition = startPosition };
             if (docCommentEndPosition > 0) {
                 declaration.DocumentationOffset = docCommentStartPosition;
                 declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -849,9 +951,11 @@ package stab.tools.parser {
             switch (lexicalUnit) {
             case OpenBrace:
                 declaration.Body = parseBlockStatement();
+				declaration.EndPosition = declaration.Body.EndPosition;
                 break;
 
             case SemiColon:
+				declaration.EndPosition = scanner.StartPosition;
                 docCommentEndPosition = 0;
                 nextLexicalUnit(true);
                 break;
@@ -910,8 +1014,8 @@ package stab.tools.parser {
             }
         }
         
-        private DelegateDeclarationNode parseDelegate(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers) {
-            var declaration = new DelegateDeclarationNode { ReturnType = parseType(true, true) };
+        private DelegateDeclarationNode parseDelegate(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, int startPosition) {
+            var declaration = new DelegateDeclarationNode { ReturnType = parseType(true, true), StartPosition = startPosition };
             if (docCommentEndPosition > 0) {
                 declaration.DocumentationOffset = docCommentStartPosition;
                 declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -937,16 +1041,17 @@ package stab.tools.parser {
             }
             parseTypeParameterConstraintsClauses(declaration.ConstraintsClauses);
             docCommentEndPosition = 0;
+			declaration.StartPosition = scanner.EndPosition;
             parseSemiColon(false, false);
             return declaration;
         }
 
-        private IInterfaceMember parseInterfaceMember(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers) {
+        private IInterfaceMember parseInterfaceMember(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, int startPosition) {
             var type = parseType(true, true);
             if (lexicalUnit == LexicalUnit.Keyword && scanner.Keyword == Keyword.This) {
                 saveScannerState();
                 nextLexicalUnit(true);
-                return parseIndexerDeclaration(annotations, modifiers, false, type, true);
+                return parseIndexerDeclaration(annotations, modifiers, false, type, true, startPosition);
             }
             if (!isIdentifier(lexicalUnit)) {
                 throw error(ParseErrorId.IdentifierExpected);
@@ -1082,8 +1187,8 @@ package stab.tools.parser {
         }
         
         private IndexerDeclarationNode parseIndexerDeclaration(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers,
-                boolean partial, TypeReferenceNode type, boolean inInterface) {
-            var declaration = new IndexerDeclarationNode { Type = type };
+                boolean partial, TypeReferenceNode type, boolean inInterface, int startPosition) {
+            var declaration = new IndexerDeclarationNode { Type = type, StartPosition = startPosition };
             if (docCommentEndPosition > 0) {
                 declaration.DocumentationOffset = docCommentStartPosition;
                 declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -1109,6 +1214,7 @@ package stab.tools.parser {
                 parseAccessorDeclaration(declaration, inInterface);
             }
             docCommentEndPosition = 0;
+			declaration.EndPosition = scanner.EndPosition;
             nextLexicalUnit(false);
             return declaration;
         }
@@ -1824,13 +1930,14 @@ package stab.tools.parser {
             if (lexicalUnit != LexicalUnit.OpenBrace) {
                 throw error(ParseErrorId.OpenBraceExpected);
             }
-            var result = new BlockStatementNode();
+            var result = new BlockStatementNode { StartPosition = scanner.StartPosition };
             setScannerState(result);
             nextLexicalUnit(true);
             while (lexicalUnit != LexicalUnit.CloseBrace) {
                 result.Statements.add(parseStatement());
             }
             docCommentEndPosition = 0;
+			result.EndPosition = scanner.EndPosition;
             nextLexicalUnit(false);
             return result;
         }
@@ -3198,13 +3305,13 @@ package stab.tools.parser {
         }
 
         private AnnotationSectionNode parseAnnotationSection() {
-            var result = new AnnotationSectionNode();
+            var result = new AnnotationSectionNode { StartPosition = scanner.StartPosition };
             setScannerState(result);
             if (!isIdentifier(nextLexicalUnit(true))) {
                 throw error(ParseErrorId.IdentifierExpected);
             }
             do {
-                var attribute = new AnnotationCreationNode();
+                var attribute = new AnnotationCreationNode { StartPosition = scanner.StartPosition };
                 setScannerState(attribute);
                 attribute.Type = parseType(true);
                 if (lexicalUnit == LexicalUnit.OpenParenthesis) {
@@ -3257,13 +3364,17 @@ package stab.tools.parser {
                             throw error(ParseErrorId.CloseParenthesisExpected);
                         }
                     }
+					attribute.EndPosition = scanner.EndPosition;
                     nextLexicalUnit(true);
-                }
+                } else {
+					attribute.EndPosition = attribute.Type.EndPosition;
+				}
                 result.Annotations.add(attribute);
             } while (lexicalUnit == LexicalUnit.Comma);
             if (lexicalUnit != LexicalUnit.CloseBracket) {
                 throw error(ParseErrorId.CloseBracketExpected);
             }
+			result.EndPosition = scanner.EndPosition;
             nextLexicalUnit(false);
             return result;
         }
@@ -3291,7 +3402,7 @@ package stab.tools.parser {
                 return result;
             }
             do {
-                var arrayType = new ArrayTypeReferenceNode();
+                var arrayType = new ArrayTypeReferenceNode { StartPosition = result.StartPosition, EndPosition = scanner.EndPosition };
                 arrayType.ElementType = result;
                 result = arrayType;
                 if (nextLexicalUnit(false) != LexicalUnit.OpenBracket) {
@@ -3416,7 +3527,7 @@ package stab.tools.parser {
             TypeReferenceNode result;
             int sp = scanner.StartPosition;
             int len = getLexicalUnitLength();
-            var name = new SimpleNameTypeReferenceNode();
+            var name = new SimpleNameTypeReferenceNode { StartPosition = sp };
             setScannerState(name);
             name.NameOffset = sp;
             name.NameLength = len;
@@ -3425,6 +3536,7 @@ package stab.tools.parser {
             nextLexicalUnit(false);
             parseTypeArguments(name.TypeArguments, false);
             while (lexicalUnit == LexicalUnit.Dot) {
+				result.EndPosition = scanner.StartPosition;
                 nextLexicalUnit(fail);
                 if (!isIdentifier(lexicalUnit)) {
                     if (fail) {
@@ -3433,16 +3545,17 @@ package stab.tools.parser {
                         return null;
                     }
                 }
-                name = new SimpleNameTypeReferenceNode();
+                name = new SimpleNameTypeReferenceNode { StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                 setScannerState(name);
                 name.NameOffset = scanner.StartPosition;
                 name.NameLength = getLexicalUnitLength();
-                var qualifiedType = new QualifiedTypeReferenceNode { EnclosingType = result, SimpleName = name };
+                var qualifiedType = new QualifiedTypeReferenceNode { EnclosingType = result, SimpleName = name, StartPosition = result.StartPosition };
                 copyScannerState(result, qualifiedType);
                 result = qualifiedType;
                 nextLexicalUnit(false);
                 parseTypeArguments(name.TypeArguments,false);
             }
+			result.EndPosition = scanner.StartPosition;
             return result;
         }
 
@@ -3461,55 +3574,64 @@ package stab.tools.parser {
             case Keyword:
                 switch (scanner.Keyword) {
                 case Byte:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Byte);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Byte) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Char:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Char);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Char) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Short:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Short);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Short) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Int:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Int);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Int) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Long:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Long);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Long) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Boolean:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Boolean);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Boolean) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Double:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Double);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Double) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Float:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Float);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Float) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Void:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Void);
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Void) {
+							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
@@ -3552,7 +3674,7 @@ package stab.tools.parser {
         }
 
         private LiteralExpressionNode createLiteralExpression(LiteralKind literalKind) {
-            var result = new LiteralExpressionNode();
+            var result = new LiteralExpressionNode { StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
             setScannerState(result);
             result.setLiteralKind(literalKind);
             result.ValueOffset = scanner.StartPosition;
@@ -3561,9 +3683,10 @@ package stab.tools.parser {
         }
 
         private TypeExpressionNode createTypeExpression(TypeReferenceKind typeReferenceKind) {
-            var result = new TypeExpressionNode();
+            var result = new TypeExpressionNode  { StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
             setScannerState(result);
-            result.setTypeReference(new PrimitiveTypeReferenceNode(typeReferenceKind));
+            result.setTypeReference(new PrimitiveTypeReferenceNode(typeReferenceKind)  {
+					StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition });
             return result;
         }
         

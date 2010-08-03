@@ -26,7 +26,7 @@ package stab.samples {
     public class Daleks : Frame {
         public static void main(String[] args) {
             var daleks = new Daleks();
-            daleks.show();
+            daleks.setVisible(true);
         }
 
         private static final int WIDTH = 25;
@@ -151,7 +151,7 @@ package stab.samples {
             energy++;
             ammo++;
             clearBoard();
-            for (int i = turn * 5; i > 0; i--) {
+            for (int i = Math.min(turn * 5, MAX_DALEKS); i > 0; i--) {
                 for (;;) {
                     int x = (int)(Math.random() * WIDTH);
                     int y = (int)(Math.random() * HEIGHT);

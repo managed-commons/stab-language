@@ -58,6 +58,16 @@ package stab.tools.compiler {
             get;
             set;
         }
+		
+		public JvmTypeSystem TypeSystem {
+			get;
+			set;
+		}
+		
+		public JvmTypeSystem AnnotatedTypeSystem {
+			get;
+			set;
+		}
     }
 
     public class CompilerResults {
@@ -167,15 +177,50 @@ package stab.tools.compiler {
             this.documentationBuilder = null;
             return results;
         }
+
+        public CompilerResults compileFromCompilationUnits(CompilerParameters parameters, CompilationUnitNode[] compilationUnits) {
+            var results = new CompilerResults();
+            this.context = new CompilerContext(parameters, results);
+            this.statementValidator = new StatementValidator(this.context);
+            this.expressionValidator = new ExpressionValidator(this.context);
+            this.statementValidator.ExpressionValidator = this.expressionValidator;
+            this.expressionValidator.StatementValidator = this.statementValidator;
+            this.reachabilityChecker = new ReachabilityChecker(context);
+            this.assignmentChecker = new AssignmentChecker(context);
+            this.bytecodeGenerator = new BytecodeGenerator(context);
+            
+			foreach (var cu in compilationUnits) {
+				context.CompilationUnits.add(cu);
+			}
+			doCompile();
+            
+            this.context = null;
+            this.statementValidator = null;
+            this.expressionValidator = null;
+            this.reachabilityChecker = null;
+            this.assignmentChecker = null;
+            this.queryTranslator = null;
+            this.documentationBuilder = null;
+            return results;
+        }
         
         private void doCompile() {
-            int nPaths = context.Parameters.ClassPath.size();
-            var classPath = context.Parameters.ClassPath.toArray(new String[nPaths]);
-            context.TypeSystem = new JvmTypeSystem(classPath, context.Parameters.BootClasses);
-            
-            nPaths = context.Parameters.AnnotatedLibraryPaths.size();
-            context.AnnotatedTypeSystem = new JvmTypeSystem(context.Parameters.AnnotatedLibraryPaths.toArray(new String[nPaths]),
-                context.TypeSystem);
+			if (context.Parameters.TypeSystem == null) {
+				int nPaths = context.Parameters.ClassPath.size();
+				var classPath = context.Parameters.ClassPath.toArray(new String[nPaths]);
+				context.TypeSystem = new JvmTypeSystem(classPath, context.Parameters.BootClasses);
+				
+				nPaths = context.Parameters.AnnotatedLibraryPaths.size();
+				context.AnnotatedTypeSystem = new JvmTypeSystem(context.Parameters.AnnotatedLibraryPaths.toArray(new String[nPaths]),
+						context.TypeSystem);
+			} else {
+				context.TypeSystem = context.Parameters.TypeSystem;
+				if (context.Parameters.AnnotatedTypeSystem != null) {
+					context.AnnotatedTypeSystem = context.Parameters.AnnotatedTypeSystem;
+				} else {
+					context.AnnotatedTypeSystem = context.Parameters.TypeSystem;
+				}
+			}
             
             // Define all types
             defineTypes();

@@ -129,7 +129,6 @@ package stab.tools.bytecode {
         private static void appendFormalTypeParametersSignature(StringBuilder sb, Iterable<JvmTypeInfo> typeArguments) {
             if (typeArguments.any()) {
                 sb.append("<");
-                int nArgs = typeArguments.count();
                 foreach (var t in typeArguments) {
                     sb.append(t.FullName);
                     var first = true;
@@ -138,18 +137,18 @@ package stab.tools.bytecode {
                             sb.append(":");
                             if (first) {
                                 first = false;
-                                if (nArgs > 1 || !bound.IsObject) {
+                                if (!bound.IsObject) {
                                     appendClassTypeSignature(sb, bound, bound.GenericArguments);
-                                }
+                                } else {
+									sb.append("Ljava/lang/Object;");
+								}
                             } else {
                                 appendClassTypeSignature(sb, bound, bound.GenericArguments);
                             }
                         }
                     } else {
                         sb.append(":");
-                        if (nArgs > 1) {
-                            sb.append("Ljava/lang/Object;");
-                        }
+						sb.append("Ljava/lang/Object;");
                     }
                 }
                 sb.append(">");

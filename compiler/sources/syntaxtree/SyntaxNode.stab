@@ -38,6 +38,16 @@ package stab.tools.syntaxtree {
 			get;
 			set;
 		}
+
+        public int StartPosition {
+            get;
+			set;
+        }
+
+        public int EndPosition {
+            get;
+			set;
+        }
 		
 		public IntIterable DisabledWarnings {
 			get;
