@@ -117,7 +117,7 @@ package stab.tools.bytecode {
                 it.next();
             }
             while (it.hasNext()) {
-                nestedTypes.add(new RawGenericType(this, it.next()));
+                nestedTypes.add(it.next());
             }
         }
     }

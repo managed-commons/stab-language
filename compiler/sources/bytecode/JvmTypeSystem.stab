@@ -73,6 +73,12 @@ package stab.tools.bytecode {
             }
         }
         
+		public Iterable<String> ClassNames {
+			get {
+				return allClassNames;
+			}
+		}
+		
         public JvmTypeBuilder defineType(String name) {
             if (typeExists(name)) {
                 throw new IllegalStateException("Type '" + name + "' already defined");

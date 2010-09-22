@@ -181,10 +181,11 @@ package stab.tools.compiler {
         }
 
         static JvmTypeInfo resolveTypeReference(CompilerContext context, String packageName, TypeReferenceNode typeReference) {
-            return resolveTypeReference(context, packageName, typeReference, true);
+            return resolveTypeReference(context, packageName, typeReference, true, true);
         }
     
-        static JvmTypeInfo resolveTypeReference(CompilerContext context, String packageName, TypeReferenceNode typeReference, boolean fail) {
+        static JvmTypeInfo resolveTypeReference(CompilerContext context, String packageName, TypeReferenceNode typeReference,
+				boolean fail, boolean reportRawTypeUsage) {
             switch (typeReference.TypeReferenceKind) {
             case Boolean:
                 return JvmTypeInfo.BOOLEAN;
@@ -227,13 +228,13 @@ package stab.tools.compiler {
                         return null;
                     }
                 }
-                return getGenericType(context, packageName, typeInfo.Type, simpleName.TypeArguments, simpleName, fail);
+                return getGenericType(context, packageName, typeInfo.Type, simpleName.TypeArguments, simpleName, fail, reportRawTypeUsage);
             }
             case Qualified: {
                 var qualified = (QualifiedTypeReferenceNode)typeReference;
                 var simpleName = qualified.SimpleName;
                 var name = context.getIdentifier(simpleName.NameOffset, simpleName.NameLength);
-                var enclosingType = resolveTypeReference(context, packageName, qualified.EnclosingType, false);
+                var enclosingType = resolveTypeReference(context, packageName, qualified.EnclosingType, false, false);
                 if (enclosingType == null) {
                     var pkg = getFullName(context, qualified.EnclosingType);
                     if (pkg.indexOf('/') == -1) {
@@ -252,7 +253,7 @@ package stab.tools.compiler {
                                 return null;
                             }
                         }
-                        return getGenericType(context, packageName, t, simpleName.TypeArguments, simpleName, fail);
+                        return getGenericType(context, packageName, t, simpleName.TypeArguments, simpleName, fail, reportRawTypeUsage);
                     } else {
                         if (fail) {
                             throw context.error(CompileErrorId.UnresolvedTypeName, qualified, fullName.replace('/', '.').replace('$', '.'));
@@ -264,7 +265,7 @@ package stab.tools.compiler {
                     var fullName = enclosingType.FullName + '$' + name;
                     foreach (var t in enclosingType.NestedTypes) {
                         if (t.FullName.equals(fullName)) {
-                            return getGenericType(context, packageName, t, simpleName.TypeArguments, simpleName, fail);
+                            return getGenericType(context, packageName, t, simpleName.TypeArguments, simpleName, fail, reportRawTypeUsage);
                         }
                     }
                     if (fail) {
@@ -281,7 +282,7 @@ package stab.tools.compiler {
         }
         
         private static JvmTypeInfo getGenericType(CompilerContext context, String packageName, JvmTypeInfo type,
-            List<TypeReferenceNode> typeArguments, SyntaxNode node, boolean fail) {
+            List<TypeReferenceNode> typeArguments, SyntaxNode node, boolean fail, boolean reportRawTypeUsage) {
             int nTypeArgs = typeArguments.size();
             if (!type.IsGenericTypeDefinition) {
                 if (nTypeArgs > 0) {
@@ -296,8 +297,10 @@ package stab.tools.compiler {
             int args = type.GenericArguments.count();
             if (args > 0 && nTypeArgs == 0) {
                 var result = type.RawGenericType;
-                context.addWarning(CompileErrorId.RawTypeUsage, node,
-                    BytecodeHelper.getDisplayName(result), BytecodeHelper.getDisplayName(type));
+				if (reportRawTypeUsage) {
+					context.addWarning(CompileErrorId.RawTypeUsage, node,
+						BytecodeHelper.getDisplayName(result), BytecodeHelper.getDisplayName(type));
+				}
                 return result;
             } else if (nTypeArgs != args) {
                 if (fail) {
@@ -311,7 +314,7 @@ package stab.tools.compiler {
             } else {
                 var typeArgs = new ArrayList<JvmTypeInfo>();
                 foreach (var t in typeArguments) {
-                    var ti = resolveTypeReference(context, packageName, t, fail);
+                    var ti = resolveTypeReference(context, packageName, t, fail, reportRawTypeUsage);
                     if (!fail && ti == null) {
                         return null;
                     }

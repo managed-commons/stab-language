@@ -239,6 +239,83 @@ package stab.tools.bytecode {
             classWriter.visitEnd();
             return classWriter.toByteArray();
         }
+
+		public JvmTypeBuilder[] getDependencies() {
+            checkCreated();
+			var dependencies = new HashSet<JvmTypeBuilder>();
+			addType(dependencies, baseType);
+			foreach (var t in interfaces) {
+				addType(dependencies, t);
+			}
+            foreach (var a in annotations) {
+				addType(dependencies, a.Type);
+			}
+            foreach (var nt in nestedTypes) {
+				foreach (var t in ((JvmTypeBuilder)nt).getDependencies()) {
+					dependencies.add((JvmTypeBuilder)t);
+				}
+			}
+			foreach (var f in fields) {
+				foreach (var a in f.Annotations) {
+					addType(dependencies, a.Type);
+				}
+				addType(dependencies, f.Type);
+			}
+            foreach (var m in methods) {
+                if (!m.IsExcludedFromCompilation) {
+					foreach (var a in m.Annotations) {
+						addType(dependencies, a.Type);
+					}
+					addType(dependencies, m.ReturnType);
+					foreach (var p in m.Parameters) {
+						foreach (var a in p.Annotations) {
+							addType(dependencies, a.Type);
+						}
+						addType(dependencies, p.Type);
+					}
+					foreach (var e in m.Exceptions) {
+						addType(dependencies, e);
+					}
+					foreach (var instruction in ((JvmMethodBuilder)m).CodeGenerator.Instructions) {
+						switch (instruction.Opcode) {
+						case Getfield:
+						case Getstatic:
+						case Putfield:
+						case Putstatic:
+							addType(dependencies, instruction.Field.DeclaringType);
+							break;
+							
+						case Invokedynamic:
+						case Invokeinterface:
+						case Invokespecial:
+						case Invokestatic:
+						case Invokevirtual:
+							addType(dependencies, instruction.Method.DeclaringType);
+							break;
+						case Anewarray:
+						case Checkcast:
+						case Instanceof:
+						case New:
+							addType(dependencies, instruction.Type);
+							break;
+						}
+					}
+				}
+			}
+			return dependencies.toArray(new JvmTypeBuilder[dependencies.size()]);
+		}
+
+		private void addType(HashSet<JvmTypeBuilder> types, JvmTypeInfo type) {
+			if (type instanceof JvmTypeBuilder) {
+				types.add((JvmTypeBuilder)type);
+			} else if (type.TypeKind == TypeKind.Array) {
+				addType(types, type.ElementType);
+			} else {
+				foreach (var t in type.GenericArguments) {
+					addType(types, t);
+				}
+			}
+		}
         
         private static String[] getTypeNames(Iterable<JvmTypeInfo> types) {
             if (types.any()) {
@@ -361,6 +438,7 @@ package stab.tools.bytecode {
             }
         }
         
+
         // ASM ClassWriter class has to be subclassed in order to avoid the use of Java reflection
         private class ClassWriterNoReflection : ClassWriter {
             private JvmTypeSystem typeSystem;

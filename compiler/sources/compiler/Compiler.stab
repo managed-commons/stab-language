@@ -68,17 +68,41 @@ package stab.tools.compiler {
 			get;
 			set;
 		}
+		
+		public boolean TypeBuildersDefined {
+			get;
+			set;
+		}
     }
 
+	public enum CompilationStage {
+		None,
+		Parsing,
+		TypesDefinition,
+		SuperTypesDefinition,
+		MembersDefinition,
+		AnnotationsDefinition,
+		CodeValidation,
+		Success
+	}
+	
     public class CompilerResults {
         CodeErrorManager codeErrorManager;
         HashMap<String, byte[]> classFiles;
+		CompilationStage compilationStage;
     
         public CompilerResults() {
             this.codeErrorManager = new CodeErrorManager();
             this.classFiles = new HashMap<String, byte[]>();
+			this.compilationStage = CompilationStage.None;
         }
         
+		public CompilationStage CompilationStage {
+			get {
+				return compilationStage;
+			}
+		}
+		
         public Iterable<CodeError> Errors {
             get {
                 return codeErrorManager.Errors;
@@ -225,36 +249,42 @@ package stab.tools.compiler {
             // Define all types
             defineTypes();
             if (context.HasErrors) {
+				context.Results.compilationStage = CompilationStage.Parsing;
                 return;
             }
             
             // Set the base types
             setBaseTypes();
             if (context.HasErrors) {
+				context.Results.compilationStage = CompilationStage.TypesDefinition;
                 return;
             }
             
             // Define all members
             defineMembers();
             if (context.HasErrors) {
+				context.Results.compilationStage = CompilationStage.SuperTypesDefinition;
                 return;
             }
 
             // Annotations generation
             generateAnnotations();
             if (context.HasErrors) {
+				context.Results.compilationStage = CompilationStage.MembersDefinition;
                 return;
             }
             
             // Code validation
             validateCode();
             if (context.HasErrors) {
+				context.Results.compilationStage = CompilationStage.AnnotationsDefinition;
                 return;
             }
 
             // Bytecode generation
             generateBytecode();
             if (context.HasErrors) {
+				context.Results.compilationStage = CompilationStage.CodeValidation;
                 return;
             }
             
@@ -269,6 +299,7 @@ package stab.tools.compiler {
             if (context.Parameters.DocumentationPath != null) {
                 buildDocumentation(new File(context.Parameters.DocumentationPath));
             }
+			context.Results.compilationStage = CompilationStage.Success;
         }
         
         ///////////////////////////////////////////////////////////////////////////////////////////
@@ -544,12 +575,28 @@ package stab.tools.compiler {
         }
 
         private JvmTypeBuilder defineType(String name, SyntaxNode node) {
-            if (context.TypeSystem.typeExists(name)) {
-                throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
-            }
-            var result = context.TypeSystem.defineType(name);
-            context.TypeBuilders.add(result);
-            return result;
+			if (context.Parameters.TypeBuildersDefined) {
+				JvmTypeBuilder result = null;
+				if (context.TypeSystem.typeExists(name)) {
+					var typeInfo = context.TypeSystem.getType(name);
+					if (!(typeInfo instanceof JvmTypeBuilder)) {
+						throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
+					}
+					result = (JvmTypeBuilder)typeInfo;
+				}
+				if (result == null) {
+					result = context.TypeSystem.defineType(name);
+				}
+				context.TypeBuilders.add(result);
+				return result;
+			} else {
+				if (context.TypeSystem.typeExists(name)) {
+					throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
+				}
+				var result = context.TypeSystem.defineType(name);
+				context.TypeBuilders.add(result);
+				return result;
+			}
         }
 
         private JvmTypeBuilder defineNestedType(JvmTypeBuilder declaringClass, String className, String shortName, SyntaxNode node) {
@@ -782,7 +829,7 @@ package stab.tools.compiler {
                     if (packageInfo.memberInfos.containsKey(name) || packageInfo.packageAliases.containsKey(name)) {
                         context.addWarning(CompileErrorId.MultipleUsingDirective, usingDirective, name);
                     }
-                    var typeInfo = CompilerHelper.resolveTypeReference(context, packageName, usingDirective.TypeOrPackage, false);
+                    var typeInfo = CompilerHelper.resolveTypeReference(context, packageName, usingDirective.TypeOrPackage, false, true);
                     if (typeInfo != null) {
                         packageInfo.memberInfos[name] = MemberInfo.getInfo(typeInfo);
                     } else {
@@ -1212,7 +1259,7 @@ package stab.tools.compiler {
                 var paramTypes = new ArrayList<JvmTypeInfo>();
                 try {
                     foreach (var p in parameters) {
-                        var t = CompilerHelper.resolveTypeReference(context, typeBuilder.PackageName, p.Type, false);
+                        var t = CompilerHelper.resolveTypeReference(context, typeBuilder.PackageName, p.Type, false, true);
                         if (t == null) {
                             break;
                         }

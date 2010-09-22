@@ -440,7 +440,9 @@ package stab.tools.parser {
                         throw scanner.error(ParseErrorId.EndifExpected);
                 }
             } while (lexicalUnit != PreprocessorLexicalUnit.Endif);
+			int line = scanner.Line;
             parseNewLine(true);
+			parts.add(new EndifSectionPart(position, scanner.Position - position, line));
 
             position = scanner.Position;
             nextLexicalUnit(skippedSection);

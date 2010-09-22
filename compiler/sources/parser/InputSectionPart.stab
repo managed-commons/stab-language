@@ -28,7 +28,8 @@ package stab.tools.parser {
         Pragma,
         If,
         Elif,
-        Else
+        Else,
+		Endif
     }
 
     public abstract class InputSectionPart {
@@ -322,7 +323,7 @@ package stab.tools.parser {
         private String endMessage;
         
         RegionSectionPart(int position, int length, int line, Iterable<InputSectionPart> parts, String startMessage, String endMessage)
-            : super(InputSectionPartKind.Region, position, line, length, parts) {
+            : super(InputSectionPartKind.Region, position, length, line, parts) {
             this.startMessage = startMessage;
             this.endMessage = endMessage;
         }
@@ -343,6 +344,12 @@ package stab.tools.parser {
     class SourceCodeSectionPart : InputSectionPart {
         SourceCodeSectionPart(int position, int length, int line)
             : super(InputSectionPartKind.SourceCode, position, length, line) {
+        }
+    }
+
+    class EndifSectionPart : InputSectionPart {
+        EndifSectionPart(int position, int length, int line)
+            : super(InputSectionPartKind.Endif, position, length, line) {
         }
     }
 
