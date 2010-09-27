@@ -446,6 +446,9 @@ package stab.tools.compiler {
                 if (field.IsStatic) {
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
+					if (boxingKind == BoxingKind.Box) {
+						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+					}
                     if (nested) {
                         generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
                     }
@@ -453,7 +456,10 @@ package stab.tools.compiler {
                     expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
-                    if (nested) {
+					if (boxingKind == BoxingKind.Box) {
+						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+					}
+					if (nested) {
                         generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
                     }
                 }
@@ -466,6 +472,9 @@ package stab.tools.compiler {
                 if (method.IsStatic) {
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
+					if (boxingKind == BoxingKind.Box) {
+						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+					}
                     if (nested) {
                         generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
                     }
@@ -473,6 +482,9 @@ package stab.tools.compiler {
                     expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
+					if (boxingKind == BoxingKind.Box) {
+						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+					}
                     if (nested) {
                         generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
                     }

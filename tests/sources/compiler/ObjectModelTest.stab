@@ -725,5 +725,15 @@ package stab.tools.compiler.test {
 		public void genericNestedClass2() {
 			doTest("GenericNestedClass2", new Class<?>[] {}, new Object[] {}, "OK");
 		}
+		
+		[Test]
+		public void genericField() {
+			doTest("GenericField", new Class<?>[] {}, new Object[] {}, 1);
+		}
+		
+		[Test]
+		public void genericProperty() {
+			doTest("GenericProperty", new Class<?>[] {}, new Object[] {}, 1);
+		}
     }
 }
