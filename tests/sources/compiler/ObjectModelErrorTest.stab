@@ -237,5 +237,11 @@ package stab.tools.compiler.test {
 				new String[] {});
 		}
 		
+		[Test]
+		public void genericFinalMethodOverride() {
+			doTest("GenericFinalMethodOverride", new String[] {
+				"GenericFinalMethodOverride.stab (7, 17) error 204: 'D<T>.m(T)' cannot override the non-virtual method in 'C<T>'"},
+				new String[] {});
+		}
 	}
 }

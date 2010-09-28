@@ -735,5 +735,10 @@ package stab.tools.compiler.test {
 		public void genericProperty() {
 			doTest("GenericProperty", new Class<?>[] {}, new Object[] {}, 1);
 		}
+		
+		[Test]
+		public void genericMethod2() {
+			doTest("GenericMethod2", new Class<?>[] {}, new Object[] {}, 3);
+		}
     }
 }

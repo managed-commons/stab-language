@@ -3029,10 +3029,8 @@ package stab.tools.compiler {
                             BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
                 }
                 if (superMethod.IsFinal) {
-                    if (modifiers.contains(Modifier.Override)) {
-                        context.addError(CompileErrorId.IllegalOverrideMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
-                                BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
-                    }
+					context.addError(CompileErrorId.IllegalOverrideMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
+							BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
                 } else if (!modifiers.contains(Modifier.Override)) {
                     context.addError(CompileErrorId.MissingOverride, node, BytecodeHelper.getDisplayName(method.DeclaringType),
                             BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));
