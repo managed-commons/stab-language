@@ -634,6 +634,25 @@ package stab.tools.bytecode {
             }
         }
 
+		public boolean HasWildcardArgument {
+			get {
+                switch (this.TypeKind) {
+                case LowerBoundedWildcard:
+                case UpperBoundedWildcard:
+                case UnboundedWildcard:
+                    return true;
+                case Array:
+                    return this.ElementType.HasWildcardArgument;
+                }
+                foreach (var t in this.GenericArguments) {
+                    if (t.HasWildcardArgument) {
+                        return true;
+                    }
+                }
+                return false;
+			}
+		}
+		
         public static boolean hasImplicitConversion(JvmTypeInfo fromType, JvmTypeInfo toType) {
             if (fromType == null) {
                 return !toType.IsPrimitive;

@@ -184,6 +184,7 @@ package stab.tools.compiler {
         DeprecatedProperty,
 		NullMemberAccess,
 		BaseClassBeforeInterfaces,
+		WildcardTypeCreation,
     }
 
     class Resources {

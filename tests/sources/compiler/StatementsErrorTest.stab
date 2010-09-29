@@ -96,5 +96,12 @@ package stab.tools.compiler.test {
 				"VarArrayInitializer.stab (3, 9) error 306: Cannot initialize implicitly-typed variable with an array initializer" },
 				new String[] {});
 		}
+        
+		[Test]
+		public void localWildcard() {
+			doTest("LocalWildcard", new String[]{ 
+				"LocalWildcard.stab (5, 24) error 324: Cannot create an instance of the type 'java.util.HashSet<?>'" },
+				new String[] {});
+		}
 	}
 }

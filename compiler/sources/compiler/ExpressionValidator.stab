@@ -1388,6 +1388,9 @@ package stab.tools.compiler {
                 if (type.IsAbstract) {
                     context.addError(CompileErrorId.AbstractTypeCreation, objectCreation.Type, BytecodeHelper.getDisplayName(type));
                 }
+				if (type.HasWildcardArgument) {
+                    context.addError(CompileErrorId.WildcardTypeCreation, objectCreation.Type, BytecodeHelper.getDisplayName(type));
+				}
                 var constructors = new ArrayList<JvmMethodInfo>();
                 foreach (var method in type.Methods) {
                     if (method.Name.equals("<init>")) {
