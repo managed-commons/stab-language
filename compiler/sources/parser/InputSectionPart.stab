@@ -16,6 +16,7 @@
  */
 using java.lang;
 using stab.lang;
+using stab.tools.helpers;
 
 package stab.tools.parser {
 
@@ -32,7 +33,7 @@ package stab.tools.parser {
 		Endif
     }
 
-    public abstract class InputSectionPart {
+    public abstract class InputSectionPart : UserDataContainer {
         protected InputSectionPart(InputSectionPartKind inputSectionPartKind, int position, int length, int line) {
             this.InputSectionPartKind = inputSectionPartKind;
             this.Position = position;

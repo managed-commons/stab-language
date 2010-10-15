@@ -1496,5 +1496,10 @@ package stab.tools.compiler.test {
 		public void addStringBoolean() {
 			doTest("AddStringBoolean", new Class<?>[] {}, new Object[] {}, "true");
 		}
+		
+		[Test]
+		public void paramsInference() {
+			doTest("ParamsInference", new Class<?>[] {}, new Object[] {}, "1");
+		}
 	}
 }

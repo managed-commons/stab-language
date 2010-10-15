@@ -19,7 +19,7 @@ using stab.tools.bytecode;
 
 package stab.tools.compiler {
 
-    class ExpressionInfo {
+    public class ExpressionInfo {
         ExpressionInfo(JvmTypeInfo type) {
             this.Type = type;
             this.BoxingKind = BoxingKind.None;
@@ -34,17 +34,17 @@ package stab.tools.compiler {
             this.Negate = true;
         }
         
-        JvmTypeInfo Type {
+        public JvmTypeInfo Type {
             get;
             set;
         }
         
-        Object Value {
+        public Object Value {
             get;
             set;
         }
         
-        boolean IsConstant {
+        public boolean IsConstant {
             get;
             set;
         }
@@ -69,7 +69,7 @@ package stab.tools.compiler {
             set;
         }
         
-        MemberInfo Member {
+        public MemberInfo Member {
             get;
             set;
         }
@@ -79,7 +79,7 @@ package stab.tools.compiler {
             set;
         }
         
-        JvmMethodInfo Method {
+        public JvmMethodInfo Method {
             get;
             set;
         }

@@ -29,6 +29,7 @@ package stab.tools.parser {
         private String savedFilename;
         private int savedLine;
         private int savedColumn;
+		private int savedPosition;
         private IntIterable savedDisabledWarnings;
         private boolean wasSingleLineDocComment;
         private int docCommentStartPosition;
@@ -1265,13 +1266,16 @@ package stab.tools.parser {
                 switch (scanner.Keyword) {
                 case Protected:
                     accessor.Modifiers.add(Modifier.Protected);
+					accessor.StartPosition = scanner.StartPosition;
+					nextLexicalUnit(true);
                     break;
 
                 case Private:
                     accessor.Modifiers.add(Modifier.Private);
+					accessor.StartPosition = scanner.StartPosition;
+					nextLexicalUnit(true);
                     break;
                 }
-                nextLexicalUnit(true);
                 break;
             }
             setScannerState(accessor);
@@ -1282,6 +1286,9 @@ package stab.tools.parser {
                     if (declaration.GetAccessor != null) {
                         throw error(ParseErrorId.DuplicateAccessor);
                     }
+					if (accessor.StartPosition == 0) {
+						accessor.StartPosition = scanner.StartPosition;
+					}
                     declaration.GetAccessor = accessor;
                     nextLexicalUnit(true);
                     break;
@@ -1290,6 +1297,9 @@ package stab.tools.parser {
                     if (declaration.SetAccessor != null) {
                         throw error(ParseErrorId.DuplicateAccessor);
                     }
+					if (accessor.StartPosition == 0) {
+						accessor.StartPosition = scanner.StartPosition;
+					}
                     declaration.SetAccessor = accessor;
                     nextLexicalUnit(true);
                     break;
@@ -1305,11 +1315,13 @@ package stab.tools.parser {
             switch (lexicalUnit) {
             case SemiColon:
                 nextLexicalUnit(false);
+				accessor.EndPosition = scanner.StartPosition;
                 break;
 
             case OpenBrace:
                 if (!inInterface) {
                     accessor.Body = parseBlockStatement();
+					accessor.EndPosition = scanner.StartPosition;
                     break;
                 }
                 goto default;
@@ -1881,6 +1893,7 @@ package stab.tools.parser {
             if (eatSemiColon) {
                 parseSemiColon(false, false);
             }
+			declaration.EndPosition = scanner.StartPosition;
             return declaration;
         }
         
@@ -3733,6 +3746,7 @@ package stab.tools.parser {
             savedLine = scanner.StartLine;
             savedColumn = scanner.StartColumn;
             savedDisabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
+			savedPosition = scanner.StartPosition;
         }
 
         private void setScannerState(SyntaxNode node) {
@@ -3740,6 +3754,7 @@ package stab.tools.parser {
             node.Line = scanner.StartLine;
             node.Column = scanner.StartColumn;
             node.DisabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
+			node.StartPosition = scanner.StartPosition;
         }
 
         private void setSavedScannerState(SyntaxNode node) {
@@ -3747,6 +3762,7 @@ package stab.tools.parser {
             node.Line = savedLine;
             node.Column = savedColumn;
             node.DisabledWarnings = savedDisabledWarnings;
+			node.StartPosition = savedPosition;
         }
 
         private static void copyScannerState(SyntaxNode node1, SyntaxNode node2) {

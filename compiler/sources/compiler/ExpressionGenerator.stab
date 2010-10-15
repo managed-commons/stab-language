@@ -1246,9 +1246,9 @@ package stab.tools.compiler {
         private void emitInterfaceCreation(JvmTypeInfo interfaceType, JvmMethodInfo method, ExpressionNode arg, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             var currentType = (JvmTypeBuilder)context.CurrentType;
-            var prefix = currentType.getFullName() + "$interface";
+            var prefix = currentType.getFullName() + "$Interface";
             int n = currentType.NestedTypes.count(p => p.FullName.startsWith(prefix));
-            var typeBuilder = currentType.defineNestedType("interface" + n);
+            var typeBuilder = currentType.defineNestedType("Interface" + n);
             context.TypeBuilders.add(typeBuilder);
             typeBuilder.setSynthetic(true);
             var objectType = context.TypeSystem.getType("java/lang/Object");

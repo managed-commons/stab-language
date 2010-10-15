@@ -243,5 +243,12 @@ package stab.tools.compiler.test {
 				"GenericFinalMethodOverride.stab (7, 17) error 204: 'D<T>.m(T)' cannot override the non-virtual method in 'C<T>'"},
 				new String[] {});
 		}
+		
+		[Test]
+		public void unknownFieldType() {
+			doTest("UnknownFieldType", new String[] {
+				"UnknownFieldType.stab (2, 5) error 278: The name 'inty' cannot be resolved to a type"},
+				new String[] {});
+		}
 	}
 }

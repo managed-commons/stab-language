@@ -507,9 +507,9 @@ package stab.tools.compiler {
             var invokeMethod = delegateType.Methods.where(p => p.Name.equals("invoke")).first();
             
             var currentType = (JvmTypeBuilder)context.CurrentType;
-            var prefix = currentType.FullName + "$delegate";
+            var prefix = currentType.FullName + "$Delegate";
             int n = currentType.NestedTypes.count(p => p.FullName.startsWith(prefix));
-            var typeBuilder = currentType.defineNestedType("delegate" + n);
+            var typeBuilder = currentType.defineNestedType("Delegate" + n);
             context.TypeBuilders.add(typeBuilder);
             typeBuilder.setSynthetic(true);
             typeBuilder.setBaseType(delegateType);

@@ -13,6 +13,7 @@ Issues ================================
 - create an InternalErrorException class
 - test partial methods
 - check that #define/#undef is used before any lexical unit
+- add support for enum constant members
 
 class C {
     public static long CONST = 0; // invalid bytecode
