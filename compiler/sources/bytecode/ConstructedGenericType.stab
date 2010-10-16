@@ -58,10 +58,12 @@ package stab.tools.bytecode {
     class ConstructedGenericType : ClassType {
         private JvmTypeInfo genericTypeDefinition;
         private GenericParameterBindings genericsScope;
+		private JvmTypeSystem typeSystem;
     
-        ConstructedGenericType(JvmTypeInfo declaringType, JvmTypeInfo genericTypeDefinition, Iterable<JvmTypeInfo> genericArguments,
+        ConstructedGenericType(JvmTypeSystem typeSystem, JvmTypeInfo declaringType, JvmTypeInfo genericTypeDefinition, Iterable<JvmTypeInfo> genericArguments,
             GenericParameterBindings genericsScope)
                 : super(genericTypeDefinition.FullName) {
+			this.typeSystem = typeSystem;
             this.declaringType = declaringType;
             this.genericTypeDefinition = genericTypeDefinition;
             this.genericArguments = genericArguments;
@@ -104,12 +106,12 @@ package stab.tools.bytecode {
             }
             
             if (genericArguments == null) {
-                genericArguments = BytecodeHelper.bindGenericParameters(genericsScope, genericTypeDefinition.GenericArguments);
+                genericArguments = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, genericTypeDefinition.GenericArguments);
             } else {
                 BytecodeHelper.declareGenericTypeBindings(genericsScope, genericTypeDefinition.GenericArguments, genericArguments);
             }
-            baseType = BytecodeHelper.bindGenericParameters(genericsScope, genericTypeDefinition.BaseType);
-            interfaces = BytecodeHelper.bindGenericParameters(genericsScope, genericTypeDefinition.Interfaces);
+            baseType = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, genericTypeDefinition.BaseType);
+            interfaces = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, genericTypeDefinition.Interfaces);
         }
         
         protected override void initializeFields() {
@@ -124,7 +126,7 @@ package stab.tools.bytecode {
             }
             while (it.hasNext()) {
                 var f = it.next();
-                var t = BytecodeHelper.bindGenericParameters(genericsScope, f.Type);
+                var t = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, f.Type);
                 var newf = new JvmFieldInfo(this, f.modifiers, f.Name, f.Value);
                 newf.type = t;
                 fields.add(newf);
@@ -142,7 +144,7 @@ package stab.tools.bytecode {
                 it.next();
             }
             while (it.hasNext()) {
-                methods.add(new ConstructedGenericMethod(this, it.next(), null, genericsScope));
+                methods.add(new ConstructedGenericMethod(typeSystem, this, it.next(), null, genericsScope));
             }
         }
         
@@ -157,7 +159,7 @@ package stab.tools.bytecode {
                 it.next();
             }
             while (it.hasNext()) {
-                nestedTypes.add(new ConstructedGenericType(this, it.next(), null, genericsScope));
+                nestedTypes.add(new ConstructedGenericType(typeSystem, this, it.next(), null, genericsScope));
             }
         }
     }

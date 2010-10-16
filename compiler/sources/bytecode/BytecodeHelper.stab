@@ -70,26 +70,26 @@ package stab.tools.bytecode {
             }
         }
 
-        static Iterable<JvmTypeInfo> bindGenericParameters(GenericParameterBindings genericsScope, Iterable<JvmTypeInfo> types) {
-            return types.select(p => bindGenericParameters(genericsScope, p)).toList();
+        static Iterable<JvmTypeInfo> bindGenericParameters(JvmTypeSystem typeSystem, GenericParameterBindings genericsScope, Iterable<JvmTypeInfo> types) {
+            return types.select(p => bindGenericParameters(typeSystem, genericsScope, p)).toList();
         }
         
-        static JvmTypeInfo bindGenericParameters(GenericParameterBindings genericsScope, JvmTypeInfo typeInfo) {
+        static JvmTypeInfo bindGenericParameters(JvmTypeSystem typeSystem, GenericParameterBindings genericsScope, JvmTypeInfo typeInfo) {
             if (genericsScope.hasBinding(typeInfo)) {
                 return genericsScope.getBindingValue(typeInfo);
             } else if (typeInfo.IsArray) {
-                return bindGenericParameters(genericsScope, typeInfo.ElementType).ArrayType;
+                return bindGenericParameters(typeSystem, genericsScope, typeInfo.ElementType).ArrayType;
             } else if (typeInfo.TypeKind == TypeKind.UpperBoundedWildcard) {
-                return bindGenericParameters(genericsScope, typeInfo.WildcardBound).UpperBoundedWildcard;
+                return bindGenericParameters(typeSystem, genericsScope, typeInfo.WildcardBound).UpperBoundedWildcard;
             } else if (typeInfo.TypeKind == TypeKind.LowerBoundedWildcard) {
-                return bindGenericParameters(genericsScope, typeInfo.WildcardBound).LowerBoundedWildcard;
+                return bindGenericParameters(typeSystem, genericsScope, typeInfo.WildcardBound).LowerBoundedWildcard;
             } else if (!typeInfo.IsClosed && typeInfo.GenericArguments.any()) {
-                return typeInfo.getGenericType(bindGenericParameters(genericsScope, typeInfo.GenericArguments), genericsScope);
+                return typeSystem.getGenericType(typeInfo, bindGenericParameters(typeSystem, genericsScope, typeInfo.GenericArguments), genericsScope);
             } else if (typeInfo.IsGenericParameter && typeInfo.GenericParameterBounds.any()) {
                 var param = new GenericParameterType(typeInfo.FullName, typeInfo);
                 genericsScope.declareBinding(typeInfo, param);
                 foreach (var t in typeInfo.GenericParameterBounds) {
-                    param.genericParameterBounds.add(bindGenericParameters(genericsScope, t));
+                    param.genericParameterBounds.add(bindGenericParameters(typeSystem, genericsScope, t));
                 }
                 return param;
             }

@@ -1270,7 +1270,7 @@ package stab.tools.compiler {
                     int n = context.CurrentType.Fields.count(p => p.Name.startsWith("stringswitch$"));
                     var mapType = context.TypeSystem.getType("java/util/Map");
                     var argTypes = new ArrayList<JvmTypeInfo> { objectType, objectType };
-                    mapType = mapType.getGenericType(argTypes);
+                    mapType = context.TypeSystem.getGenericType(mapType, argTypes);
                     var hashMapType = context.TypeSystem.getType("java/util/HashMap");
                     var strings = ((JvmTypeBuilder)context.CurrentType).defineField("stringswitch$" + n, hashMapType);
                     strings.setFinal(true);
@@ -2149,7 +2149,7 @@ package stab.tools.compiler {
                 iterableInterface = context.TypeSystem.getType("stab/lang/DoubleIterable");
                 break;
             default:
-                iterableInterface = context.TypeSystem.getType("java/lang/Iterable").getGenericType(Collections.singletonList(elementType));
+                iterableInterface = context.TypeSystem.getGenericType(context.TypeSystem.getType("java/lang/Iterable"), Collections.singletonList(elementType));
                 break;
             }
             iterableType.addInterface(iterableInterface);

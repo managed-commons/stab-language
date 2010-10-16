@@ -27,10 +27,12 @@ package stab.tools.bytecode {
         private Iterable<JvmTypeInfo> genericArguments;
         private Iterable<JvmTypeInfo> exceptions;
         private GenericParameterBindings genericsScope;
+		private JvmTypeSystem typeSystem;
     
-        ConstructedGenericMethod(JvmTypeInfo declaringType, JvmMethodInfo genericMethodDefinition, Iterable<JvmTypeInfo> genericArguments,
+        ConstructedGenericMethod(JvmTypeSystem typeSystem, JvmTypeInfo declaringType, JvmMethodInfo genericMethodDefinition, Iterable<JvmTypeInfo> genericArguments,
                 GenericParameterBindings genericsScope)
             : super(declaringType, genericMethodDefinition.Name) {
+			this.typeSystem = typeSystem;
             this.genericMethodDefinition = genericMethodDefinition;
             this.genericArguments = genericArguments;
             this.genericsScope = new GenericParameterBindings(genericsScope);
@@ -100,18 +102,18 @@ package stab.tools.bytecode {
             }
             
             if (genericArguments == null) {
-                genericArguments = BytecodeHelper.bindGenericParameters(genericsScope, genericMethodDefinition.GenericArguments);
+                genericArguments = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, genericMethodDefinition.GenericArguments);
             } else {
                 BytecodeHelper.declareGenericTypeBindings(genericsScope, genericMethodDefinition.GenericArguments, genericArguments);
             }
-            returnType = BytecodeHelper.bindGenericParameters(genericsScope, genericMethodDefinition.ReturnType);
+            returnType = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, genericMethodDefinition.ReturnType);
             parameters = new ArrayList<JvmParameterInfo>();
             foreach (var p in genericMethodDefinition.Parameters) {
-                var newp = new JvmParameterInfo(p.Position, BytecodeHelper.bindGenericParameters(genericsScope, p.Type));
+                var newp = new JvmParameterInfo(p.Position, BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, p.Type));
                 newp.name = p.Name;
                 parameters.add(newp);
             }
-            exceptions = BytecodeHelper.bindGenericParameters(genericsScope, genericMethodDefinition.Exceptions);
+            exceptions = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, genericMethodDefinition.Exceptions);
             genericsScope = null;
         }
     }

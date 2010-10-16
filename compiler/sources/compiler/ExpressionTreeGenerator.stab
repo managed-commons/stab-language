@@ -111,7 +111,7 @@ package stab.tools.compiler {
             get {
                 if (unboundedConstructorType == null) {
                     var type = context.TypeSystem.getType("java/lang/reflect/Constructor");
-                    unboundedConstructorType = type.getGenericType(Query.singleton(JvmTypeInfo.UNBOUNDED_WILDCARD));
+                    unboundedConstructorType = context.TypeSystem.getGenericType(type, Query.singleton(JvmTypeInfo.UNBOUNDED_WILDCARD));
                 }
                 return unboundedConstructorType;
             }

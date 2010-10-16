@@ -60,7 +60,6 @@ package stab.tools.bytecode {
 
     public abstract class JvmMethodInfo : UserDataContainer {
         protected String signature;
-        private ArrayList<JvmMethodInfo> constructedGenericMethods;
         
         protected JvmMethodInfo(JvmTypeInfo declaringType, String name) {
             this.DeclaringType = declaringType;
@@ -231,27 +230,6 @@ package stab.tools.bytecode {
             }
         }
         
-        public JvmMethodInfo getGenericMethod(Iterable<JvmTypeInfo> typeArguments) {
-            if (this.IsClosed) {
-                throw new IllegalStateException();
-            }
-            if (typeArguments.sequenceEqual(this.GenericArguments)) {
-                return this;
-            }
-            if (constructedGenericMethods == null) {
-                constructedGenericMethods = new ArrayList<JvmMethodInfo>();
-            } else {
-                foreach (var m in constructedGenericMethods) {
-                    if (typeArguments.sequenceEqual(m.GenericArguments)) {
-                        return m;
-                    }
-                }
-            }
-            var m = new ConstructedGenericMethod(this.DeclaringType, this, typeArguments, null);
-            constructedGenericMethods.add(m);
-            return m;
-        }
-
         public boolean isOverriding(JvmMethodInfo method) {
             if (this.IsStatic || this == method || method.IsPrivate) {
                 return false;

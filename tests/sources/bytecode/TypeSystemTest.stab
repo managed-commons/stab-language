@@ -43,7 +43,7 @@ package stab.tools.bytecode.test {
 				typeSystem.getType("java/lang/Object"),
 				typeSystem.getType("java/io/Serializable"),
 				typeSystem.getType("java/lang/CharSequence"),
-				typeSystem.getType("java/lang/Comparable").getGenericType(Collections.singletonList(stringType))
+				typeSystem.getGenericType(typeSystem.getType("java/lang/Comparable"), Collections.singletonList(stringType))
 			});
 			var publicBaseTypes = stringType.getBaseTypes().where(p => p.IsPublic);
 			Assert.assertTrue(publicBaseTypes.union(types).sequenceEqual(publicBaseTypes));
@@ -66,7 +66,7 @@ package stab.tools.bytecode.test {
 			var typeInfo = typeSystem.getType("stab/bytecode/test/classes/GenericClass");
 			var args = new ArrayList<JvmTypeInfo>();
 			args.add(typeSystem.getType("java/lang/String"));
-			doTest("ConstructedGenericClass", typeInfo.getGenericType(args));
+			doTest("ConstructedGenericClass", typeSystem.getGenericType(typeInfo, args));
 		}
 
 		[Test]

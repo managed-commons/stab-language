@@ -545,7 +545,7 @@ package stab.tools.bytecode {
                     foreach (var sig in signature.TypeArguments) {
                         typeArgs.add(getTypeInfo(sig));
                     }
-                    result = result.getGenericType(typeArgs);
+                    result = typeSystem.getGenericTypeCore(result, typeArgs, null);
                 }
                 break;
 

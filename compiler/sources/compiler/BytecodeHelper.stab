@@ -693,7 +693,7 @@ package stab.tools.compiler {
             if (typeSystem.typeExists(annotatedTypeName)) {
                 var annotatedType = typeSystem.getType(annotatedTypeName);
                 if (method.DeclaringType.GenericArguments.any()) {
-                    annotatedType = annotatedType.getGenericType(method.DeclaringType.GenericArguments);
+                    annotatedType = typeSystem.getGenericType(annotatedType, method.DeclaringType.GenericArguments);
                 }
                 foreach (var m in annotatedType.Methods) {
                     if (m.Name.equals(method.Name) && m.hasSameParameters(method)) {

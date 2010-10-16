@@ -154,7 +154,7 @@ package stab.tools.compiler {
                 case Method:
                     if (nTypeArgs > 0) {
                         if (nTypeArgs == mi.Method.GenericArguments.count()) {
-                            yield return MemberInfo.getInfo(mi.Method.getGenericMethod(typeArguments));
+                            yield return MemberInfo.getInfo(typeSystem.getGenericMethod(mi.Method, typeArguments));
                         }
                     } else {
                         yield return mi;

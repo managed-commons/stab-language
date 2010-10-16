@@ -323,7 +323,7 @@ package stab.tools.compiler {
                     }
                     typeArgs.add(ti);
                 }
-                return type.getGenericType(typeArgs);
+                return context.TypeSystem.getGenericType(type, typeArgs);
             }
         }
         
@@ -615,7 +615,7 @@ package stab.tools.compiler {
             
             var argTypes = new ArrayList<JvmTypeInfo>();
             argTypes.add(context.TypeSystem.StringType);
-            argTypes.add(classType.getGenericType(Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD)).ArrayType);
+            argTypes.add(context.TypeSystem.getGenericType(classType, Collections.singletonList(JvmTypeInfo.UNBOUNDED_WILDCARD)).ArrayType);
             gen.emit(JvmOpcode.Invokevirtual, classType.getMethod("getMethod", argTypes));
             gen.emit(JvmOpcode.Areturn);
             gen.endScope();

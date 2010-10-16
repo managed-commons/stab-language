@@ -934,7 +934,7 @@ package stab.tools.compiler {
                     if (classDeclaration.IsEnum) {
                         typeBuilder.setEnum(true);
                         var enumType = context.TypeSystem.getType("java/lang/Enum");
-                        typeBuilder.setBaseType(enumType.getGenericType(Collections.singletonList<JvmTypeInfo>(typeBuilder)));
+                        typeBuilder.setBaseType(context.TypeSystem.getGenericType(enumType, Collections.singletonList<JvmTypeInfo>(typeBuilder)));
                     } else {
                         typeBuilder.setBaseType(context.TypeSystem.ObjectType);
                     }

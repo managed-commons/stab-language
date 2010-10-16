@@ -1319,7 +1319,7 @@ package stab.tools.compiler {
                                     throw context.error(CompileErrorId.WrongTypeArgumentNumber, memberAccess,
                                         BytecodeHelper.getDisplayName(type), type.GenericArguments.count());
                                 }
-                                type = type.getGenericType(typeArgs);
+                                type = context.TypeSystem.getGenericType(type, typeArgs);
                             } else {
                                 type = type.RawGenericType;
                                 context.addWarning(CompileErrorId.RawTypeUsage, memberAccess,
@@ -1622,12 +1622,12 @@ package stab.tools.compiler {
             var classType = typeSystem.getType("java/lang/Class");
             if (type.IsPrimitive) {
                 if (type == JvmTypeInfo.VOID) {
-                    classType = classType.getGenericType(Collections.singletonList(typeSystem.getType("java/lang/Void")));
+                    classType = typeSystem.getGenericType(classType, Collections.singletonList(typeSystem.getType("java/lang/Void")));
                 } else {
-                    classType = classType.getGenericType(Collections.singletonList(typeSystem.getBoxingMethod(type).ReturnType));
+                    classType = typeSystem.getGenericType(classType, Collections.singletonList(typeSystem.getBoxingMethod(type).ReturnType));
                 }
             } else {
-                classType = classType.getGenericType(Collections.singletonList(type));
+                classType = typeSystem.getGenericType(classType, Collections.singletonList(type));
             }
             typeofExpression.addOrReplaceUserData(new ExpressionInfo(classType));
             return null;

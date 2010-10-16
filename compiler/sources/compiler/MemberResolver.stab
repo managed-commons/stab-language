@@ -69,7 +69,7 @@ package stab.tools.compiler {
                 if (member != null) {
                     if (nTypeArgs > 0) {
                         if (member.MemberKind == MemberKind.Type && nTypeArgs == member.Type.GenericArguments.count()) {
-                            yield return MemberInfo.getInfo(member.Type.getGenericType(typeArguments));
+                            yield return MemberInfo.getInfo(this.TypeFinder.TypeSystem.getGenericType(member.Type, typeArguments));
                         }
                     } else {
                         if (member.MemberKind == MemberKind.Type && member.Type.GenericArguments.count() > 0) {
@@ -128,7 +128,7 @@ package stab.tools.compiler {
                             continue;
                         }
                         if (JvmTypeInfo.hasImplicitConversion(type, m.Parameters.first().Type)) {
-                            yield return (nTypeArgs > 0) ? m.getGenericMethod(typeArguments) : m;
+                            yield return (nTypeArgs > 0) ? this.TypeFinder.TypeSystem.getGenericMethod(m, typeArguments) : m;
                         }
                     }
                 }

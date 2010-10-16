@@ -69,7 +69,6 @@ package stab.tools.bytecode {
         private JvmTypeInfo lowerBoundedWildcard;
         private JvmTypeInfo upperBoundedWildcard;
         private JvmTypeInfo rawGenericType;
-        private ArrayList<JvmTypeInfo> constructedGenericTypes;
         private JvmTypeInfo arrayType;
         
         protected JvmTypeInfo(TypeKind typeKind, String fullName) {
@@ -347,34 +346,6 @@ package stab.tools.bytecode {
             }
         }
 
-        public JvmTypeInfo getGenericType(Iterable<JvmTypeInfo> typeArguments) {
-            return getGenericType(typeArguments, null);
-        }
-        
-        JvmTypeInfo getGenericType(Iterable<JvmTypeInfo> typeArguments, GenericParameterBindings scope) {
-            if (this.IsClosed) {
-                throw new IllegalStateException();
-            }
-            if (typeArguments.sequenceEqual(this.GenericArguments)) {
-                return this;
-            }
-            if (this.DeclaringType == null && !this.IsGenericTypeDefinition) {
-                return this.OriginalTypeDefinition.getGenericType(typeArguments);
-            }
-            if (constructedGenericTypes == null) {
-                constructedGenericTypes = new ArrayList<JvmTypeInfo>();
-            } else {
-                foreach (var t in constructedGenericTypes) {
-                    if (typeArguments.sequenceEqual(t.GenericArguments)) {
-                        return t;
-                    }
-                }
-            }
-            var t = new ConstructedGenericType(this.DeclaringType, this, typeArguments, scope);
-            constructedGenericTypes.add(t);
-            return t;
-        }
-        
         public boolean IsGenericTypeDefinition {
             get {
                 return this.GenericArguments.any() && this.GenericTypeDefinition == null;

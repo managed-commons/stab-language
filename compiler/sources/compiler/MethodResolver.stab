@@ -209,7 +209,7 @@ package stab.tools.compiler {
                     foreach (var t in method.GenericArguments) {
                         typeArguments.add(typeVariableInfos[t].fixedType);
                     }
-                    method = method.getGenericMethod(typeArguments);
+                    method = context.TypeSystem.getGenericMethod(method, typeArguments);
                 }
 
                 var it1 = arguments.iterator();
@@ -590,12 +590,12 @@ package stab.tools.compiler {
             }
         }
 
-        private static Iterable<JvmTypeInfo> bindGenericParameters(HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables,
+        private Iterable<JvmTypeInfo> bindGenericParameters(HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables,
                 Iterable<JvmTypeInfo> types) {
             return types.select(p => bindGenericParameters(typeVariables, p)).toList();
         }
         
-        private static JvmTypeInfo bindGenericParameters(HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables, JvmTypeInfo typeInfo) {
+        private JvmTypeInfo bindGenericParameters(HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables, JvmTypeInfo typeInfo) {
             if (typeVariables.containsKey(typeInfo)) {
                 return typeVariables[typeInfo].fixedType;
             } else if (typeInfo.IsArray) {
@@ -606,7 +606,7 @@ package stab.tools.compiler {
                 if (tl.any(p => p == null)) {
                     return null;
                 }
-                return typeInfo.getGenericType(tl);
+                return context.TypeSystem.getGenericType(typeInfo, tl);
             }
             return typeInfo;
         }
