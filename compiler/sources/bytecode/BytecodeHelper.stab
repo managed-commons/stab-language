@@ -156,17 +156,7 @@ package stab.tools.bytecode {
         }
         
         private static void appendClassTypeSignature(StringBuilder sb, JvmTypeInfo type, Iterable<JvmTypeInfo> typeArguments) {
-            var declaringType = type.DeclaringType;
-            if (declaringType != null) {
-                appendClassTypeSignature(sb, declaringType, declaringType.GenericArguments);
-                sb.setLength(sb.length() - 1);
-                sb.append(".");
-                var name = type.FullName;
-                name = name.substring(name.lastIndexOf('$') + 1);
-                sb.append(name);
-            } else {
-                sb.append("L").append(type.FullName);
-            }
+            sb.append("L").append(type.FullName);
             if (typeArguments.any()) {
                 sb.append("<");
                 foreach (var t in typeArguments) {

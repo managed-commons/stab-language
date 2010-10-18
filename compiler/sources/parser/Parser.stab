@@ -130,7 +130,6 @@ package stab.tools.parser {
                         }
 						ns.EndPosition = scanner.EndPosition;
                         if (nextLexicalUnit(false) == LexicalUnit.SemiColon) {
-							ns.EndPosition = scanner.EndPosition;
                             nextLexicalUnit(false);
 						}
                         result.Members.add(ns);
@@ -391,7 +390,6 @@ package stab.tools.parser {
                     while (lexicalUnit == LexicalUnit.OpenBracket) {
                         annotations.add(parseAnnotationSection());
                     }
-					startPosition = scanner.StartPosition;
                     switch (lexicalUnit) {
                     case Keyword:
                     case ContextualKeyword:
@@ -534,6 +532,9 @@ package stab.tools.parser {
                             break;
 
                         case Class:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             nextLexicalUnit(true);
                             members.add(parseClass(annotations, modifiers, false, false, startPosition));
                             modifiers.clear();
@@ -541,6 +542,9 @@ package stab.tools.parser {
                             break;
 
                         case Interface:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             nextLexicalUnit(true);
                             members.add(parseInterface(annotations, modifiers, false, startPosition));
                             modifiers.clear();
@@ -548,6 +552,9 @@ package stab.tools.parser {
                             break;
 
                         case Delegate:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             nextLexicalUnit(true);
                             members.add(parseDelegate(annotations, modifiers, startPosition));
                             modifiers.clear();
@@ -555,6 +562,9 @@ package stab.tools.parser {
                             break;
 
                         case Enum:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             nextLexicalUnit(true);
                             members.add(parseClass(annotations, modifiers, true, false, startPosition));
                             modifiers.clear();
@@ -562,6 +572,9 @@ package stab.tools.parser {
                             break;
 
                         default:
+							if (modifiers.size() == 0) {
+								startPosition = scanner.StartPosition;
+							}
                             members.add(parseClassMember(annotations, modifiers, false, startPosition));
                             modifiers.clear();
                             annotations.clear();
@@ -584,6 +597,9 @@ package stab.tools.parser {
                         break;
 
                     case Identifier:
+						if (modifiers.size() == 0) {
+							startPosition = scanner.StartPosition;
+						}
                         members.add(parseClassMember(annotations, modifiers, false, startPosition));
                         modifiers.clear();
                         annotations.clear();
@@ -3754,7 +3770,9 @@ package stab.tools.parser {
             node.Line = scanner.StartLine;
             node.Column = scanner.StartColumn;
             node.DisabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
-			node.StartPosition = scanner.StartPosition;
+			if (node.StartPosition == 0) {
+				node.StartPosition = scanner.StartPosition;
+			}
         }
 
         private void setSavedScannerState(SyntaxNode node) {
@@ -3762,7 +3780,9 @@ package stab.tools.parser {
             node.Line = savedLine;
             node.Column = savedColumn;
             node.DisabledWarnings = savedDisabledWarnings;
-			node.StartPosition = savedPosition;
+			if (node.StartPosition == 0) {
+				node.StartPosition = savedPosition;
+			}
         }
 
         private static void copyScannerState(SyntaxNode node1, SyntaxNode node2) {
