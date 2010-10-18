@@ -18,7 +18,7 @@ using java.lang;
 using java.lang.reflect;
 using java.io;
 using java.util;
-using java.util.jar;
+using java.util.zip;
 using org.objectweb.asm;
 using stab.query;
 using stab.tools.bytecode.signature;
@@ -53,7 +53,7 @@ package stab.tools.bytecode {
         JvmMethodInfo boxingMethod;
         JvmMethodInfo unboxingMethod;
 
-        ClassFileType(JvmTypeSystem typeSystem, String name, File origin)
+        ClassFileType(JvmTypeSystem typeSystem, String name, File origin, ZipFile jarOrigin)
             : super(name) {
             this.typeSystem = typeSystem;
             this.descriptor = "L" + name + ";";
@@ -61,11 +61,15 @@ package stab.tools.bytecode {
             if (numericTypeKind == null) {
                 numericTypeKind = NumericTypeKind.None;
             }
-            loadClassFile(origin);
+			if (origin != null) {
+				loadClassFile(origin);
+			} else {
+				loadClassFile(jarOrigin);
+			}
             this.genericsScope = new Scope<String, JvmTypeInfo>();
             this.genericsScope.enterScope();
         }
-        
+		
         public override String Descriptor {
             get {
                 return descriptor;
@@ -292,18 +296,16 @@ package stab.tools.bytecode {
         }
         
         private void loadClassFile(File origin) {
-            InputStream stream = null;
+			loadClassFile(new FileInputStream(origin), new byte[(int)origin.length()]);
+        }
+
+		private void loadClassFile(ZipFile origin) {
+			var entry = origin.getEntry(this.FullName + ".class");
+			loadClassFile(origin.getInputStream(entry), new byte[(int)entry.getSize()]);
+        }
+
+		private void loadClassFile(InputStream stream, byte[] bytes) {
             try {
-                byte[] bytes;
-                if (origin.getPath().endsWith(".class")) {
-                    bytes = new byte[(int)origin.length()];
-                    stream = new FileInputStream(origin);
-                } else {
-                    var jarFile = new JarFile(origin);
-                    var entry = jarFile.getJarEntry(this.FullName + ".class");
-                    bytes = new byte[(int)entry.getSize()];
-                    stream = jarFile.getInputStream(entry);
-                }
                 int read;
                 int offset = 0;
                 int len = sizeof(bytes);
