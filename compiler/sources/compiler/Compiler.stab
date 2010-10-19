@@ -246,59 +246,59 @@ package stab.tools.compiler {
 				}
 			}
             
-            // Define all types
-            defineTypes();
-            if (context.HasErrors) {
+			// Define all types
+			defineTypes();
+			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.Parsing;
-                return;
-            }
-            
-            // Set the base types
-            setBaseTypes();
-            if (context.HasErrors) {
+				return;
+			}
+			
+			// Set the base types
+			setBaseTypes();
+			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.TypesDefinition;
-                return;
-            }
-            
-            // Define all members
-            defineMembers();
-            if (context.HasErrors) {
+				return;
+			}
+			
+			// Define all members
+			defineMembers();
+			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.SuperTypesDefinition;
-                return;
-            }
+				return;
+			}
 
-            // Annotations generation
-            generateAnnotations();
-            if (context.HasErrors) {
+			// Annotations generation
+			generateAnnotations();
+			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.MembersDefinition;
-                return;
-            }
-            
-            // Code validation
-            validateCode();
-            if (context.HasErrors) {
+				return;
+			}
+			
+			// Code validation
+			validateCode();
+			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.AnnotationsDefinition;
-                return;
-            }
+				return;
+			}
 
-            // Bytecode generation
-            generateBytecode();
-            if (context.HasErrors) {
+			// Bytecode generation
+			generateBytecode();
+			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.CodeValidation;
-                return;
-            }
-            
-            // Class files creation
-            foreach (var typeBuilder in context.TypeBuilders) {
-                if (!typeBuilder.IsCreated) {
-                    context.Results.classFiles[typeBuilder.FullName.replace('/', '.')] = typeBuilder.createType(context.TypeSystem);
-                }
-            }
-            
-            // Documentation file
-            if (context.Parameters.DocumentationPath != null) {
-                buildDocumentation(new File(context.Parameters.DocumentationPath));
-            }
+				return;
+			}
+			
+			// Class files creation
+			foreach (var typeBuilder in context.TypeBuilders) {
+				if (!typeBuilder.IsCreated) {
+					context.Results.classFiles[typeBuilder.FullName.replace('/', '.')] = typeBuilder.createType(context.TypeSystem);
+				}
+			}
+			
+			// Documentation file
+			if (context.Parameters.DocumentationPath != null) {
+				buildDocumentation(new File(context.Parameters.DocumentationPath));
+			}
 			context.Results.compilationStage = CompilationStage.Success;
         }
         

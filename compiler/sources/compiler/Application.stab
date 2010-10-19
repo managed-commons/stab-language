@@ -19,6 +19,7 @@ using java.lang;
 using java.util;
 using java.util.jar;
 using java.util.zip;
+using stab.tools.bytecode;
 using stab.tools.helpers;
 
 package stab.tools.compiler {
@@ -125,76 +126,82 @@ package stab.tools.compiler {
             
             var t0 = System.nanoTime();
             
-            var results = new Compiler().compileFromFiles(parameters, sourceFiles.toArray(new File[sourceFiles.size()]));
-            var hasErrors = false;
-            foreach (var error in results.Errors) {
-                var filename = error.Filename;
-                if (filename != null) {
-                    System.out.print(new File(error.Filename).getAbsolutePath());
-                } else {
-                    System.out.print("Unknown source");
-                }
-                if (error.Line > 0) {
-                    System.out.print(" (");
-                    System.out.print(error.Line);
-                    if (error.Column > 0) {
-                        System.out.print(", ");
-                        System.out.print(error.Column);
-                    }
-                    System.out.print(")");
-                }
-                if (error.Level == 0) {
-                    hasErrors = true;
-                    System.out.print(" error ");
-                } else {
-                    System.out.print(" warning ");
-                }
-                System.out.print(error.Id);
-                System.out.print(": ");
-                System.out.println(error.Message);
-            }
-            if (!hasErrors) {
-                var destination = outputPath;
-                if (PathHelper.getExtension(destination).length() == 0) {
-                    destination += ".jar";
-                }
-                using (var zipStream = new ZipOutputStream(new FileOutputStream(destination))) {
-                    if (manifestPath != null) {
-                        var zipEntry = new ZipEntry("META-INF/MANIFEST.MF");
-                        zipStream.putNextEntry(zipEntry);
-                        var buffer = new byte[4096];
-                        var inputStream = new FileInputStream(manifestPath);
-                        int read;
-                        while ((read = inputStream.read(buffer)) != -1) {
-                            zipStream.write(buffer, 0, read);
-                        }
-                    }
-                    if (resourcesPath != null) {
-                        var rootDir = new File(resourcesPath);
-                        foreach (var content in rootDir.list()) {
-                            var file = new File(rootDir, content);
-                            if (file.isDirectory()) {
-                                exploreDirectory(zipStream, "", file);
-                            } else {
-                                addEntry(zipStream, "", file);
-                            }
-                        }
-                    }
-                    foreach (var e in results.ClassFiles.entrySet()) {
-                        var zipEntry = new ZipEntry(e.Key.replace('.', '/') + ".class");
-                        zipStream.putNextEntry(zipEntry);
-                        zipStream.write(e.Value);
-                    }
-                }
-                System.out.println();
-                System.out.println(String.format("%d class(es) successfully generated in %.2fs",
-                    results.classFiles.size(), (System.nanoTime() - t0) / 1e9));
-                return 0;
-            } else {
-                System.out.println();
-                System.out.println("Compilation failed");
-                return 1;
-            }
+			try {
+				var results = new Compiler().compileFromFiles(parameters, sourceFiles.toArray(new File[sourceFiles.size()]));
+				var hasErrors = false;
+				foreach (var error in results.Errors) {
+					var filename = error.Filename;
+					if (filename != null) {
+						System.out.print(new File(error.Filename).getAbsolutePath());
+					} else {
+						System.out.print("Unknown source");
+					}
+					if (error.Line > 0) {
+						System.out.print(" (");
+						System.out.print(error.Line);
+						if (error.Column > 0) {
+							System.out.print(", ");
+							System.out.print(error.Column);
+						}
+						System.out.print(")");
+					}
+					if (error.Level == 0) {
+						hasErrors = true;
+						System.out.print(" error ");
+					} else {
+						System.out.print(" warning ");
+					}
+					System.out.print(error.Id);
+					System.out.print(": ");
+					System.out.println(error.Message);
+				}
+				if (!hasErrors) {
+					var destination = outputPath;
+					if (PathHelper.getExtension(destination).length() == 0) {
+						destination += ".jar";
+					}
+					using (var zipStream = new ZipOutputStream(new FileOutputStream(destination))) {
+						if (manifestPath != null) {
+							var zipEntry = new ZipEntry("META-INF/MANIFEST.MF");
+							zipStream.putNextEntry(zipEntry);
+							var buffer = new byte[4096];
+							var inputStream = new FileInputStream(manifestPath);
+							int read;
+							while ((read = inputStream.read(buffer)) != -1) {
+								zipStream.write(buffer, 0, read);
+							}
+						}
+						if (resourcesPath != null) {
+							var rootDir = new File(resourcesPath);
+							foreach (var content in rootDir.list()) {
+								var file = new File(rootDir, content);
+								if (file.isDirectory()) {
+									exploreDirectory(zipStream, "", file);
+								} else {
+									addEntry(zipStream, "", file);
+								}
+							}
+						}
+						foreach (var e in results.ClassFiles.entrySet()) {
+							var zipEntry = new ZipEntry(e.Key.replace('.', '/') + ".class");
+							zipStream.putNextEntry(zipEntry);
+							zipStream.write(e.Value);
+						}
+					}
+					System.out.println();
+					System.out.println(String.format("%d class(es) successfully generated in %.2fs",
+						results.classFiles.size(), (System.nanoTime() - t0) / 1e9));
+					return 0;
+				} else {
+					System.out.println();
+					System.out.println("Compilation failed");
+					return 1;
+				}
+			} catch (JvmTypeLoadException e) {
+				System.out.println("Cannot find type " + e.TypeName + ". The class is missing from the classpath.");
+				System.out.println("Compilation failed");
+				return 1;
+			}
         }
 
         private void addEntry(ZipOutputStream zipStream, String root, File file) {

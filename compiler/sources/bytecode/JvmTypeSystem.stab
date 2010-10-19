@@ -108,11 +108,11 @@ package stab.tools.bytecode {
             if (typeInfo != null) {
                 return typeInfo;
             }
-            File f = classFiles[name];
-			ZipFile zf = jarClasses[name];
+            var f = classFiles.remove(name);
+			var zf = jarClasses.remove(name);
             if (f == null && zf == null) {
 				if (parent == null) {
-					throw new IllegalStateException("Class not found: " + name);
+					throw new JvmTypeLoadException("Class not found: " + name, name);
 				} else {
 					return parent.getType(name);
 				}
