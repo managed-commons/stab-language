@@ -24,12 +24,14 @@ package stab.tools.parser {
     public class PreprocessedTextScanner : IScanner {
         private String filename;
         private String lineFilename;
+		private int tabWidth;
         private SourceCodeScanner scanner;
         private ArrayList<SourceInfo> sourceInfos;
         
         public PreprocessedTextScanner(CodeErrorManager codeErrorManager, PreprocessedText preprocessedText) {
             this.CodeErrorManager = codeErrorManager;
             this.PreprocessedText = preprocessedText;
+			this.tabWidth = 4;
         }
         
         public CodeErrorManager CodeErrorManager {
@@ -48,6 +50,9 @@ package stab.tools.parser {
             }
             set {
                 filename = value;
+				if (scanner != null ) {
+					scanner.Filename = value;
+				}
             }
         }
         
@@ -59,10 +64,13 @@ package stab.tools.parser {
         
         public int TabWidth {
             get {
-                return this.Scanner.TabWidth;
+				return tabWidth;
             }
             set {
-                this.Scanner.TabWidth = value;
+				tabWidth = value;
+				if (scanner != null) {
+					scanner.TabWidth = value;
+				}
             }
         }
         
@@ -153,7 +161,8 @@ package stab.tools.parser {
                         this.CodeErrorManager.DisabledWarnings = info.disabledWarnings;
                         int line = initializeLine(source, info.line);
                         scanner = new SourceCodeScanner(this.CodeErrorManager, this.Text, source.Position, source.Length, line, 0);
-                        scanner.Filename = this.Filename;
+                        scanner.Filename = this.filename;
+						scanner.TabWidth = this.tabWidth;
                     } else {
                         scanner = new SourceCodeScanner(this.CodeErrorManager, this.Text, 0, 0, 0, 0);
                     }

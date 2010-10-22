@@ -32,6 +32,7 @@ package stab.tools.compiler {
             this.ClassPath = new ArrayList<String>();
             this.Symbols = new ArrayList<String>();
             this.AnnotatedLibraryPaths = new ArrayList<String>();
+			this.GenerateClassFiles = true;
         }
 
         public List<String> ClassPath {
@@ -69,7 +70,7 @@ package stab.tools.compiler {
 			set;
 		}
 		
-		public boolean TypeBuildersDefined {
+		public boolean GenerateClassFiles {
 			get;
 			set;
 		}
@@ -289,9 +290,11 @@ package stab.tools.compiler {
 			}
 			
 			// Class files creation
-			foreach (var typeBuilder in context.TypeBuilders) {
-				if (!typeBuilder.IsCreated) {
-					context.Results.classFiles[typeBuilder.FullName.replace('/', '.')] = typeBuilder.createType(context.TypeSystem);
+			if (context.Parameters.GenerateClassFiles) {
+				foreach (var typeBuilder in context.TypeBuilders) {
+					if (!typeBuilder.IsCreated) {
+						context.Results.classFiles[typeBuilder.FullName.replace('/', '.')] = typeBuilder.createType(context.TypeSystem);
+					}
 				}
 			}
 			
@@ -575,28 +578,12 @@ package stab.tools.compiler {
         }
 
         private JvmTypeBuilder defineType(String name, SyntaxNode node) {
-			if (context.Parameters.TypeBuildersDefined) {
-				JvmTypeBuilder result = null;
-				if (context.TypeSystem.typeExists(name)) {
-					var typeInfo = context.TypeSystem.getType(name);
-					if (!(typeInfo instanceof JvmTypeBuilder)) {
-						throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
-					}
-					result = (JvmTypeBuilder)typeInfo;
-				}
-				if (result == null) {
-					result = context.TypeSystem.defineType(name);
-				}
-				context.TypeBuilders.add(result);
-				return result;
-			} else {
-				if (context.TypeSystem.typeExists(name)) {
-					throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
-				}
-				var result = context.TypeSystem.defineType(name);
-				context.TypeBuilders.add(result);
-				return result;
+			if (context.TypeSystem.typeExists(name)) {
+				throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
 			}
+			var result = context.TypeSystem.defineType(name);
+			context.TypeBuilders.add(result);
+			return result;
         }
 
         private JvmTypeBuilder defineNestedType(JvmTypeBuilder declaringClass, String className, String shortName, SyntaxNode node) {
