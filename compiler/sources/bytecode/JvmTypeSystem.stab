@@ -24,8 +24,6 @@ using stab.tools.helpers;
 package stab.tools.bytecode {
 
     public class JvmTypeSystem {
-        private static HashMap<String, ZipFile> computedBootClasses;
-        
         private JvmTypeSystem parent;
         private HashMap<String, File> classFiles;
 		private HashMap<String, ZipFile> jarClasses;
@@ -39,11 +37,7 @@ package stab.tools.bytecode {
         private JvmTypeInfo classType;
         private JvmTypeInfo unboundedClassType;
 
-        public JvmTypeSystem(String[] classPath)
-            : this(classPath, (String[])null) {
-        }
-        
-        public JvmTypeSystem(String[] classPath, String[] bootClasses) {
+        public JvmTypeSystem(String[] classPath) {
             this.classFiles = new HashMap<String, File>(128);
             this.jarClasses = new HashMap<String, ZipFile>(0x5000);
             this.allClassNames = new ArrayList<String>();
@@ -51,7 +45,7 @@ package stab.tools.bytecode {
 			this.constructedGenericTypes = new HashMap<JvmTypeInfo, ArrayList<JvmTypeInfo>>();
 			this.constructedGenericMethods = new HashMap<JvmMethodInfo, ArrayList<JvmMethodInfo>>();
             
-            initializeBootClasses(bootClasses);
+            initializeBootClasses();
             
             foreach (var path in classPath) {
                 explorePath(path);
@@ -127,7 +121,7 @@ package stab.tools.bytecode {
 
         JvmTypeInfo getGenericType(JvmTypeInfo type, Iterable<JvmTypeInfo> typeArguments, GenericParameterBindings scope) {
 			if (parent != null) {
-				var t = getGenericTypeIfExist(type, typeArguments);
+				var t = parent.getGenericTypeIfExist(type, typeArguments);
 				if (t != null) {
 					return t;
 				}
@@ -418,7 +412,7 @@ package stab.tools.bytecode {
             return ctype.unboxingMethod;
         }
         
-        private void initializeBootClasses(String[] bootClasses) {
+        private void initializeBootClasses() {
             var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
             var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
             if (!rtJarFile.exists()) {
@@ -428,21 +422,7 @@ package stab.tools.bytecode {
             }
 
 			var zipFile = new ZipFile(rtJarFile);
-            if (bootClasses != null) {
-                foreach (var s in bootClasses) {
-                    jarClasses.put(s, zipFile);
-                    allClassNames.add(s);
-                }
-            } else {
-                if (computedBootClasses == null) {
-                    computedBootClasses = new HashMap<String, ZipFile>();
-                    exploreJarFile(zipFile, computedBootClasses, null);
-                }
-                foreach (var e in computedBootClasses.entrySet()) {
-                    jarClasses[e.Key] = e.Value;
-                    allClassNames.add(e.Key);
-                }
-            }
+			exploreJarFile(zipFile);
         }
         
         private void explorePath(String path) {
@@ -463,7 +443,7 @@ package stab.tools.bytecode {
                         }
                     }
                 } else {
-                    exploreJarFile(new ZipFile(file), jarClasses, allClassNames);
+                    exploreJarFile(new ZipFile(file));
                 }
             } else {
                 throw new IllegalStateException(path + " not found");
@@ -488,7 +468,7 @@ package stab.tools.bytecode {
             }
         }
         
-        private static void exploreJarFile(ZipFile jarFile, HashMap<String, ZipFile> jarClasses, ArrayList<String> allClassNames) {
+        private void exploreJarFile(ZipFile jarFile) {
 			var e = jarFile.entries();
 			while (e.hasMoreElements()) {
 				var entry = e.nextElement();
@@ -497,9 +477,7 @@ package stab.tools.bytecode {
 					var className = name.substring(0, name.length() - 6);
 					if (!jarClasses.containsKey(className)) {
 						jarClasses[className] = jarFile;
-						if (allClassNames != null) {
-							allClassNames.add(className);
-						}
+						allClassNames.add(className);
 					}
 				}
 			}

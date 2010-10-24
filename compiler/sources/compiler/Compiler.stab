@@ -50,11 +50,6 @@ package stab.tools.compiler {
             private set;
         }
         
-        public String[] BootClasses {
-            get;
-            set;
-        }
-        
         public String DocumentationPath {
             get;
             set;
@@ -74,8 +69,18 @@ package stab.tools.compiler {
 			get;
 			set;
 		}
+		
+		public ICompilationProgressTracker ProgressTracker {
+			get;
+			set;
+		}
     }
 
+	public interface ICompilationProgressTracker {
+		void compilationStageFinished(CompilationStage stage);
+		void compilationFinished();
+	}
+	
 	public enum CompilationStage {
 		None,
 		Parsing,
@@ -190,9 +195,12 @@ package stab.tools.compiler {
             }
             
             if (!context.HasErrors) {
+				if (parameters.ProgressTracker != null) {
+					parameters.ProgressTracker.compilationStageFinished(CompilationStage.Parsing);
+				}
                 doCompile();
             }
-            
+			
             this.context = null;
             this.statementValidator = null;
             this.expressionValidator = null;
@@ -200,6 +208,10 @@ package stab.tools.compiler {
             this.assignmentChecker = null;
             this.queryTranslator = null;
             this.documentationBuilder = null;
+			
+			if (parameters.ProgressTracker != null) {
+				parameters.ProgressTracker.compilationFinished();
+			}
             return results;
         }
 
@@ -226,6 +238,10 @@ package stab.tools.compiler {
             this.assignmentChecker = null;
             this.queryTranslator = null;
             this.documentationBuilder = null;
+			
+			if (parameters.ProgressTracker != null) {
+				parameters.ProgressTracker.compilationFinished();
+			}
             return results;
         }
         
@@ -233,7 +249,7 @@ package stab.tools.compiler {
 			if (context.Parameters.TypeSystem == null) {
 				int nPaths = context.Parameters.ClassPath.size();
 				var classPath = context.Parameters.ClassPath.toArray(new String[nPaths]);
-				context.TypeSystem = new JvmTypeSystem(classPath, context.Parameters.BootClasses);
+				context.TypeSystem = new JvmTypeSystem(classPath);
 				
 				nPaths = context.Parameters.AnnotatedLibraryPaths.size();
 				context.AnnotatedTypeSystem = new JvmTypeSystem(context.Parameters.AnnotatedLibraryPaths.toArray(new String[nPaths]),
@@ -253,12 +269,18 @@ package stab.tools.compiler {
 				context.Results.compilationStage = CompilationStage.Parsing;
 				return;
 			}
+			if (context.Parameters.ProgressTracker != null) {
+				context.Parameters.ProgressTracker.compilationStageFinished(CompilationStage.TypesDefinition);
+			}
 			
 			// Set the base types
 			setBaseTypes();
 			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.TypesDefinition;
 				return;
+			}
+			if (context.Parameters.ProgressTracker != null) {
+				context.Parameters.ProgressTracker.compilationStageFinished(CompilationStage.SuperTypesDefinition);
 			}
 			
 			// Define all members
@@ -267,12 +289,18 @@ package stab.tools.compiler {
 				context.Results.compilationStage = CompilationStage.SuperTypesDefinition;
 				return;
 			}
+			if (context.Parameters.ProgressTracker != null) {
+				context.Parameters.ProgressTracker.compilationStageFinished(CompilationStage.MembersDefinition);
+			}
 
 			// Annotations generation
 			generateAnnotations();
 			if (context.HasErrors) {
 				context.Results.compilationStage = CompilationStage.MembersDefinition;
 				return;
+			}
+			if (context.Parameters.ProgressTracker != null) {
+				context.Parameters.ProgressTracker.compilationStageFinished(CompilationStage.AnnotationsDefinition);
 			}
 			
 			// Code validation
@@ -281,16 +309,19 @@ package stab.tools.compiler {
 				context.Results.compilationStage = CompilationStage.AnnotationsDefinition;
 				return;
 			}
-
-			// Bytecode generation
-			generateBytecode();
-			if (context.HasErrors) {
-				context.Results.compilationStage = CompilationStage.CodeValidation;
-				return;
+			if (context.Parameters.ProgressTracker != null) {
+				context.Parameters.ProgressTracker.compilationStageFinished(CompilationStage.CodeValidation);
 			}
-			
-			// Class files creation
+
 			if (context.Parameters.GenerateClassFiles) {
+				// Bytecode generation
+				generateBytecode();
+				if (context.HasErrors) {
+					context.Results.compilationStage = CompilationStage.CodeValidation;
+					return;
+				}
+			
+				// Class files creation
 				foreach (var typeBuilder in context.TypeBuilders) {
 					if (!typeBuilder.IsCreated) {
 						context.Results.classFiles[typeBuilder.FullName.replace('/', '.')] = typeBuilder.createType(context.TypeSystem);
@@ -301,6 +332,9 @@ package stab.tools.compiler {
 			// Documentation file
 			if (context.Parameters.DocumentationPath != null) {
 				buildDocumentation(new File(context.Parameters.DocumentationPath));
+			}
+			if (context.Parameters.ProgressTracker != null) {
+				context.Parameters.ProgressTracker.compilationStageFinished(CompilationStage.Success);
 			}
 			context.Results.compilationStage = CompilationStage.Success;
         }

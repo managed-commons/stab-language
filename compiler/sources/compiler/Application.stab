@@ -122,7 +122,6 @@ package stab.tools.compiler {
             if (!handleArguments(arguments)) {
                 return 1;
             }
-            setBootClasses();
             
             var t0 = System.nanoTime();
             
@@ -372,60 +371,6 @@ package stab.tools.compiler {
             return true;
         }
         
-        private void setBootClasses() {
-            var jreLibPath = PathHelper.combine(System.getProperty("java.home"), "lib");
-            var rtJarFile = new File(PathHelper.combine(jreLibPath, "rt.jar"));
-            if (!rtJarFile.exists()) {
-                // Probably Mac OS
-                jreLibPath = PathHelper.combine(PathHelper.getDirectoryName(System.getProperty("java.home")), "Classes");
-                rtJarFile = new File(PathHelper.combine(jreLibPath, "classes.jar"));
-            }
-            var stabPath = PathHelper.combine(System.getProperty("user.home"), ".stab");
-            var stabDir = new File(stabPath);
-            if (!stabDir.exists()) {
-                stabDir.mkdir();
-            }
-            var rtClassesFile = new File(PathHelper.combine(stabPath, "rtClasses" + rtJarFile.length()));
-            var bootClasses = new ArrayList<String>();
-            if (!rtClassesFile.exists()) {
-                exploreJarFile(rtJarFile, bootClasses);
-                BufferedWriter writer = null;
-                try {
-                    writer = new BufferedWriter(new FileWriter(rtClassesFile));
-                    foreach (var s in bootClasses) {
-                        writer.write(s);
-                        writer.newLine();
-                    }
-                } finally {
-                    try {
-                        if (writer != null) {
-                            writer.close();
-                        }
-                    } catch (IOException e) {
-                    }
-                }
-            } else {
-                BufferedReader reader = null;
-                try {
-                    reader = new BufferedReader(new FileReader(rtClassesFile));
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.length() > 0) {
-                            bootClasses.add(line);
-                        }
-                    }
-                } finally {
-                    try {
-                        if (reader != null) {
-                            reader.close();
-                        }
-                    } catch (IOException e) {
-                    }
-                }
-            }
-            parameters.BootClasses = bootClasses.toArray(new String[bootClasses.size()]);
-        }
-
         private void exploreJarFile(File jarFile, List<String> classes) {
             JarInputStream jarStream = null;
             try {

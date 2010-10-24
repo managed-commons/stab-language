@@ -391,7 +391,9 @@ package stab.tools.syntaxtree {
                 from.Origin = handleExpression(from.Origin, scope, true);
                 var body = query.Body;
                 var name = new String(text, from.NameOffset, from.NameLength);
-                return translateQuery(scope, from.Type, from.NameOffset, from.NameLength, name, from.Origin, body);
+                var result = translateQuery(scope, from.Type, from.NameOffset, from.NameLength, name, from.Origin, body);
+				result.addUserData(query);
+				return result;
             }
             
             private ExpressionNode translateQuery(QueryScope scope, TypeReferenceNode type, int nameOffset, int nameLength, String name,
