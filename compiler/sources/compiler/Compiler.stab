@@ -2795,6 +2795,11 @@ package stab.tools.compiler {
                     }
 					context.CodeValidationContext.IsStatic = false;
                     var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, initializer.Arguments, JvmTypeInfo.VOID);
+					if (constructor == null) {
+                        context.addError(CompileErrorId.BaseMissingConstructor,
+                            constructorDeclaration,
+                            BytecodeHelper.getDisplayName(typeBuilder.BaseType), initializer.Arguments.size());
+					}
                     var info = new ExpressionInfo(initType);
                     info.Method = constructor;
                     initializer.addUserData(info);
@@ -2810,7 +2815,7 @@ package stab.tools.compiler {
                     if (base == null) {
                         context.addError(CompileErrorId.BaseMissingDefaultConstructor,
                             constructorDeclaration,
-                            typeBuilder.BaseType.FullName);
+                            BytecodeHelper.getDisplayName(typeBuilder.BaseType));
                     } else {
                         var info = new ExpressionInfo(typeBuilder.BaseType);
                         info.Method = base;

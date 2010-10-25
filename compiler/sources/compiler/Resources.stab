@@ -185,6 +185,7 @@ package stab.tools.compiler {
 		NullMemberAccess,
 		BaseClassBeforeInterfaces,
 		WildcardTypeCreation,
+		BaseMissingConstructor,
     }
 
     class Resources {

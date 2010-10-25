@@ -250,5 +250,12 @@ package stab.tools.compiler.test {
 				"UnknownFieldType.stab (2, 5) error 278: The name 'inty' cannot be resolved to a type"},
 				new String[] {});
 		}
+		
+		[Test]
+		public void baseMissingConstructor() {
+			doTest("BaseMissingConstructor", new String[]{
+				"BaseMissingConstructor.stab (4, 12) error 325: 'java.lang.Object' does not contain a constructor that takes 1 arguments" },
+				new String[] {});
+		}
 	}
 }

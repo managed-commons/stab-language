@@ -88,5 +88,12 @@ package stab.tools.compiler.test {
 				new String[]{ "Error.stab (1) error 1: #error: 'Test error'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void semicolonInsteadOfComma() {
+			doTest("SemicolonInsteadOfComma",
+				new String[]{ "SemicolonInsteadOfComma.stab (2, 12) error 24: ) expected" },
+				new String[] {});
+		}
 	}
 }
