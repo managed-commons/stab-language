@@ -740,5 +740,15 @@ package stab.tools.compiler.test {
 		public void genericMethod2() {
 			doTest("GenericMethod2", new Class<?>[] {}, new Object[] {}, 3);
 		}
+		
+		[Test]
+		public void staticFinalLongField() {
+			doTest("StaticFinalLongField", new Class<?>[] {}, new Object[] {}, 0L);
+		}
+		
+		[Test]
+		public void genericAssignment() {
+			doTest("GenericAssignment", new Class<?>[] {}, new Object[] {}, true);
+		}
     }
 }

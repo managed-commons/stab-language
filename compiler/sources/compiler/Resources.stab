@@ -186,6 +186,7 @@ package stab.tools.compiler {
 		BaseClassBeforeInterfaces,
 		WildcardTypeCreation,
 		BaseMissingConstructor,
+		GenericParameterInCatch,
     }
 
     class Resources {

@@ -103,5 +103,12 @@ package stab.tools.compiler.test {
 				"LocalWildcard.stab (5, 24) error 324: Cannot create an instance of the type 'java.util.HashSet<?>'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void genericExceptionHandler() {
+			doTest("GenericExceptionHandler", new String[]{ 
+				"GenericExceptionHandler.stab (5, 18) error 326: Cannot use the type parameter 'T' in a catch clause" },
+				new String[] {});
+		}
 	}
 }

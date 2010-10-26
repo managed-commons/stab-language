@@ -7,7 +7,6 @@ Features ==============================
 Issues ================================
 
 - validate generic constraints
-- test constant expressions with static final fields
 - generate bridge methods for public abstract methods implemented in private superclasses?
 - create an InternalErrorException class
 - test partial methods
@@ -15,10 +14,6 @@ Issues ================================
 - add support for enum constant members
 - ZipFile.entries() : test casts of Enumeration<? extends ZipEntry>
 - try/catch and switch support in expression trees
-
-class C {
-    public static long CONST = 0; // invalid bytecode
-}
 
 Errors ================================
 using java.lang;

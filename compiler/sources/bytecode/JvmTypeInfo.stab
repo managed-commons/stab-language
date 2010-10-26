@@ -475,6 +475,14 @@ package stab.tools.bytecode {
                     }
                 }
             }
+			if (type.IsGenericParameter) {
+				foreach (var bound in type.GenericParameterBounds) {
+					if (this.isAssignableFrom(bound)) {
+						return true;
+					}
+				}
+				return false;
+			}
             int typeArgs = this.GenericArguments.count();
             if (type.GenericArguments.count() != typeArgs) {
                 if (typeArgs == 0 && this.OriginalTypeDefinition == type.OriginalTypeDefinition) {

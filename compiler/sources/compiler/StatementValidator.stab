@@ -431,8 +431,12 @@ package stab.tools.compiler {
                     if (node.ExceptionType != null) {
                         var etype = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, node.ExceptionType);
                         node.addOrReplaceUserData(etype);
+						if (etype.IsGenericParameter) {
+                            throw context.error(CompileErrorId.GenericParameterInCatch, node.ExceptionType,
+                                    BytecodeHelper.getDisplayName(etype));
+						}
                         if (!context.TypeSystem.getType("java/lang/Throwable").isAssignableFrom(etype)) {
-                            throw context.error(CompileErrorId.NoImplicitConversion, node,
+                            throw context.error(CompileErrorId.NoImplicitConversion, node.ExceptionType,
                                     BytecodeHelper.getDisplayName(etype), "java.lang.Throwable");
                         }
                         if (node.NameLength > 0) {
