@@ -44,6 +44,9 @@ package stab.tools.compiler {
         private JvmMethodInfo labelMethod;
         private JvmMethodInfo labeledMethod;
         private JvmMethodInfo makeReturnMethod;
+        private JvmMethodInfo makeThrowMethod;
+        private JvmMethodInfo makeSynchronizedMethod;
+        private JvmMethodInfo makeUsingMethod;
         private JvmMethodInfo makeWhileMethod;
         private JvmMethodInfo valueMethod;
         private JvmMethodInfo getDeclaredMethodMethod;
@@ -242,6 +245,33 @@ package stab.tools.compiler {
                     makeReturnMethod = this.StatementType.getMethod("makeReturn", Query.singleton(this.ExpressionType));
                 }
                 return makeReturnMethod;
+            }
+        }
+
+        JvmMethodInfo MakeThrowMethod {
+            get {
+                if (makeThrowMethod == null) {
+                    makeThrowMethod = this.StatementType.getMethod("makeThrow", Query.singleton(this.ExpressionType));
+                }
+                return makeThrowMethod;
+            }
+        }
+        
+        JvmMethodInfo MakeSynchronizedMethod {
+            get {
+                if (makeSynchronizedMethod == null) {
+                    makeSynchronizedMethod = this.StatementType.getMethod("makeSynchronized", Query.pair(this.ExpressionType, this.StatementType));
+                }
+                return makeSynchronizedMethod;
+            }
+        }
+
+        JvmMethodInfo MakeUsingMethod {
+            get {
+                if (makeUsingMethod == null) {
+                    makeUsingMethod = this.StatementType.getMethod("makeUsing", Query.pair(this.StatementType, this.StatementType));
+                }
+                return makeUsingMethod;
             }
         }
         
@@ -666,7 +696,46 @@ package stab.tools.compiler {
             generator.emit(JvmOpcode.Invokestatic, this.MakeReturnMethod);
             return null;
         }
-         
+
+        protected override Void handleSynchronized(SynchronizedStatementNode synchronizedStatement, Void source) {
+            var info = synchronizedStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+			expressionGenerator.handleExpression(synchronizedStatement.Lock, null, true);
+            handleStatement(synchronizedStatement.Statement, null);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeSynchronizedMethod);
+			return null;
+		}
+        
+		protected override Void handleThrow(ThrowStatementNode throwStatement, Void source) {
+            var info = throwStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+			if (throwStatement.Exception == null) {
+                generator.emit(JvmOpcode.Aconst_Null);
+			} else {
+                expressionGenerator.handleExpression(throwStatement.Exception, null, true);
+			}
+            generator.emit(JvmOpcode.Invokestatic, this.MakeThrowMethod);
+			return null;
+		}
+
+		protected override Void handleUsing(UsingStatementNode usingStatement, Void source) {
+            var info = usingStatement.getUserData(typeof(StatementInfo));
+            if (info == null) {
+                return null;
+            }
+            var generator = context.MethodGenerationContext.Generator;
+            handleStatement(usingStatement.ResourceAcquisition, null);
+            handleStatement(usingStatement.Statement, null);
+            generator.emit(JvmOpcode.Invokestatic, this.MakeUsingMethod);
+			return null;
+		}
+		
         protected override Void handleWhile(WhileStatementNode whileStatement, Void source) {
             var info = whileStatement.getUserData(typeof(StatementInfo));
             if (info == null) {

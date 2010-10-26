@@ -31,6 +31,9 @@ package stab.tree {
         If,
         Labeled,
         Return,
+		Synchronized,
+		Throw,
+		Using,
         While
     }
 
@@ -95,6 +98,18 @@ package stab.tree {
         public static ReturnStatement makeReturn(Expression value) {
             return new ReturnStatement(value);
         }
+
+		public static SynchronizedStatement makeSynchronized(Expression lock, Statement body) {
+			return new SynchronizedStatement(lock, body);
+		}
+		
+		public static ThrowStatement makeThrow(Expression exception) {
+			return new ThrowStatement(exception);
+		}
+		
+		public static UsingStatement makeUsing(Statement resourceAcquisition, Statement body) {
+			return new UsingStatement(resourceAcquisition, body);
+		}
         
         public static LoopStatement makeWhile(Expression condition, Statement body) {
             return new LoopStatement(StatementKind.While, condition, body);

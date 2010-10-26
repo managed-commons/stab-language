@@ -1,7 +1,6 @@
 Features ==============================
 
-1 - Expression trees
-2 - Generic constructors
+1 - Generic constructors
 	* syntax for this and super clauses (this<T1, T2>(...))
 	* syntax for new (new <T1, T2> C(...))
 
@@ -15,6 +14,7 @@ Issues ================================
 - check that #define/#undef is used before any lexical unit
 - add support for enum constant members
 - ZipFile.entries() : test casts of Enumeration<? extends ZipEntry>
+- try/catch and switch support in expression trees
 
 class C {
     public static long CONST = 0; // invalid bytecode
