@@ -257,5 +257,26 @@ package stab.tools.compiler.test {
 				"BaseMissingConstructor.stab (4, 12) error 325: 'java.lang.Object' does not contain a constructor that takes 1 arguments" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void wildcardConstraint() {
+			doTest("WildcardConstraint", new String[]{
+				"WildcardConstraint.stab (7, 22) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void wildcardAssignment() {
+			doTest("WildcardAssignment", new String[]{
+				"WildcardAssignment.stab (6, 50) error 234: Cannot implicitly convert type 'java.util.Enumeration<?>' to 'java.util.Enumeration<java.util.zip.ZipEntry>'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void wildcardLowerConstraint() {
+			doTest("WildcardLowerConstraint", new String[]{
+				"WildcardLowerConstraint.stab (7, 22) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				new String[] {});
+		}
 	}
 }

@@ -750,5 +750,25 @@ package stab.tools.compiler.test {
 		public void genericAssignment() {
 			doTest("GenericAssignment", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void wildcardArgument() {
+			doTest("WildcardArgument", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void wildcardArrayArgument() {
+			doTest("WildcardArrayArgument", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void wildcardConstraintArgument() {
+			doTest("WildcardConstraintArgument", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void wildcardLowerConstraintArgument() {
+			doTest("WildcardLowerConstraintArgument", new Class<?>[] {}, new Object[] {}, true);
+		}
     }
 }

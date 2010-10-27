@@ -12,7 +12,6 @@ Issues ================================
 - test partial methods
 - check that #define/#undef is used before any lexical unit
 - add support for enum constant members
-- ZipFile.entries() : test casts of Enumeration<? extends ZipEntry>
 - try/catch and switch support in expression trees
 
 Errors ================================
