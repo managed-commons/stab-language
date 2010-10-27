@@ -148,5 +148,13 @@ package stab.tools.compiler.test {
 				"EnumEquals.stab (6, 16) error 175: Operator '==' cannot applied to operand of type 'C.E1' and 'C.E2'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void genericSubtract() {
+			doTest("GenericSubtract", new String[]{
+				"GenericSubtract.stab (3, 16) error 175: Operator '-' cannot applied to operand of type 'T' and 'U'",
+				"GenericSubtract.stab (3, 16) error 234: Cannot implicitly convert type 'T' to 'int'" },
+				new String[] {});
+		}
 	}
 }

@@ -621,9 +621,10 @@ package stab.tools.compiler {
                 } else if ((lt != null && BytecodeHelper.isDelegateType(lt)) || (rt != null && BytecodeHelper.isDelegateType(rt))) {
                     if ((binary.Operator != BinaryOperator.Add && binary.Operator != BinaryOperator.Subtract)
                             || (lt != null && rt != null && lt != rt)){
+						info.Type = lt ?? rt;
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
-                        info.Type = (lt == null) ? rt : lt;
+                        info.Type = lt ?? rt;
                         if (leftIsMethod) {
                             MethodResolver.resolveDelegate(info.Type, left, li, left);
                         }
@@ -636,6 +637,8 @@ package stab.tools.compiler {
                     info.Type = context.TypeSystem.StringType;
                     binary.addOrReplaceUserData(info);
                 } else {
+					info.Type = lt ?? rt;
+                    binary.addOrReplaceUserData(info);
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 }
                 break;
@@ -644,6 +647,7 @@ package stab.tools.compiler {
             case Or:
             case Xor:
                 if (li == null) {
+                    binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.getOperator()), left, right);
                 } else if (lt.IsNumeric) {
                     if (ri == null || !rt.IsNumeric) {
@@ -666,6 +670,7 @@ package stab.tools.compiler {
                     }
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                 } else {
+                    binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.getOperator()), left, right);
                 }
                 break;
@@ -693,10 +698,10 @@ package stab.tools.compiler {
                         ValidationHelper.setBoxing(context, rt, right);
                         binary.addOrReplaceUserData(lt);
                     }
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                 } else {
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 }
+				binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                 break;
                 
             case Equal:
@@ -754,7 +759,8 @@ package stab.tools.compiler {
             case RightShift:
             case UnsignedRightShift:
                 if (li == null || ri == null) {
-                    addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
+					binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
+					addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 } else {
                     switch (rt.NumericTypeKind) {
                     case Byte:
@@ -778,7 +784,6 @@ package stab.tools.compiler {
                             }
                             ValidationHelper.setBoxing(context, lt, left);
                             ValidationHelper.setBoxing(context, JvmTypeInfo.INT, right);
-                            binary.addOrReplaceUserData(new ExpressionInfo(lt));
                         } else {
                             addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                         }
@@ -787,6 +792,7 @@ package stab.tools.compiler {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                         break;
                     }
+					binary.addOrReplaceUserData(new ExpressionInfo(lt));
                 }
                 break;
                 
@@ -836,6 +842,7 @@ package stab.tools.compiler {
                     } else if (lt == null || (lt != null && rt.isAssignableFrom(lt))) {
                         binary.addOrReplaceUserData(new ExpressionInfo(rt));
                     } else {
+                        binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
                 }
