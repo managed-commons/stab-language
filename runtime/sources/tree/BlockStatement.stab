@@ -22,7 +22,7 @@ package stab.tree {
     public class BlockStatement : Statement {
         BlockStatement(Statement[] statements)
             : super(StatementKind.Block) {
-            this.Statements = Query.asIterable((Statement[])statements.clone());
+            this.Statements = (statements == null) ? Query.empty<Statement>() : Query.asIterable((Statement[])statements.clone());
         }
         
         public Iterable<Statement> Statements {

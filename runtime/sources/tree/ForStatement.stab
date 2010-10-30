@@ -22,9 +22,9 @@ package stab.tree {
     public class ForStatement : Statement {
         ForStatement(Statement[] initializer, Expression condition, Statement[] iterator, Statement body)
             : super(StatementKind.For) {
-            this.Initializer = (initializer == null) ? Query.empty<Statement>() : Query.asIterable(initializer);
+            this.Initializer = (initializer == null) ? Query.empty<Statement>() : Query.asIterable((Statement[])initializer.clone());
             this.Condition = condition;
-            this.Iterator = (iterator == null) ? Query.empty<Statement>() : Query.asIterable(iterator);
+            this.Iterator = (iterator == null) ? Query.empty<Statement>() : Query.asIterable((Statement[])iterator.clone());
             this.Body = body;
         }
 

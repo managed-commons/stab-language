@@ -24,7 +24,7 @@ package stab.tree {
         InvocationExpression(Expression target, Expression[] arguments)
             : super(ExpressionKind.Invocation, getReturnType(target)) {
             this.Target = target;
-            this.Arguments = Query.asIterable((Expression[])arguments.clone());
+            this.Arguments = (arguments == null) ? Query.empty<Expression>() : Query.asIterable((Expression[])arguments.clone());
         }
         
         public Expression Target {

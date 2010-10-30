@@ -29,6 +29,16 @@ package stab.tools.syntaxtree {
 		PackageMemberKind PackageMemberKind {
 			get;
 		}
+		
+        int DocumentationOffset {
+            get;
+            set;
+        }
+		
+        int DocumentationLength {
+            get;
+            set;
+        }
 	}
 	
 	public class PackageBodyNode : SyntaxNode {

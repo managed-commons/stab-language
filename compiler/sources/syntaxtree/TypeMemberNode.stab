@@ -51,6 +51,16 @@ package stab.tools.syntaxtree {
 		TypeMemberKind TypeMemberKind {
 			get;
 		}
+		
+        int DocumentationOffset {
+            get;
+            set;
+        }
+		
+        int DocumentationLength {
+            get;
+            set;
+        }
 	}
 	
 	public interface IInterfaceMember : ITypeMember {

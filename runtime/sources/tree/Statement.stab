@@ -28,11 +28,14 @@ package stab.tree {
         For,
         Foreach,
         Goto,
+		GotoCase,
         If,
         Labeled,
         Return,
+		Switch,
 		Synchronized,
 		Throw,
+		Try,
 		Using,
         While
     }
@@ -55,6 +58,10 @@ package stab.tree {
             return new SimpleStatement(StatementKind.Break);
         }
 
+		public static CatchClause makeCatch(VariableExpression variable, BlockStatement body) {
+			return new CatchClause(variable, body);
+		}
+		
         public static Statement makeContinue() {
             return new SimpleStatement(StatementKind.Continue);
         }
@@ -71,10 +78,14 @@ package stab.tree {
             return new ExpressionStatement(expression);
         }
         
-        public static GotoStatement gotoStatement(Label label) {
+        public static GotoStatement makeGoto(Label label) {
             return new GotoStatement(label);
         }
 
+		public static GotoCaseStatement gotoCase(SwitchLabel label) {
+			return new GotoCaseStatement(label);
+		}
+		
         public static Label label(String name) {
             return new Label(name);
         }
@@ -99,12 +110,28 @@ package stab.tree {
             return new ReturnStatement(value);
         }
 
+		public static SwitchStatement makeSwitch(Expression expression, SwitchSection[] sections) {
+			return new SwitchStatement(expression, sections);
+		}
+		
+		public static SwitchSection switchSection(SwitchLabel[] labels, Statement[] statements) {
+			return new SwitchSection(labels, statements);
+		}
+		
+		public static SwitchLabel switchLabel(String name, int value, boolean isDefault) {
+			return new SwitchLabel(name, value, isDefault);
+		}
+		
 		public static SynchronizedStatement makeSynchronized(Expression lock, Statement body) {
 			return new SynchronizedStatement(lock, body);
 		}
 		
 		public static ThrowStatement makeThrow(Expression exception) {
 			return new ThrowStatement(exception);
+		}
+
+		public static TryStatement makeTry(BlockStatement body, CatchClause[] catchClauses, BlockStatement finallyBlock) {
+			return new TryStatement(body, catchClauses, finallyBlock);
 		}
 		
 		public static UsingStatement makeUsing(Statement resourceAcquisition, Statement body) {
