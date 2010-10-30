@@ -1047,7 +1047,9 @@ package stab.tools.compiler {
                         generator.emit(BytecodeHelper.getStoreOpcode(type), generator.declareLocal(type, local.Name));
                     }
                 } else {
-                    generator.declareLocal(type, local.Name);
+                    if (!local.IsUsedFromLambda) {
+						generator.declareLocal(type, local.Name);
+					}
                 }
             }
             return null;

@@ -156,5 +156,12 @@ package stab.tools.compiler.test {
 				"GenericSubtract.stab (3, 16) error 234: Cannot implicitly convert type 'T' to 'int'" },
 				new String[] {});
 		}
+
+		[Test]
+		public void stringSubtract() {
+			doTest("StringSubtract", new String[]{
+				"StringSubtract.stab (6, 16) error 175: Operator '-' cannot applied to operand of type 'java.lang.String' and 'int'" },
+				new String[] {});
+		}
 	}
 }

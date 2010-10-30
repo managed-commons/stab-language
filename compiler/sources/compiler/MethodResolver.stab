@@ -292,10 +292,7 @@ package stab.tools.compiler {
                 }
                 i = 0;
                 foreach (var argNode in arguments) {
-                    var argInfo = argNode.getUserData(typeof(ExpressionInfo));
-                    if (argInfo == null) {
-                        expressionValidator.handleExpression(argNode, parameterTypes[i], true);
-                    }
+					expressionValidator.handleExpression(argNode, parameterTypes[i], true);
                     i++;
                 }
             }

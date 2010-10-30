@@ -1501,5 +1501,10 @@ package stab.tools.compiler.test {
 		public void paramsInference() {
 			doTest("ParamsInference", new Class<?>[] {}, new Object[] {}, "1");
 		}
+		
+		[Test]
+		public void nestedLambdas() {
+			doTest("NestedLambdas", new Class<?>[] {}, new Object[] {}, true);
+		}
 	}
 }

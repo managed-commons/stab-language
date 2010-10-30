@@ -633,7 +633,7 @@ package stab.tools.compiler {
                         }
                     }
                     binary.addOrReplaceUserData(info);
-                } else if (lt == context.TypeSystem.StringType || rt == context.TypeSystem.StringType) {
+                } else if ((lt == context.TypeSystem.StringType || rt == context.TypeSystem.StringType) && binary.Operator == BinaryOperator.Add) {
                     info.Type = context.TypeSystem.StringType;
                     binary.addOrReplaceUserData(info);
                 } else {
@@ -1103,7 +1103,16 @@ package stab.tools.compiler {
             if (methodBuilder != null) {
                 ((JvmTypeBuilder)methodBuilder.DeclaringType).undefineMethod(methodBuilder);
             }
-            methodBuilder = typeBuilder.defineMethod("lambda$" + (typeBuilder.Methods.count() - 1));
+			String methodName;
+			int n = 0;
+			for (;;) {
+				methodName = "lambda$" + n++;
+				if (typeBuilder.Methods.all(p => !p.Name.equals(methodName))) {
+					break;
+				}
+			}
+			
+            methodBuilder = typeBuilder.defineMethod(methodName);
             lambda.addOrReplaceUserData(methodBuilder);
             
             if (targetType == null) {

@@ -165,7 +165,7 @@ package stab.tools.compiler {
                         
                     case Local:
                         var currentMethod = context.CodeValidationContext.CurrentMethod;
-                        if (currentMethod != member.Method && currentMethod.DeclaringType.FullName.indexOf('#') == -1) {
+                        if (!member.IsUsedFromLambda && currentMethod != member.Method && currentMethod.DeclaringType.FullName.indexOf('#') == -1) {
                             member.IsUsedFromLambda = true;
                         }
                         info.Member = member;
