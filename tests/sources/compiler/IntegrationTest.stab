@@ -1,0 +1,68 @@
+using java.lang;
+using org.junit;
+
+package stab.tools.compiler.test {
+
+	public class IntegrationTest : ExecutionTest {
+		protected override String ResourcesPath {
+			get {
+				return "IntegrationTest";
+			}
+		}
+		
+		[Test]
+		public void factorial() {
+			doTest("Factorial", new Class<?>[] {}, new Object[] {}, 120);
+		}
+		
+		[Test]
+		public void quicksort() {
+			int[] tab = new int[] { 2, 1, 4, 3 };
+			doTest("Quicksort", new Class<?>[] { typeof(int[]) }, new Object[] { tab }, null);
+			Assert.assertEquals(1, tab[0]);
+			Assert.assertEquals(2, tab[1]);
+			Assert.assertEquals(3, tab[2]);
+			Assert.assertEquals(4, tab[3]);
+		}
+		
+		[Test]
+		public void gcd() {
+			doTest("Gcd", new Class<?>[] { typeof(int), typeof(int) }, new Object[] { 42, 56 }, 14);
+		}
+		
+		[Test]
+		public void bitCount() {
+			doTest("BitCount", new Class<?>[] { typeof(int), typeof(int) }, new Object[] { 1, 0x0F0F0F0F }, 16);
+		}
+		
+		[Test]
+		public void bitCount_1() {
+			doTest("BitCount", new Class<?>[] { typeof(int), typeof(int) }, new Object[] { 2, 0x0F0F0F0F }, 16);
+		}
+		
+		[Test]
+		public void bitCount_2() {
+			doTest("BitCount", new Class<?>[] { typeof(int), typeof(int) }, new Object[] { 3, 0x0F0F0F0F }, 16);
+		}
+		
+		[Test]
+		public void bitCount_3() {
+			doTest("BitCount", new Class<?>[] { typeof(int), typeof(int) }, new Object[] { 4, 0x0F0F0F0F }, 16);
+		}
+		
+		[Test]
+		public void erathosthenesSieve() {
+			doTest("ErathosthenesSieve", new Class<?>[] { typeof(int) }, new Object[] { 1000 }, 170);
+		}
+		
+		[Test]
+		public void factorialLambda() {
+			doTest("FactorialLambda", new Class<?>[] { typeof(int) }, new Object[] { 5 }, 120);
+		}
+		
+		[Test]
+		public void autoboxingPuzzle() {
+			doTest("AutoboxingPuzzle", new Class<?>[] {}, new Object[] {}, 100);
+		}
+	}
+}

@@ -1506,5 +1506,25 @@ package stab.tools.compiler.test {
 		public void nestedLambdas() {
 			doTest("NestedLambdas", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void lexicalDecomposition() {
+			doTest("LexicalDecomposition", new Class<?>[] {}, new Object[] {}, 518);
+		}
+		
+		[Test]
+		public void lexicalDecomposition2() {
+			doTest("LexicalDecomposition2", new Class<?>[] {}, new Object[] {}, 744);
+		}
+		
+		[Test]
+		public void lexicalDecomposition3() {
+			doTest("LexicalDecomposition3", new Class<?>[] {}, new Object[] {}, -274);
+		}
+		
+		[Test]
+		public void lexicalDecomposition4() {
+			doTest("LexicalDecomposition4", new Class<?>[] {}, new Object[] {}, 845);
+		}
 	}
 }

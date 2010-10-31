@@ -7,7 +7,7 @@ IF EXIST runtime\doc.xml DEL /Q runtime\doc.xml
 IF EXIST tests\tests.jar DEL /Q tests\tests.jar
 IF EXIST tests\resources\ExpressionsTest\generated RMDIR /S /Q tests\resources\ExpressionsTest\generated
 IF EXIST tests\resources\LibraryTest\generated RMDIR /S /Q tests\resources\LibraryTest\generated
-IF EXIST tests\resources\NotCommittedTest\generated RMDIR /S /Q tests\resources\NotCommittedTest\generated
+IF EXIST tests\resources\IntegrationTest\generated RMDIR /S /Q tests\resources\IntegrationTest\generated
 IF EXIST tests\resources\ObjectModelTest\generated RMDIR /S /Q tests\resources\ObjectModelTest\generated
 IF EXIST tests\resources\ParseCompilationUnitTest\generated RMDIR /S /Q tests\resources\ParseCompilationUnitTest\generated
 IF EXIST tests\resources\ParseExpressionTest\generated RMDIR /S /Q tests\resources\ParseExpressionTest\generated
