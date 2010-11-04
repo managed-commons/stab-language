@@ -113,11 +113,11 @@ package stab.tools.compiler {
         private String resourcesPath;
         private String outputPath;
         
-        Application() {
+        public Application() {
             sourceFiles = new ArrayList<File>();
         }
         
-        int run(String[] arguments) {
+        public int run(String[] arguments) {
             sourceFiles.clear();
             if (!handleArguments(arguments)) {
                 return 1;

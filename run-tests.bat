@@ -1,5 +1,0 @@
-@ECHO OFF
-
-java -cp bin\junit-4.8.1.jar;runtime\stabrt.jar;bin\asm-3.3.jar;compiler\stabc.jar;tests\tests.jar org.junit.runner.JUnitCore stab.tools.parser.test.SourceCodeScannerTest stab.tools.parser.test.PreprocessorTest stab.tools.parser.test.PreprocessedTextScannerTest stab.tools.helpers.test.UserDataContainerTest stab.tools.parser.test.ParseExpressionTest stab.tools.parser.test.ParseCompilationUnitTest stab.tools.bytecode.test.TypeSystemTest stab.tools.bytecode.test.TypeBuilderTest stab.tools.compiler.test.MemberInfoTest stab.tools.compiler.test.MemberResolverTest stab.tools.compiler.test.ExpressionsTest stab.tools.compiler.test.ObjectModelTest stab.tools.compiler.test.StatementsTest stab.tools.compiler.test.LibraryTest stab.tools.compiler.test.SyntaxErrorTest stab.tools.compiler.test.ObjectModelErrorTest stab.tools.compiler.test.StatementsErrorTest stab.tools.compiler.test.ExpressionsErrorTest stab.tools.syntaxtree.test.QueryTranslatorTest stab.tools.compiler.test.IntegrationTest
-
-REM java -cp bin\junit-4.8.1.jar;runtime\stabrt.jar;bin\asm-3.3.jar;compiler\stabc.jar;tests\tests.jar org.junit.runner.JUnitCore stab.tools.compiler.test.ExpressionsTest
