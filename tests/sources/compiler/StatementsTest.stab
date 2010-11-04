@@ -470,5 +470,10 @@ package stab.tools.compiler.test {
 		public void forBreak() {
 			doTest("ForBreak", new Class<?>[] {}, new Object[] {}, "str2");
 		}
+		
+		[Test]
+		public void unusedLocal() {
+			doTest("UnusedLocal", new Class<?>[] {}, new Object[] {}, true);
+		}
 	}
 }

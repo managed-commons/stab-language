@@ -3084,6 +3084,7 @@ package stab.tools.compiler {
                 } else if (li.referenceCount > 0) {
                     context.addError(CompileErrorId.VariableUninitialized, li.declaration, li.local.Name);
                 } else {
+					li.local.Unused = true;
                     context.addWarning(CompileErrorId.VariableNeverUsed, li.declaration, li.local.Name);
                 }
             }

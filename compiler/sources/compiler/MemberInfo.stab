@@ -930,6 +930,10 @@ package stab.tools.compiler {
                 usedFromLambda = value;
             }
         }
-
+		
+		public boolean Unused {
+			get;
+			set;
+		}
     }
 }
