@@ -83,10 +83,13 @@ package stab.tools.tests {
  	
  	class TestListener : RunListener {
  		private String className;
+ 		private int globalCount;
  		private int count;
  		private int success;
+ 		private long startTime;
  	
 		public override void testFinished(Description d) {
+			globalCount++;
 			success++;
 			if (!d.getClassName().equals(className)) {
 				if (className != null) {
@@ -104,6 +107,14 @@ package stab.tools.tests {
 			System.out.println("Failure: " + f.getMessage());
 			f.getException().printStackTrace();
 		}
+
+		public override void testRunStarted(Description d) {
+			startTime = System.nanoTime();
+		}
+		
+		public override void testRunFinished(Result r) {
+			System.out.println();
+			System.out.println(String.format("%d tests run in %.2fs", globalCount, (System.nanoTime() - startTime) / 1e9));
+		}
  	}
 }
- 
