@@ -56,9 +56,9 @@ package stab.tools.build {
 			System.out.println("--------------------------");
 			
 			var args = new ArrayList<String>();
-			args.add(@"-cp:bin\stabrt.jar");
-			args.add(@"-out:annotated\stabal.jar");
-			addSourceFiles(new File(@"annotated\sources"), args);
+			args.add("-cp:bin/stabrt.jar");
+			args.add("-out:annotated/stabal.jar");
+			addSourceFiles(new File("annotated/sources"), args);
 			
 			return new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 		}
@@ -69,12 +69,12 @@ package stab.tools.build {
 			System.out.println("--------------------------");
 
 			var args = new ArrayList<String>();
-			args.add(@"-al:bin\stabal.jar");
-			args.add(@"-cp:bin\stabrt.jar;bin\asm-3.3.jar");
-			args.add(@"-resources:compiler\resources");
-			args.add(@"-manifest:compiler\MANIFEST.MF");
-			args.add(@"-out:compiler\stabc.jar");
-			addSourceFiles(new File(@"compiler\sources"), args);
+			args.add("-al:bin/stabal.jar");
+			args.add("-cp:bin/stabrt.jar;bin/asm-3.3.jar");
+			args.add("-resources:compiler/resources");
+			args.add("-manifest:compiler/MANIFEST.MF");
+			args.add("-out:compiler/stabc.jar");
+			addSourceFiles(new File("compiler/sources"), args);
 			
 			return new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 		}
@@ -85,10 +85,10 @@ package stab.tools.build {
 			System.out.println("--------------------------");
 			
 			var args = new ArrayList<String>();
-			args.add(@"-al:bin\stabal.jar");
-			args.add(@"-doc:runtime\doc.xml");
-			args.add(@"-out:runtime\stabrt.jar");
-			addSourceFiles(new File(@"runtime\sources"), args);
+			args.add("-al:bin/stabal.jar");
+			args.add("-doc:runtime/doc.xml");
+			args.add("-out:runtime/stabrt.jar");
+			addSourceFiles(new File("runtime/sources"), args);
 			
 			return new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 		}
@@ -99,21 +99,21 @@ package stab.tools.build {
 			System.out.println("--------------------------");
 			
 			var args = new ArrayList<String>();
-			args.add(@"-al:bin\stabal.jar");
-			args.add(@"-cp:bin\stabrt.jar;bin\junit-4.8.1.jar;bin\asm-3.3.jar;compiler\stabc.jar");
-			args.add(@"-out:tests\tests.jar");
-			addSourceFiles(new File(@"tests\sources"), args);
+			args.add("-al:bin/stabal.jar");
+			args.add("-cp:bin/stabrt.jar;bin/junit-4.8.1.jar;bin/asm-3.3.jar;compiler/stabc.jar");
+			args.add("-out:tests/tests.jar");
+			addSourceFiles(new File("tests/sources"), args);
 			
 			int code = new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 			if (code == 0) {
 				System.out.println();
 				System.out.println("Tests Launcher");
 				args = new ArrayList<String>();
-				args.add(@"-al:bin\stabal.jar");
-				args.add(@"-cp:bin\stabrt.jar;bin\junit-4.8.1.jar");
-				args.add(@"-manifest:tools\tests\MANIFEST.MF");
-				args.add(@"-out:bin\tests.jar");
-				addSourceFiles(new File(@"tools\tests"), args);
+				args.add("-al:bin/stabal.jar");
+				args.add("-cp:bin/stabrt.jar;bin/junit-4.8.1.jar");
+				args.add("-manifest:tools/tests/MANIFEST.MF");
+				args.add("-out:bin/tests.jar");
+				addSourceFiles(new File("tools/tests"), args);
 				
 				code = new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 			}
@@ -126,11 +126,11 @@ package stab.tools.build {
 			System.out.println("--------------------------");
 
 			var args = new ArrayList<String>();
-			args.add(@"-al:bin\stabal.jar");
-			args.add(@"-cp:bin\stabrt.jar;bin\asm-3.3.jar;bin\stabc.jar");
-			args.add(@"-manifest:tools\build\MANIFEST.MF");
-			args.add(@"-out:bin\build.jar");
-			addSourceFiles(new File(@"tools\build"), args);
+			args.add("-al:bin/stabal.jar");
+			args.add("-cp:bin/stabrt.jar;bin/asm-3.3.jar;bin/stabc.jar");
+			args.add("-manifest:tools/build/MANIFEST.MF");
+			args.add("-out:bin/build.jar");
+			addSourceFiles(new File("tools/build"), args);
 			
 			return new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 		}
