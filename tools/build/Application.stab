@@ -136,11 +136,14 @@ package stab.tools.build {
 		}
 
 		private void addSourceFiles(File dir, List<String> args) {
-			foreach (var file in dir.listFiles()) {
-				if (file.isDirectory()) {
-					addSourceFiles(file, args);
-				} else if (PathHelper.getExtension(file.getName()).equals(".stab")) {
-					args.add(file.getAbsolutePath());
+			var files = dir.listFiles();
+			if (files != null) {
+				foreach (var file in files) {
+					if (file.isDirectory()) {
+						addSourceFiles(file, args);
+					} else if (PathHelper.getExtension(file.getName()).equals(".stab")) {
+						args.add(file.getAbsolutePath());
+					}
 				}
 			}
 		}
@@ -188,11 +191,14 @@ package stab.tools.build {
 		
 		private static boolean deleteDir(File dir) {
 		    if (dir.isDirectory()) {
-	        	foreach (var f in dir.listFiles()) {
-		            if (!deleteDir(f)) {
-	    	            return false;
-	        	    }
-	        	}
+				var files = dir.listFiles();
+				if (files != null) {
+					foreach (var f in files) {
+						if (!deleteDir(f)) {
+							return false;
+						}
+					}
+				}
 	    	}
 		    return dir.delete();
 		}
