@@ -28,8 +28,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testResolveTypeName() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { rtPath });
 			var annotatedTypeSystem = new JvmTypeSystem(new String[] { alPath }, typeSystem);
 		
@@ -51,8 +51,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testResolveTypeName2() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { rtPath });
 			var annotatedTypeSystem = new JvmTypeSystem(new String[] { alPath }, typeSystem);
 		

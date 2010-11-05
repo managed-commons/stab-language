@@ -158,17 +158,17 @@ package stab.tools.build {
 			deleteFile("runtime/doc.xml");
 			deleteFile("tests/tests.jar");
 
-			deleteDir(@"tests\resources\ExpressionsTest\generated");
-			deleteDir(@"tests\resources\LibraryTest\generated");
-			deleteDir(@"tests\resources\IntegrationTest\generated");
-			deleteDir(@"tests\resources\ObjectModelTest\generated");
-			deleteDir(@"tests\resources\ParseCompilationUnitTest\generated");
-			deleteDir(@"tests\resources\ParseExpressionTest\generated");
-			deleteDir(@"tests\resources\PreprocessorTest\generated");
-			deleteDir(@"tests\resources\StatementsTest\generated");
-			deleteDir(@"tests\resources\TypeBuilderTest\stab");
-			deleteDir(@"tests\resources\TypeSystemTest\generated");
-			deleteDir(@"tests\resources\QueryTranslatorTest\generated");
+			deleteDir("tests/resources/ExpressionsTest/generated");
+			deleteDir("tests/resources/LibraryTest/generated");
+			deleteDir("tests/resources/IntegrationTest/generated");
+			deleteDir("tests/resources/ObjectModelTest/generated");
+			deleteDir("tests/resources/ParseCompilationUnitTest/generated");
+			deleteDir("tests/resources/ParseExpressionTest/generated");
+			deleteDir("tests/resources/PreprocessorTest/generated");
+			deleteDir("tests/resources/StatementsTest/generated");
+			deleteDir("tests/resources/TypeBuilderTest/stab");
+			deleteDir("tests/resources/TypeSystemTest/generated");
+			deleteDir("tests/resources/QueryTranslatorTest/generated");
 		}
 
 		private static void deleteFile(String path) {

@@ -27,8 +27,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testListIndexer() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { alPath, rtPath });
 			var listType = typeSystem.getType("java/util/List");
 			var indexers = MemberInfo.getIndexers(typeSystem, listType, 1);
@@ -47,8 +47,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testArrayListIndexer() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { alPath, rtPath });
 			var arrayListType = typeSystem.getType("java/util/ArrayList");
 			
@@ -70,8 +70,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testMapIndexer() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { alPath, rtPath });
 			var mapType = typeSystem.getType("java/util/Map");
 			var indexers = MemberInfo.getIndexers(typeSystem, mapType, 1);
@@ -90,8 +90,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testStringToString() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { alPath, rtPath });
 			var stringType = typeSystem.getType("java/lang/String");
 			var members = MemberInfo.getMembers(typeSystem, typeSystem.ObjectType, stringType, "toString", true);
@@ -102,8 +102,8 @@ package stab.tools.compiler.test {
 		[Test]
 		public void testHashMapIndexer() {
 			var userDir = System.getProperty("user.dir");
-			var alPath = PathHelper.combine(userDir, "bin\\stabal.jar");
-			var rtPath = PathHelper.combine(userDir, "bin\\stabrt.jar");
+			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
+			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
 			var typeSystem = new JvmTypeSystem(new String[] { alPath, rtPath });
 			var hashMapType = typeSystem.getType("java/util/HashMap");
 			var indexers = MemberInfo.getIndexers(typeSystem, typeSystem.ObjectType, hashMapType, 1, true);
