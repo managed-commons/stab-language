@@ -101,6 +101,16 @@ package stab.tools.bytecode {
             }
         }
         
+		private static boolean hasGenericArguments(JvmTypeInfo type) {
+			if (type instanceof ClassFileType) {
+				var classInfo = ((ClassFileType)type).classInfo;
+				if (classInfo != null && classInfo.name != null) {
+					return classInfo.signature != null && classInfo.signature.FormalTypeParameters.any();
+				}
+			}
+			return type.GenericArguments.any();
+		}
+		
         protected override void initializeBaseTypes() {
             if (classInfo == null || classInfo.name == null) {
                 return;
@@ -109,16 +119,17 @@ package stab.tools.bytecode {
 
             BytecodeHelper.declareEnclosingGenericParameters(genericsScope, this);
             if (classInfo.signature == null) {
+                genericArguments = Query.empty();
                 if (classInfo.superName != null) {
                     baseType = typeSystem.getType(classInfo.superName);
-                    if (baseType.GenericArguments.any()) {
+					if (hasGenericArguments(baseType)) {
                         baseType = baseType.RawGenericType;
                     }
                     if (classInfo.interfaces != null) {
                         var ints = new ArrayList<JvmTypeInfo>();
                         foreach (var s in classInfo.interfaces) {
                             var t = typeSystem.getType(s);
-                            if (t.GenericArguments.any()) {
+							if (hasGenericArguments(t)) {
                                 t = t.RawGenericType;
                             }
                             ints.add(t);
@@ -130,7 +141,6 @@ package stab.tools.bytecode {
                 } else {
                     interfaces = Query.empty();
                 }
-                genericArguments = Query.empty();
             } else {
                 if (classInfo.signature.FormalTypeParameters.any()) {
                     var genArgs = new ArrayList<JvmTypeInfo>();
@@ -166,7 +176,7 @@ package stab.tools.bytecode {
                 }
                 classInfo.signature = null;
             }
-            
+
             if (classInfo.annotations.isEmpty()) {
                 this.annotations = Collections.emptyList();
             } else {
@@ -230,7 +240,7 @@ package stab.tools.bytecode {
                         var ex = new ArrayList<JvmTypeInfo>();
                         foreach (var s in  m.exceptions) {
                             var t = typeSystem.getType(s);
-                            if (t.GenericArguments.any()) {
+							if (hasGenericArguments(t)) {
                                 t = t.RawGenericType;
                             }
                             ex.add(t);
@@ -500,9 +510,9 @@ package stab.tools.bytecode {
 
             default:
                 var result = typeSystem.getType(type.getInternalName());
-                if (result.GenericArguments.any()) {
-                    result = result.RawGenericType;
-                }
+				if (hasGenericArguments(result)) {
+					result = result.RawGenericType;
+				}
                 return result;
             }
         }
