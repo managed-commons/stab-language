@@ -171,9 +171,7 @@ package stab.tools.compiler {
                     }
                     var preprocessor = new Preprocessor(results.codeErrorManager, text);
                     preprocessor.Filename = file.getAbsolutePath();
-                    foreach (var s in parameters.Symbols) {
-                        preprocessor.Symbols.add(s);
-                    }
+					preprocessor.Symbols.addAll(parameters.Symbols);
                     
                     var scanner = new PreprocessedTextScanner(results.codeErrorManager, preprocessor.preprocess());
                     scanner.Filename = file.getAbsolutePath();
@@ -2630,7 +2628,7 @@ package stab.tools.compiler {
                                 : Query.empty<JvmTypeInfo>());
                     if (baseConstructor == null) {
                         context.addError(CompileErrorId.BaseMissingDefaultConstructor,
-                            methodBuilder.DeclaringType.BaseType.getUserData(typeof(ClassDeclarationNode)),
+                            methodBuilder.DeclaringType.getUserData(typeof(ClassDeclarationNode)),
                             BytecodeHelper.getDisplayName(methodBuilder.DeclaringType.BaseType));
                     }
                 }

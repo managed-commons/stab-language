@@ -23,6 +23,26 @@ package stab.tools.tests {
 
 	public class Application {
 		public static void main(params String[] args) {
+			if (sizeof(args) == 1) {
+				switch (args[0]) {
+				case "Expressions":
+				case "ExpressionsError":
+				case "Statements":
+				case "StatementsError":
+				case "ObjectModel":
+				case "ObjectModelError":
+				case "Library":
+				{
+					JUnitCore core = new JUnitCore();
+					core.addListener(new TestListener());
+					core.run(new Class<?>[] {
+						Class.forName("stab.tools.compiler.test." + args[0] + "Test"),
+					});
+					return;
+				}
+				}
+			}
+		
 			System.out.println();
 			System.out.println("Running tests...");
 			System.out.println();
@@ -30,10 +50,10 @@ package stab.tools.tests {
 			JUnitCore core = new JUnitCore();
 			core.addListener(new TestListener());
 			Result result = core.run(new Class<?>[] {
+				Class.forName("stab.tools.helpers.test.UserDataContainerTest"),
 				Class.forName("stab.tools.parser.test.SourceCodeScannerTest"),
 				Class.forName("stab.tools.parser.test.PreprocessorTest"),
 				Class.forName("stab.tools.parser.test.PreprocessedTextScannerTest"),
-				Class.forName("stab.tools.helpers.test.UserDataContainerTest"),
 				Class.forName("stab.tools.parser.test.ParseExpressionTest"),
 				Class.forName("stab.tools.parser.test.ParseCompilationUnitTest"),
 				Class.forName("stab.tools.bytecode.test.TypeSystemTest"),
@@ -48,8 +68,8 @@ package stab.tools.tests {
 				Class.forName("stab.tools.compiler.test.ObjectModelErrorTest"),
 				Class.forName("stab.tools.compiler.test.StatementsErrorTest"),
 				Class.forName("stab.tools.compiler.test.ExpressionsErrorTest"),
+				Class.forName("stab.tools.compiler.test.IntegrationTest"),
 				Class.forName("stab.tools.syntaxtree.test.QueryTranslatorTest"),
-				Class.forName("stab.tools.compiler.test.IntegrationTest")
 			});
 			if (result.wasSuccessful()) {
 				System.out.println();
@@ -104,7 +124,7 @@ package stab.tools.tests {
 		
 		public override void testFailure(Failure f) {
 			success--;
-			System.out.println("Failure: " + f.getMessage());
+			System.out.println("Failure: " + f.getTestHeader());
 			f.getException().printStackTrace();
 		}
 

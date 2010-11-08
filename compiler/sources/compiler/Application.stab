@@ -169,6 +169,7 @@ package stab.tools.compiler {
 							while ((read = inputStream.read(buffer)) != -1) {
 								zipStream.write(buffer, 0, read);
 							}
+							inputStream.close();
 						}
 						if (resourcesPath != null) {
 							var rootDir = new File(resourcesPath);

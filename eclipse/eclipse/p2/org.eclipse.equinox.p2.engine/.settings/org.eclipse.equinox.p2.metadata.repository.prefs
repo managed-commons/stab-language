@@ -1,0 +1,12 @@
+#Thu Sep 09 10:52:26 EDT 2010
+repositories/http\:__download.eclipse.org_eclipse_updates_3.6/count=1
+repositories/http\:__download.eclipse.org_eclipse_updates_3.6/isSystem=false
+repositories/http\:__download.eclipse.org_releases_helios/nickname=Helios
+repositories/http\:__download.eclipse.org_releases_helios/count=1
+repositories/http\:__download.eclipse.org_releases_helios/uri=http\://download.eclipse.org/releases/helios
+repositories/http\:__download.eclipse.org_eclipse_updates_3.6/enabled=true
+repositories/http\:__download.eclipse.org_releases_helios/enabled=true
+repositories/http\:__download.eclipse.org_eclipse_updates_3.6/uri=http\://download.eclipse.org/eclipse/updates/3.6
+repositories/http\:__download.eclipse.org_releases_helios/isSystem=false
+repositories/http\:__download.eclipse.org_eclipse_updates_3.6/nickname=The Eclipse Project Updates
+eclipse.preferences.version=1

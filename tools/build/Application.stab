@@ -27,9 +27,16 @@ package stab.tools.build {
 		}
 		
 		public int run(String[] arguments) {
-			if (sizeof(arguments) == 1 && arguments[0].equals("clean")) {
-				clean();
-				return 0;	
+			if (sizeof(arguments) == 1) {
+				switch (arguments[0]) {
+				case "clean":
+					clean();
+					return 0;
+				case "eclipse":
+					return buildEclipse();
+				case "build":
+					return buildBuild();
+				}
 			}
 		
 			System.out.println("Building...");
@@ -45,6 +52,9 @@ package stab.tools.build {
 				return code;
 			}
 			if ((code = buildTests()) != 0) {
+				return code;
+			}
+			if ((code = buildEclipse()) != 0) {
 				return code;
 			}
 			return buildBuild();
@@ -118,6 +128,60 @@ package stab.tools.build {
 				code = new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
 			}
 			return code;
+		}
+
+		private int buildEclipse() {
+			System.out.println();
+			System.out.println("Build Eclipse");
+			System.out.println("--------------------------");
+
+			var args = new ArrayList<String>();
+			args.add("-al:bin/stabal.jar");
+			args.add("-resources:eclipse/resources");
+
+			var tmpManifest = new File("eclipse/MANIFEST.MF.TMP");
+			String version = "1.0.0";
+			using (var reader = new BufferedReader(new FileReader("eclipse/MANIFEST.MF"))) {
+				using (var writer = new BufferedWriter(new FileWriter(tmpManifest))) {
+					String line;
+					while ((line = reader.readLine()) != null) {
+						if (line.startsWith("Bundle-Version:")) {
+							int idx = line.indexOf(".qualifier");
+							var sb = new StringBuilder();
+							sb.append(line.substring("Bundle-Version:".length(), idx + 1).trim());
+							writer.write(line.substring(0, idx + 1));
+							var qualifier = String.format("%1$tY%1$tm%1$td%1$tH%1$tM", GregorianCalendar.getInstance());
+							sb.append(qualifier);
+							writer.write(qualifier);
+							version = sb.toString();
+						} else {
+							writer.write(line);
+						}
+						writer.newLine();
+					}
+				}
+			}
+			
+			args.add("-manifest:eclipse/MANIFEST.MF.TMP");
+			args.add("-out:eclipse/stab.tools.eclipse_" + version + ".jar");
+			args.add("-define:TRACE");
+			
+			var pluginDir = new File("eclipse/eclipse/plugins");
+			var files = pluginDir.listFiles();
+			var sb = new StringBuilder();
+			sb.append("-cp:bin/stabrt.jar;bin/stabc.jar;bin/asm-3.3.jar");
+			foreach (var file in files) {
+				if (!file.isDirectory() && file.getName().endsWith(".jar")) {
+					sb.append(';');
+					sb.append(file.getAbsolutePath());
+				}
+			}
+			args.add(sb.toString());
+			addSourceFiles(new File("eclipse/sources"), args);
+			
+			int result = new stab.tools.compiler.Application().run(args.toArray(new String[args.size()]));
+			tmpManifest.delete();
+			return result;
 		}
 
 		private int buildBuild() {

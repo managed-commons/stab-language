@@ -235,5 +235,15 @@ package stab.tools.compiler.test {
 		public void conditionalTest2() {
 			doTest(new String[]{ "ConditionalTest2", "ConditionalAux" }, new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void allAny() {
+			doTest("AllAny", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void allContains() {
+			doTest("AllContains", new Class<?>[] {}, new Object[] {}, true);
+		}
 	}
 }

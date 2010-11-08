@@ -1211,64 +1211,112 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Pop);
                 }
             } else {
-                var cases = new ArrayList<String>();
-                SwitchSectionNode defaultSection = null;
-                foreach (var section in switchStatement.Sections) {
-                    if (section.CaseExpression == null) {
-                        defaultSection = section;
-                        continue;
-                    }
-                    var cinfo = section.CaseExpression.getUserData(typeof(ExpressionInfo));
-                    if (cinfo == null) {
-                        cases.add(null);
-                    } else {
-                        cases.add((String)cinfo.Value);
-                    }
-                }
                 var objectType = context.TypeSystem.ObjectType;
-                if (cases.size() < 7) {
+                if (switchStatement.Sections.size() < 7) {
+					var tests = new ArrayList<ArrayList<String>>();
+					var statements = new ArrayList<List<StatementNode>>();
+					List<StatementNode> defaultStatements = null;
+					ArrayList<String> run = null;
+					var currentIsDefault = false;
+					int ntests = 0;
+					foreach (var section in switchStatement.Sections) {
+						if (section.CaseExpression == null) {
+							if (section.Statements.isEmpty()) {
+								currentIsDefault = true;
+							} else {
+								defaultStatements = section.Statements;
+								currentIsDefault = false;
+							}
+							run = null;
+						} else if (currentIsDefault) {
+							if (!section.Statements.isEmpty()) {
+								defaultStatements = section.Statements;
+								currentIsDefault = false;
+							}
+						} else {
+							if (run == null) {
+								run = new ArrayList<String>();
+							}
+							var cinfo = section.CaseExpression.getUserData(typeof(ExpressionInfo));
+							if (cinfo == null) {
+								run.add(null);
+							} else {
+								run.add((String)cinfo.Value);
+							}
+							if (!section.Statements.isEmpty()) {
+								tests.add(run);
+								ntests += run.size();
+								run = null;
+								statements.add(section.Statements);
+							}
+						}
+					}
+					
                     expressionGenerator.handleExpression(switchStatement.Selector, null, true);
                     var selectorVar = generator.declareLocal(objectType, "switchselector$" + context.MethodGenerationContext.nextStringSwitch());
                     generator.emit(JvmOpcode.Astore, selectorVar);
-                    var eq = objectType.getMethod("equals", Collections.singleton(objectType));
-                    var defaultLabel = generator.defineLabel();
-                    var markDefault = false;
-                    foreach (var section in switchStatement.Sections) {
-                        if (section.CaseExpression == null) {
-                            if (section.Statements.isEmpty()) {
-                                markDefault = true;
-                            }
-                            continue;
-                        }
-                        var elseLabel = generator.defineLabel();
-                        var cinfo = section.CaseExpression.getUserData(typeof(ExpressionInfo));
-                        generator.emit(JvmOpcode.Aload, selectorVar);
-                        if (cinfo == null) {
-                            generator.emit(JvmOpcode.Ifnonnull, elseLabel);
-                        } else {
-                            generator.emit(JvmOpcode.Ldc, cinfo.Value);
-                            generator.emit(JvmOpcode.Invokevirtual, eq);
-                            generator.emit(JvmOpcode.Ifeq, elseLabel);
-                        }
-                        if (markDefault) {
-                            generator.markLabel(defaultLabel);
-                            markDefault = false;
-                        }
-                        foreach (var s in section.Statements) {
-                            handleStatement(s, null);
-                        }
-                        generator.markLabel(elseLabel);
-                    }
-                    if (defaultSection != null) {
-                        if (defaultSection.Statements.isEmpty()) {
-                            generator.emit(JvmOpcode.Goto, defaultLabel);
-                        } else {
-                            foreach (var s in defaultSection.getStatements()) {
-                                handleStatement(s, null);
-                            }
-                        }
-                    }
+					if (ntests > 0) {
+						var eq = objectType.getMethod("equals", Collections.singleton(objectType));
+						var tit = tests.iterator();
+						var sit = statements.iterator();
+						while (tit.hasNext()) {
+							var strings = tit.next();
+							var stmts = sit.next();
+							
+							var thenLabel = (strings.size() == 1) ? null : generator.defineLabel();
+							JvmLabelMarker elseLabel = null;
+							for (int i = 0; i < strings.size(); i++) {
+								var s = strings[i];
+								generator.emit(JvmOpcode.Aload, selectorVar);
+								if (i == strings.size() - 1) {
+									elseLabel = generator.defineLabel();
+									if (s == null) {
+										generator.emit(JvmOpcode.Ifnonnull, elseLabel);
+									} else {
+										generator.emit(JvmOpcode.Ldc, s);
+										generator.emit(JvmOpcode.Invokevirtual, eq);
+										generator.emit(JvmOpcode.Ifeq, elseLabel);
+									}
+									if (thenLabel != null) {
+										generator.markLabel(thenLabel);
+									}
+								} else {
+									if (s == null) {
+										generator.emit(JvmOpcode.Ifnull, thenLabel);
+									} else {
+										generator.emit(JvmOpcode.Ldc, s);
+										generator.emit(JvmOpcode.Invokevirtual, eq);
+										generator.emit(JvmOpcode.Ifne, thenLabel);
+									}
+								}
+							}
+							foreach (var s in stmts) {
+								handleStatement(s, null);
+							}
+							generator.markLabel(elseLabel);
+						}
+						if (defaultStatements != null) {
+							foreach (var s in defaultStatements) {
+								handleStatement(s, null);
+							}
+						}
+					}
                 } else {
+					var cases = new ArrayList<String>();
+					SwitchSectionNode defaultSection = null;
+					foreach (var section in switchStatement.Sections) {
+						if (section.CaseExpression == null) {
+							defaultSection = section;
+							continue;
+						}
+						var cinfo = section.CaseExpression.getUserData(typeof(ExpressionInfo));
+						if (cinfo == null) {
+							cases.add(null);
+						} else {
+							cases.add((String)cinfo.Value);
+						}
+					}
+					
                     int n = context.CurrentType.Fields.count(p => p.Name.startsWith("stringswitch$"));
                     var mapType = context.TypeSystem.getType("java/util/Map");
                     var argTypes = new ArrayList<JvmTypeInfo> { objectType, objectType };
@@ -1328,9 +1376,11 @@ package stab.tools.compiler {
                     generator.markLabel(switchLabel);
                     generator.emit(JvmOpcode.Tableswitch, 0, cases.size() - 1, labels, defaultLabel);
                     int i = 0;
+					var defaultMarked = false;
                     foreach (var section in switchStatement.Sections) {
                         if (section.CaseExpression == null) {
                             generator.markLabel(defaultLabel);
+							defaultMarked = true;
                         } else {
                             generator.markLabel(labels[i++]);
                         }
@@ -1338,6 +1388,9 @@ package stab.tools.compiler {
                             handleStatement(s, null);
                         }
                     }
+					if (!defaultMarked) {
+						generator.markLabel(defaultLabel);
+					}
                 }
             }
             generator.markLabel(info.EndLabel);
@@ -1749,10 +1802,8 @@ package stab.tools.compiler {
                 }
                 if (mcontext.IsLambdaScopeInitialized) {
                     var field = mcontext.LambdaScope.getField("this$0");
-                    if (field != null && !mcontext.IsLambdaScopeThisInitialized) {
-                        if (!mcontext.IsInLambda) {
-                            generator.emit(JvmOpcode.Aload, generator.getLocal("lambda$scope"));
-                        }
+                    if (field != null && !mcontext.IsLambdaScopeThisInitialized && !mcontext.IsInLambda) {
+						generator.emit(JvmOpcode.Aload, generator.getLocal("lambda$scope"));
                         generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
                         generator.emit(JvmOpcode.Putfield, field);
                         mcontext.IsLambdaScopeThisInitialized = true;

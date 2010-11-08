@@ -646,7 +646,7 @@ package stab.tools.compiler {
             case And:
             case Or:
             case Xor:
-                if (li == null) {
+                if (lt == null) {
                     binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.getOperator()), left, right);
                 } else if (lt.IsNumeric) {
@@ -662,7 +662,7 @@ package stab.tools.compiler {
                     ValidationHelper.setBoxing(context, rt, right);
                     binary.addOrReplaceUserData(new ExpressionInfo(lt));
                 } else if (lt.IsBoolean) {
-                    if (ri == null || !rt.IsBoolean) {
+                    if (rt == null || !rt.IsBoolean) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
                         ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, left);
@@ -679,10 +679,10 @@ package stab.tools.compiler {
             case LessThanOrEqual:
             case GreaterThan:
             case GreaterThanOrEqual:
-                if (li == null) {
+                if (lt == null) {
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 } else if (lt.IsNumeric) {
-                    if (ri == null || !rt.IsNumeric) {
+                    if (rt == null || !rt.IsNumeric) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
                         if (lt.NumericTypeKind == NumericTypeKind.Double || rt.NumericTypeKind == NumericTypeKind.Double) {
@@ -706,13 +706,13 @@ package stab.tools.compiler {
                 
             case Equal:
             case NotEqual:
-                if (li == null && ri == null) {
+                if (lt == null && rt == null) {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN, true));
                     binary.addOrReplaceUserData(context.TypeSystem.ObjectType);
-                } else if (li == null) {
+                } else if (lt == null) {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(rt);
-                } else if (ri == null) {
+                } else if (rt == null) {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(lt);
                 } else if (lt.IsNumeric) {
@@ -758,7 +758,7 @@ package stab.tools.compiler {
             case LeftShift:
             case RightShift:
             case UnsignedRightShift:
-                if (li == null || ri == null) {
+                if (lt == null || rt == null) {
 					binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
 					addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 } else {
@@ -818,7 +818,7 @@ package stab.tools.compiler {
                 
             case LogicalOr:
             case LogicalAnd:
-                if (li == null || ri == null || !lt.IsBoolean || !rt.IsBoolean) {
+                if (lt == null || rt == null || !lt.IsBoolean || !rt.IsBoolean) {
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 } else {
                     lt = ValidationHelper.getType(context, left);
@@ -830,7 +830,7 @@ package stab.tools.compiler {
                 break;
                 
             case NullCoalescing:
-                if (li != null || ri != null) {
+                if (lt != null || rt != null) {
                     if (lt != null && lt.IsPrimitive) {
                         throw context.error(CompileErrorId.ReferenceTypeValueExpected, left);
                     }
@@ -1039,7 +1039,7 @@ package stab.tools.compiler {
                     if (method == null) {
                         throw context.error(CompileErrorId.NoInvocationTargetFound, invocation);
                     }
-                    tinfo.Member = method.getUserData(typeof(MemberInfo));
+                    tinfo.Member = MemberInfo.getInfo(method);
                 }
             }
             

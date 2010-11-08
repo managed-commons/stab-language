@@ -261,9 +261,15 @@ package stab.tools.compiler {
             if (expressionChecker.handleExpression(synchronizedStatement.Lock, visited, true) == AssignmentState.Assigned) {
                 return Boolean.FALSE;
             }
-            handleStatement(synchronizedStatement, visited);
+            handleStatement(synchronizedStatement.Statement, visited);
             return Boolean.TRUE;
         }
+
+		protected override Boolean handleUsing(UsingStatementNode usingStatement, HashSet<StatementNode> visited) {
+            handleStatement(usingStatement.ResourceAcquisition, visited);
+            handleStatement(usingStatement.Statement, visited);
+            return Boolean.TRUE;
+		}
         
         protected override Boolean handleWhile(WhileStatementNode whileStatement, HashSet<StatementNode> visited) {
             switch (expressionChecker.handleExpression(whileStatement.Condition, visited, true)) {

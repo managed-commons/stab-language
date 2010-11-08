@@ -475,5 +475,80 @@ package stab.tools.compiler.test {
 		public void unusedLocal() {
 			doTest("UnusedLocal", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void switchString6() {
+			doTest("SwitchString6", new Class<?>[] { typeof(String) }, new Object[] { "STR1" }, 1);
+		}
+		
+		[Test]
+		public void switchString6_1() {
+			doTest("SwitchString6", new Class<?>[] { typeof(String) }, new Object[] { "STR2" }, 1);
+		}
+		
+		[Test]
+		public void switchString6_2() {
+			doTest("SwitchString6", new Class<?>[] { typeof(String) }, new Object[] { " " }, 0);
+		}
+		
+		[Test]
+		public void switchString7() {
+			doTest("SwitchString7", new Class<?>[] { typeof(String) }, new Object[] { "STR1" }, 1);
+		}
+		
+		[Test]
+		public void switchString7_1() {
+			doTest("SwitchString7", new Class<?>[] { typeof(String) }, new Object[] { "STR7" }, 1);
+		}
+		
+		[Test]
+		public void switchString7_2() {
+			doTest("SwitchString7", new Class<?>[] { typeof(String) }, new Object[] { " " }, 0);
+		}
+		
+		[Test]
+		public void switchString8() {
+			doTest("SwitchString8", new Class<?>[] { typeof(String) }, new Object[] { "STR1" }, 1);
+		}
+		
+		[Test]
+		public void switchString8_1() {
+			doTest("SwitchString8", new Class<?>[] { typeof(String) }, new Object[] { "STR7" }, 0);
+		}
+		
+		[Test]
+		public void switchString8_2() {
+			doTest("SwitchString8", new Class<?>[] { typeof(String) }, new Object[] { " " }, 1);
+		}
+		
+		[Test]
+		public void switchString9() {
+			doTest("SwitchString9", new Class<?>[] { typeof(String) }, new Object[] { "STR1" }, 1);
+		}
+		
+		[Test]
+		public void switchString9_1() {
+			doTest("SwitchString9", new Class<?>[] { typeof(String) }, new Object[] { "STR2" }, 0);
+		}
+		
+		[Test]
+		public void switchString9_2() {
+			doTest("SwitchString9", new Class<?>[] { typeof(String) }, new Object[] { " " }, 1);
+		}
+		
+		[Test]
+		public void switchString10() {
+			doTest("SwitchString10", new Class<?>[] { typeof(String) }, new Object[] { "STR1" }, 1);
+		}
+		
+		[Test]
+		public void switchString10_1() {
+			doTest("SwitchString10", new Class<?>[] { typeof(String) }, new Object[] { "STR2" }, 0);
+		}
+		
+		[Test]
+		public void switchString10_2() {
+			doTest("SwitchString10", new Class<?>[] { typeof(String) }, new Object[] { " " }, 1);
+		}
 	}
 }

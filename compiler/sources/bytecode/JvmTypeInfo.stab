@@ -621,12 +621,21 @@ package stab.tools.bytecode {
                 case UnboundedWildcard:
                     return true;
                 case Array:
-                    return this.ElementType.HasWildcardArgument;
+					switch (this.ElementType.TypeKind) {
+					case LowerBoundedWildcard:
+					case UpperBoundedWildcard:
+					case UnboundedWildcard:
+						return true;
+					}
+					return false;
                 }
                 foreach (var t in this.GenericArguments) {
-                    if (t.HasWildcardArgument) {
-                        return true;
-                    }
+					switch (t.TypeKind) {
+					case LowerBoundedWildcard:
+					case UpperBoundedWildcard:
+					case UnboundedWildcard:
+						return true;
+					}
                 }
                 return false;
 			}

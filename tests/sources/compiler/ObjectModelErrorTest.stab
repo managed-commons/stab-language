@@ -42,7 +42,7 @@ package stab.tools.compiler.test {
 		[Test]
 		public void baseMissingDefaultConstructor() {
 			doTest("BaseMissingDefaultConstructor", new String[]{
-				"BaseMissingDefaultConstructor.stab (1, 14) error 174: 'Base' does not contain a constructor without argument" },
+				"BaseMissingDefaultConstructor.stab (6, 14) error 174: 'Base' does not contain a constructor without argument" },
 				new String[] {});
 		}
 		

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config transient="false">
+	<site enabled="true" updateable="true" policy="USER-EXCLUDE" url="platform:/base/">
+		<feature id="org.eclipse.rcp" url="features/org.eclipse.rcp_3.6.1.r361_v20100827-9OArFLdFjY-ThSQXmKvKz0_T/" version="3.6.1.r361_v20100827-9OArFLdFjY-ThSQXmKvKz0_T">
+		</feature>
+		<feature id="org.eclipse.help" plugin-identifier="org.eclipse.help.base" url="features/org.eclipse.help_1.2.0.v20100427-7e7jEQFEp4jsWcboLU9l93/" version="1.2.0.v20100427-7e7jEQFEp4jsWcboLU9l93">
+		</feature>
+		<feature id="org.eclipse.platform" url="features/org.eclipse.platform_3.6.1.r361_v20100909-9gF78GrkFqw7GrsZnvz0JWNTeb6fue6896L/" version="3.6.1.r361_v20100909-9gF78GrkFqw7GrsZnvz0JWNTeb6fue6896L">
+		</feature>
+		<feature id="org.eclipse.equinox.p2.user.ui" url="features/org.eclipse.equinox.p2.user.ui_2.0.1.r361_v20100903-897HFZFFZRuSD2LMtVxyz0Vr/" version="2.0.1.r361_v20100903-897HFZFFZRuSD2LMtVxyz0Vr">
+		</feature>
+	</site>
+</config>
