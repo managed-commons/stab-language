@@ -39,5 +39,7 @@ package stab.tools.eclipse {
 		public static String librariesPreferencesRemoveButtonText;
 		public static String librariesPreferencesOpenJARsDialogTitle;
 		public static String librariesPreferencesOpenJARsDialogMessage;
+		
+		public static String fullBuildTaskName;
 	}	
 }

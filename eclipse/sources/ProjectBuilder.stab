@@ -14,9 +14,14 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using java.lang;
+using java.io;
 using java.util;
 using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
+using stab.query;
+using stab.tools.bytecode;
+using stab.tools.eclipse.helpers;
 
 package stab.tools.eclipse {
 
@@ -24,12 +29,93 @@ package stab.tools.eclipse {
 	// The incremental builder for Stab source files.
 	//
 	public class ProjectBuilder : IncrementalProjectBuilder {
+		private ProjectManager projectManager;
 
 		#pragma warning disable 252
 		public override IProject[] build(int kind, Map args, IProgressMonitor monitor) {
 		#pragma warning restore 252
-			Environment.trace(this, "build");
+			this.projectManager = Environment.getProjectManager(getProject());
+			
+			if (kind == FULL_BUILD || projectManager.RequireFullBuild) {
+				return buildProject(monitor);
+			} else {
+				var delta = getDelta(getProject());
+				if (delta == null) {
+					return buildProject(monitor);
+				}
+				if (delta.getKind() != IResourceDelta.NO_CHANGE) {
+					return buildDelta(delta, monitor);
+				}
+			}
 			return null;
-		}	
+		}
+		
+		private IProject[] buildProject(IProgressMonitor monitor) {
+			Environment.trace(this, "Full build");
+			var t0 = System.nanoTime();
+
+			try {
+				monitor.beginTask(Messages.fullBuildTaskName, 4);
+
+				var libs = projectManager.Properties.Libraries.where(p => p.Enabled);
+				var libFiles = libs.select(p => projectManager.Project.getFile(Path.fromPortableString(p.Path))).where(p => p.exists()).toList();
+				int i = libFiles.size();
+				var classPath = new String[i];
+				foreach (var file in libFiles) {
+					classPath[--i] = file.getLocation().toOSString();
+				}
+				var classPathTypeSystem = new JvmTypeSystem(classPath);
+				
+				var parameters = new SourceCompilerParameters { FullBuild = true, ClassPathTypeSystem = classPathTypeSystem };
+				parameters.AllFiles.addAll(projectManager.getSourceFiles());
+				foreach (var s in projectManager.Properties.PreprocessorSymbols) {
+					parameters.PreprocessorSymbols.add(s);
+				}
+				
+				var compiler = new SourceCompiler();
+				var results = compiler.compile(parameters, new SubProgressMonitor(monitor, 3));
+				if (results.Failed) {
+				
+				} else {
+					var t1 = System.nanoTime();
+
+					var outputFolder = getProject().getFolder(projectManager.Properties.OutputPath);
+					if (outputFolder.exists()) {
+						outputFolder.accept(p => {
+							if (p.getType() == IResource.FILE) {
+								if (p.getName().endsWith(".class")) {
+									p.requestResource().delete(IResource.FORCE, null);
+								}
+								return false;
+							}
+							return true;
+						}, IResource.NONE);
+					} else {
+						outputFolder.create(IResource.FORCE, true, null);
+					}
+					foreach (var e in results.ClassFiles.entrySet()) {
+						var fileName = e.Key.replace('.', '/') + ".class";
+						var file = outputFolder.getFile(fileName);
+						EclipseHelper.createFolders(file);
+						file.create(new ByteArrayInputStream(e.Value), IResource.FORCE, null);
+					}
+					
+					Environment.trace(this, results.ClassFiles.size() + " .class files saved in " + ((System.nanoTime() - t1) / 1e6) + "ms");
+				}
+
+				monitor.worked(1);
+			} finally {
+				monitor.done();
+			}
+
+			Environment.trace(this, "Full build done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
+			return null;
+		}
+		
+		private IProject[] buildDelta(IResourceDelta delta, IProgressMonitor monitor) {
+			Environment.trace(this, "Incremental build");
+		
+			return null;
+		}
 	}
 }

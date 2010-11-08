@@ -23,6 +23,9 @@ using stab.query;
 
 package stab.tools.eclipse {
 
+	//
+	// Manages the resources associated to a project with the Stab nature.
+	//
 	public class ProjectManager {
 		ProjectManager(IProject project) {
 			this.Project = project;
@@ -53,6 +56,12 @@ package stab.tools.eclipse {
 			}
 		}
 
+		public boolean RequireFullBuild {
+			get {
+				return true;
+			}
+		}
+
 		public IProject Project {
 			get;
 			private set;
@@ -61,6 +70,24 @@ package stab.tools.eclipse {
 		public ProjectProperties Properties {
 			get;
 			private set;
+		}
+
+		public Iterable<IFile> getSourceFiles() {
+			var result = new ArrayList<IFile>();
+			try {
+				this.Project.accept(p => {
+					if (p.getType() == IResource.FILE) {
+						if (p.getName().endsWith(".stab")) {
+							result.add((IFile)p.requestResource());
+						}
+						return false;
+					}
+					return true;
+				}, IResource.NONE);
+			} catch (Exception e) {
+				Environment.logException(e);
+			}
+			return result;
 		}
 
 		public void propertiesUpdated() {

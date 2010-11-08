@@ -68,5 +68,17 @@ package stab.tools.eclipse.helpers {
 			}
 			return false;
 		}
+		
+		public static void createFolders(IResource resource) {
+			var parent = (IFolder)resource.getParent();
+			if (!parent.exists()) {
+				createFolders(parent);
+				try {
+					parent.create(IResource.FORCE, true, null);
+				} catch (CoreException e) {
+					Environment.logException(e);
+				}
+			}
+		}
 	}
 }

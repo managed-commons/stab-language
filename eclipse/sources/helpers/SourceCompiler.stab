@@ -1,0 +1,73 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using java.util;
+using org.eclipse.core.resources;
+using org.eclipse.core.runtime;
+using stab.tools.bytecode;
+
+package stab.tools.eclipse.helpers {
+
+	public class SourceCompilerParameters {
+		public SourceCompilerParameters() {
+			this.AllFiles = new ResourceSet<IFile>();
+			this.PreprocessorSymbols = new HashSet<String>();
+		}
+	
+		public boolean FullBuild {
+			get;
+			set;
+		}
+		
+		public ResourceSet<IFile> AllFiles {
+			get;
+			private set;
+		}
+		
+		public Set<String> PreprocessorSymbols {
+			get;
+			private set;
+		}
+		
+		public JvmTypeSystem ClassPathTypeSystem {
+			get;
+			set;
+		}
+	}
+
+	public class SourceCompilerResults {
+		public SourceCompilerResults() {
+			this.ClassFiles = new HashMap<String, byte[]>();
+		}
+	
+		public boolean Failed {
+			get;
+			set;
+		}
+		
+		public Map<String, byte[]> ClassFiles {
+			get;
+			private set;
+		}
+	}
+
+	public class SourceCompiler {
+		public SourceCompilerResults compile(SourceCompilerParameters parameters, IProgressMonitor monitor) {
+			return new SourceCompilerResults();
+		}
+	}
+}
