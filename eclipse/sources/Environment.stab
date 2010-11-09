@@ -19,6 +19,8 @@ using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
 using Image = org.eclipse.swt.graphics.Image;
 using org.eclipse.ui.console;
+using org.eclipse.ui.editors.text;
+using org.eclipse.ui.texteditor;
 using org.osgi.framework;
 using stab.lang;
 
@@ -78,6 +80,10 @@ package stab.tools.eclipse {
 				Environment.logException(e);
 				throw new IllegalArgumentException(e.getMessage());
 			}
+		}
+
+		public static int getTabWidth() {
+			return EditorsUI.getPreferenceStore().getInt(AbstractDecoratedTextEditorPreferenceConstants.EDITOR_TAB_WIDTH);
 		}
 
 		public static ILog getLog() {

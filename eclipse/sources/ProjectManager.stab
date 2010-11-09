@@ -20,6 +20,9 @@ using java.util;
 using org.eclipse.core.resources;
 using org.eclipse.ui;
 using stab.query;
+using stab.tools.bytecode;
+using stab.tools.eclipse.helpers;
+using stab.tools.syntaxtree;
 
 package stab.tools.eclipse {
 
@@ -58,7 +61,7 @@ package stab.tools.eclipse {
 
 		public boolean RequireFullBuild {
 			get {
-				return true;
+				return this.DependencyInfo == null;
 			}
 		}
 
@@ -70,6 +73,36 @@ package stab.tools.eclipse {
 		public ProjectProperties Properties {
 			get;
 			private set;
+		}
+
+		public DependencyInfo DependencyInfo {
+			get;
+			set;
+		}
+
+		public JvmTypeSystem ClassPathTypeSystem {
+			get;
+			set;
+		}
+
+		public JvmTypeSystem TypeSystem {
+			get;
+			set;
+		}
+
+		public JvmTypeSystem AnnotatedTypeSystem {
+			get;
+			set;
+		}
+
+		public Map<String, CompilationUnitNode> CompilationUnits {
+			get;
+			set;
+		}
+
+		public Iterable<String> FilesToCompile {
+			get;
+			set;
 		}
 
 		public Iterable<IFile> getSourceFiles() {

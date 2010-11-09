@@ -93,9 +93,12 @@ package stab.tools.bytecode {
         }
         
         public boolean typeExists(String name) {
-            return (parent != null && parent.typeExists(name)) || typeInfos.containsKey(name) ||
-					classFiles.containsKey(name) || jarClasses.containsKey(name);
+            return (parent != null && parent.typeExists(name)) || isLocalType(name);
         }
+		
+		protected boolean isLocalType(String name) {
+			return typeInfos.containsKey(name) || classFiles.containsKey(name) || jarClasses.containsKey(name);
+		}
         
         public JvmTypeInfo getType(String name) {
             var typeInfo = typeInfos[name];
@@ -120,28 +123,46 @@ package stab.tools.bytecode {
         }
 
         JvmTypeInfo getGenericType(JvmTypeInfo type, Iterable<JvmTypeInfo> typeArguments, GenericParameterBindings scope) {
-			if (parent != null) {
-				var t = parent.getGenericTypeIfExist(type, typeArguments);
-				if (t != null) {
-					return t;
+			if (parent == null || isLocalType(type.OriginalTypeDefinition.FullName)) {
+				return getGenericTypeCore(type, typeArguments, scope);
+			}
+			foreach (var t in typeArguments) {
+				if (isLocalType(t)) {
+					return getGenericTypeCore(type, typeArguments, scope);
 				}
 			}
-			return getGenericTypeCore(type, typeArguments, scope);
-		}
-        
-		private JvmTypeInfo getGenericTypeIfExist(JvmTypeInfo type, Iterable<JvmTypeInfo> typeArguments) {
-			var constructedTypes = constructedGenericTypes[type];
-			if (constructedTypes == null) {
-				return null;
-			}
-			foreach (var t in constructedTypes) {
-				if (typeArguments.sequenceEqual(t.GenericArguments)) {
-					return t;
-				}
-			}
-			return null;
+			return parent.getGenericType(type, typeArguments, scope);
 		}
 		
+		private boolean isLocalType(JvmTypeInfo type) {
+			switch (type.TypeKind) {
+			case Reference:
+				if (isLocalType(type.OriginalTypeDefinition.FullName)) {
+					return true;
+				}
+				foreach (var arg in type.GenericArguments) {
+					if (isLocalType(arg)) {
+						return true;
+					}
+				}
+				return false;
+				
+			case Array:
+				return isLocalType(type.ElementType);
+				
+			case GenericParameter:
+				return true;
+				
+			case LowerBoundedWildcard:
+			case UpperBoundedWildcard:
+				return isLocalType(type.WildcardBound);
+				
+			case UnboundedWildcard:
+			default:
+				return false;
+			}
+		}
+
         JvmTypeInfo getGenericTypeCore(JvmTypeInfo type, Iterable<JvmTypeInfo> typeArguments, GenericParameterBindings scope) {
             if (type.IsClosed) {
                 throw new IllegalStateException();
@@ -168,27 +189,16 @@ package stab.tools.bytecode {
             return t;
         }
 
-        public JvmMethodInfo getGenericMethod(JvmMethodInfo method, Iterable<JvmTypeInfo> typeArguments) {
-			if (parent != null) {
-				var m = getGenericMethodIfExist(method, typeArguments);
-				if (m != null) {
-					return m;
+		public JvmMethodInfo getGenericMethod(JvmMethodInfo method, Iterable<JvmTypeInfo> typeArguments) {
+			if (parent == null || isLocalType(method.DeclaringType)) {
+				return getGenericMethodCore(method, typeArguments);
+			}
+			foreach (var t in typeArguments) {
+				if (isLocalType(t)) {
+					return getGenericMethodCore(method, typeArguments);
 				}
 			}
-			return getGenericMethodCore(method, typeArguments);
-		}
-
-		private JvmMethodInfo getGenericMethodIfExist(JvmMethodInfo method, Iterable<JvmTypeInfo> typeArguments) {
-			var constructedMethods = constructedGenericMethods[method];
-            if (constructedMethods == null) {
-				return null;
-			}
-			foreach (var m in constructedMethods) {
-				if (typeArguments.sequenceEqual(m.GenericArguments)) {
-					return m;
-				}
-			}
-			return null;
+			return parent.getGenericMethod(method, typeArguments);
 		}
 		
         private JvmMethodInfo getGenericMethodCore(JvmMethodInfo method, Iterable<JvmTypeInfo> typeArguments) {

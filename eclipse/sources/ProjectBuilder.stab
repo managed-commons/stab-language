@@ -75,7 +75,12 @@ package stab.tools.eclipse {
 				var compiler = new SourceCompiler();
 				var results = compiler.compile(parameters, new SubProgressMonitor(monitor, 3));
 				if (results.Failed) {
-				
+					if (results.MissingType != null) {
+						projectManager.DependencyInfo = null;
+						// TODO: display the marker
+					} else {
+						projectManager.FilesToCompile = results.CompiledFiles;
+					}
 				} else {
 					var t1 = System.nanoTime();
 
@@ -101,6 +106,13 @@ package stab.tools.eclipse {
 					}
 					
 					Environment.trace(this, results.ClassFiles.size() + " .class files saved in " + ((System.nanoTime() - t1) / 1e6) + "ms");
+
+					projectManager.DependencyInfo = results.getDependencyInfo();
+					projectManager.ClassPathTypeSystem = classPathTypeSystem;
+					projectManager.TypeSystem = results.getTypeSystem();
+					projectManager.AnnotatedTypeSystem = results.getAnnotatedTypeSystem();
+					projectManager.CompilationUnits = results.getCompilationUnits();
+					projectManager.FilesToCompile = Query.empty();
 				}
 
 				monitor.worked(1);

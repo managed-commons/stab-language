@@ -3158,6 +3158,20 @@ package stab.query {
 			}
 			return result;
 		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////////
+		// toSet
+		//
+		
+		public static Set<TSource> toSet<TSource>(this Iterable<TSource> source) {
+			if (source == null) throw new NullPointerException("source");
+		
+			var result = new java.util.HashSet<TSource>();
+			foreach (var s in source) {
+				result.add(s);
+			}
+			return result;
+		}
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// union
