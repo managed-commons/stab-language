@@ -550,5 +550,10 @@ package stab.tools.compiler.test {
 		public void switchString10_2() {
 			doTest("SwitchString10", new Class<?>[] { typeof(String) }, new Object[] { " " }, 1);
 		}
+		
+		[Test]
+		public void tryFinallyLocal() {
+			doTest("TryFinallyLocal", new Class<?>[] {}, new Object[] {}, 1);
+		}
 	}
 }

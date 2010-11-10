@@ -55,7 +55,7 @@ package stab.tools.compiler.test {
 		[Test]
 		public void staticInvocation() {
 			doTest("StaticInvocation", new String[]{
-				"StaticInvocation.stab (6, 13) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				"StaticInvocation.stab (6, 9) error 327: A static member 'test' cannot be resolved in this context" },
 				new String[] {});
 		}
 		
@@ -276,6 +276,13 @@ package stab.tools.compiler.test {
 		public void wildcardLowerConstraint() {
 			doTest("WildcardLowerConstraint", new String[]{
 				"WildcardLowerConstraint.stab (7, 22) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void nonStaticField() {
+			doTest("NonStaticField", new String[]{
+				"NonStaticField.stab (5, 13) error 327: A static member 'field' cannot be resolved in this context" },
 				new String[] {});
 		}
 	}

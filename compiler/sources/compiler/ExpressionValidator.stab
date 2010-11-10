@@ -1578,6 +1578,9 @@ package stab.tools.compiler {
             } else {
                 if (context.CodeValidationContext.IsStatic) {
                     members = members.where(p => p.IsStatic).toList();
+					if (!members.any()) {
+                        throw context.error(CompileErrorId.UnresolvedStaticName, simpleName, name);
+					}
                 }
                 var info = new ExpressionInfo(null) { Members = members };
                 simpleName.addOrReplaceUserData(info);

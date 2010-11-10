@@ -310,13 +310,11 @@ package stab.tools.compiler {
             foreach (var node in tryStatement.CatchClauses) {
                 var stmts = node.Block.Statements;
                 if (stmts.size() > 0) {
-                    stmtRes = visitStatement(stmts[0], visited);
-                    if (isAssigned) {
-                        isAssigned = !stmts[stmts.size() - 1].getUserData(typeof(StatementInfo)).IsEndPointReachable || stmtRes;
-                    }
+                    isAssigned = isAssigned && !visitStatement(stmts[0], visited) ||
+						!stmts[stmts.size() - 1].getUserData(typeof(StatementInfo)).IsEndPointReachable;
                 } else {
-                    isAssigned = false;
-                }
+					isAssigned = false;
+				}
             }
             if (tryStatement.Finally != null) {
                 stmtRes = handleStatement(tryStatement.Finally, visited);

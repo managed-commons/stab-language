@@ -162,11 +162,63 @@ package stab.tools.eclipse.helpers {
 			}
 			
 			try {
-				monitor.beginTask("", 3);
-
+				monitor.beginTask("", 5);
 				
-
-				return new SourceCompilerResults();
+				var results = compileCore(new SubProgressMonitor(monitor, 2));
+				if (results.MissingType == null) {
+					if (results.Failed) {
+						// Try to build with all the dependencies
+						parameters.ProgressiveBuild = false;
+						results = compileCore(new SubProgressMonitor(monitor, 3));
+					} else {
+						// Check for type structural modifications
+						var oldDependencyInfo = parameters.DependencyInfo;
+						var newDependencyInfo = results.DependencyInfo;
+						var oldTypes = results.CompiledFiles.selectMany(p => oldDependencyInfo.getFileContents(p)).toList();
+						var newTypes = results.CompiledFiles.selectMany(p => newDependencyInfo.getFileContents(p)).toList();
+						var typesToRebuild = Query.empty<String>();
+						foreach (var type in oldTypes.except(newTypes)) {
+							typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
+						}
+						foreach (var type in oldTypes.intersect(newTypes)) {
+								if (JvmTypeSystemHelper.hasStructureChanged(JvmTypeSystemHelper.getType(parameters.TypeSystem, type),
+											JvmTypeSystemHelper.getType(results.TypeSystem, type))) {
+								typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
+							}
+						}
+						var filesToRebuild = typesToRebuild.selectMany(p => oldDependencyInfo.getTypeLocations(p));
+						filesToRebuild = filesToRebuild.distinct().except(results.CompiledFiles).toList();
+						monitor.worked(1);
+						
+						if (filesToRebuild.any()) {
+							// If some types have changed, rebuild the referencing types
+							var oldResult = results;
+							this.parameters = new SourceCompilerParameters();
+							foreach (var f in filesToRebuild) {
+								this.parameters.getFilesToCompile().add(f);
+							}
+							this.parameters.AllFiles.addAll(parameters.AllFiles.getAllResources());
+							this.parameters.DependencyInfo = newDependencyInfo;
+							this.parameters.ClassPathTypeSystem = parameters.ClassPathTypeSystem;
+							this.parameters.TypeSystem = results.TypeSystem;
+							
+							results = compileCore(new SubProgressMonitor(monitor, 2));
+							
+							foreach (var e in oldResult.CompilationUnits.entrySet()) {
+								results.CompilationUnits[e.Key] = e.Value;
+							}
+							foreach (var e in oldResult.ClassFiles.entrySet()) {
+								results.ClassFiles[e.Key] = e.Value;
+							}
+							results.CompiledFiles.addAll(oldResult.CompiledFiles);
+						} else {
+							monitor.worked(2);
+						}
+					}
+				} else {
+					monitor.worked(3);
+				}
+				return results;
 			} finally {
 				monitor.done();
 			}
@@ -237,7 +289,7 @@ package stab.tools.eclipse.helpers {
 				// Compiling
 				var t1 = System.nanoTime();
 				
-				var typeSystem = new JvmTypeSystem(new String[0], parameters.getClassPathTypeSystem());
+				var typeSystem = new JvmTypeSystem(new String[0], parameters.ClassPathTypeSystem);
 				JvmTypeSystemHelper.cloneTypes(typesToCopy, typeSystem);
 				
 				var annotatedTypeSystem = new JvmTypeSystem(new[] { Environment.getLibraryPath("stabal.jar") }, typeSystem);
@@ -264,20 +316,19 @@ package stab.tools.eclipse.helpers {
 				if (!hasErrors) {
 					var dependencyInfo = new DependencyInfo();
 					results.DependencyInfo = dependencyInfo;
-					
-					Set<String> allTypes = new HashSet<String>();
+					var allTypes = new HashSet<String>();
 	
 					// Copy informations from unbuilt files
 					if (parameters.DependencyInfo != null) {
 						var unbuiltFiles = allFiles.getAllProjectRelativeNames();
 						unbuiltFiles = unbuiltFiles.except(filesToCompile.select(p => allFiles.getProjectRelativeName(p)));
 						unbuiltFiles = unbuiltFiles.except(deletedFiles);
-						foreach (var f in unbuiltFiles) {
-							foreach (var t in parameters.DependencyInfo.getFileContents(f)) {
-								allTypes.add(t);
-								dependencyInfo.addFileToTypeRelation(f, t);
-								foreach (var rt in parameters.DependencyInfo.getReferencedTypes(t)) {
-									dependencyInfo.addTypeToTypeRelation(t, rt);
+						foreach (var file in unbuiltFiles) {
+							foreach (var type in parameters.DependencyInfo.getFileContents(file)) {
+								allTypes.add(type);
+								dependencyInfo.addFileToTypeRelation(file, type);
+								foreach (var refType in parameters.DependencyInfo.getReferencedTypes(type)) {
+									dependencyInfo.addTypeToTypeRelation(type, refType);
 								}
 							}
 						}
@@ -285,33 +336,29 @@ package stab.tools.eclipse.helpers {
 					
 					// Collect the types and update the dependencies.
 					var typeMembers = new HashMap<IFile, Iterable<TypeMemberNode>>();
-					foreach (var f in filesToCompile) {
-						var fname = allFiles.getProjectRelativeName(f);
-						var compilationUnit = compilationUnits.get(fname);
+					foreach (var file in filesToCompile) {
+						var fileName = allFiles.getProjectRelativeName(file);
+						var compilationUnit = compilationUnits[fileName];
 						if (compilationUnit == null) {
 							continue;
 						}
 						var members = SyntaxTreeHelper.getTypeMembers(compilationUnit);
-						typeMembers.put(f, members);
+						typeMembers.put(file, members);
 						foreach (var member in members) {
-							var type = member.getUserData(typeof(JvmTypeInfo));
-							dependencyInfo.addFileToTypeRelation(fname, type.getFullName());
-							allTypes.add(type.getFullName());
+							var typeName = member.getUserData(typeof(JvmTypeInfo)).FullName;
+							dependencyInfo.addFileToTypeRelation(fileName, typeName);
+							allTypes.add(typeName);
 						}
 					}
 
 					if (parameters.DependencyInfo != null) {
 						// Copy the types ignored by this compilation
 						var missingTypes = new HashSet<JvmTypeInfo>();
-						foreach (String t in allTypes) {
-							if (t.indexOf('$') == -1) {
-								if (!typeSystem.typeExists(t)) {
-									if (hasErrors = parameters.DependencyInfo.getReferencedTypes(t).all(p => allTypes.contains(p))) {
-										break;
-									}
-									missingTypes.add(parameters.TypeSystem.getType(t));
-								}
+						foreach (var t in allTypes.where(p => p.indexOf('$') == -1 && !typeSystem.typeExists(p))) {
+							if (hasErrors = parameters.DependencyInfo.getReferencedTypes(t).all(p => allTypes.contains(p))) {
+								break;
 							}
+							missingTypes.add(parameters.TypeSystem.getType(t));
 						}
 						if (!hasErrors) {
 							JvmTypeSystemHelper.cloneTypes(missingTypes, typeSystem);
@@ -321,8 +368,9 @@ package stab.tools.eclipse.helpers {
 					if (!hasErrors) {
 						// Compute the dependencies in the compiled files
 						foreach (var member in filesToCompile.select(p => typeMembers[p]).where(p => p != null).selectMany(p => p)) {
-							foreach (var t in SyntaxTreeHelper.computeTypeMemberDependencies(member, allTypes)) {
-								dependencyInfo.addTypeToTypeRelation(member.getUserData(typeof(JvmTypeInfo)).getFullName(), t.getFullName());
+							foreach (var t in SyntaxTreeHelper.getTypeMemberDependencies(member)
+									.intersect(allTypes.select(p => typeSystem.getType(p)))) {
+								dependencyInfo.addTypeToTypeRelation(member.getUserData(typeof(JvmTypeInfo)).FullName, t.FullName);
 							}
 						}
 	
@@ -343,9 +391,9 @@ package stab.tools.eclipse.helpers {
 				results.MissingType = e.TypeName;
 				hasErrors = true;
 				monitor.worked(6);
-			} //finally {
+			} finally {
 				monitor.done();
-			//}
+			}
 
 			foreach (var file in filesToCompile) {
 				results.CompiledFiles.add(allFiles.getProjectRelativeName(file));

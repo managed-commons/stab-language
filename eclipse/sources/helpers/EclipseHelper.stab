@@ -19,6 +19,7 @@ using java.util;
 using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
 using org.eclipse.jface.viewers;
+using stab.query;
 
 package stab.tools.eclipse.helpers {
 
@@ -79,6 +80,31 @@ package stab.tools.eclipse.helpers {
 					Environment.logException(e);
 				}
 			}
+		}
+		
+		public static Iterable<IFile> getModifiedFiles(IResourceDelta delta, Iterable<String> extensions, Iterable<String> excludedFolders) {
+			var result = new HashSet<IFile>();
+			try {
+				delta.accept(p => {
+					var resource = p.getResource();
+					switch (resource.getType()) {
+					case IResource.FOLDER:
+						return !excludedFolders.contains(resource.getProjectRelativePath().toPortableString());
+					case IResource.FILE:
+						var file = (IFile)resource;
+						if (extensions.contains(file.getFileExtension())) {
+							//if ((p.getFlags() & IResourceDelta.CONTENT) != 0 || (p.getFlags() & IResourceDelta.MARKERS) == 0) {
+							result.add(file);
+							//}
+						}
+						return false;
+					}
+					return true;
+				});
+			} catch (CoreException e) {
+				Environment.logException(e);
+			}
+			return result;
 		}
 	}
 }
