@@ -21,6 +21,7 @@ using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
 using stab.query;
 using stab.tools.bytecode;
+using stab.tools.helpers;
 using stab.tools.syntaxtree;
 using stab.tools.eclipse.helpers;
 
@@ -115,6 +116,7 @@ package stab.tools.eclipse {
 					projectManager.CompilationUnits = results.CompilationUnits;
 					projectManager.FilesToCompile = Query.empty();
 				}
+				updateMarkers(results.CodeErrors, parameters.AllFiles);
 
 				monitor.worked(1);
 			} finally {
@@ -211,6 +213,7 @@ package stab.tools.eclipse {
 					}
 					projectManager.CompilationUnits = compilationUnits;
 				}
+				updateMarkers(results.CodeErrors, parameters.AllFiles);
 
 				monitor.worked(1);
 				
@@ -220,6 +223,73 @@ package stab.tools.eclipse {
 		
 			Environment.trace(this, "Incremental build done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 			return null;
+		}
+		
+		private void updateMarkers(List<CodeError> codeErrors, ResourceSet<IFile> fileSet) {
+			// Collect all the markers
+			var oldMarkers = new HashMap<IFile, IMarker[]>();
+			var markersToDelete = new HashSet<IMarker>();
+			foreach (var file in fileSet.getAllResources().where(p => p.exists())) {
+				try {
+					var markers = file.findMarkers(IMarker.PROBLEM, false, IFile.DEPTH_ZERO);
+					oldMarkers.put(file, markers);
+					foreach (var marker in markers) {
+						markersToDelete.add(marker);
+					}
+				} catch (CoreException e) {
+					Environment.logException(e);
+				}
+			}
+	
+			// List the error to mark and the marks to remove
+			var errorsToMark = new HashSet<CodeError>(codeErrors);
+			foreach (var error in codeErrors) {
+				var file = fileSet.getResource(error.Filename);
+				foreach (var marker in oldMarkers[file]) {
+					if (!markersToDelete.contains(marker)) {
+						continue;
+					}
+					if (error.Line != marker.getAttribute(IMarker.LINE_NUMBER, -1)) {
+						continue;
+					}
+					if (!error.Message.equals(marker.getAttribute(IMarker.MESSAGE, null))) {
+						continue;
+					}
+					int severity = marker.getAttribute(IMarker.SEVERITY, -1);
+					if (((error.Level == 0) ? IMarker.SEVERITY_ERROR : IMarker.SEVERITY_WARNING) != severity) {
+						continue;
+					}
+					if (marker.getAttribute(IMarker.PRIORITY, -1) != IMarker.PRIORITY_HIGH) {
+						continue;
+					}
+					errorsToMark.remove(error);
+					markersToDelete.remove(marker);
+					break;
+				}
+			}
+	
+			// Delete the obsolete markers
+			foreach (var marker in markersToDelete) {
+				try {
+					marker.delete();
+				} catch (CoreException e) {
+					Environment.logException(e);
+				}
+			}
+	
+			// Create the new markers
+			foreach (var error in errorsToMark) {
+				var file = fileSet.getResource(error.Filename);
+				try {
+					var marker = file.createMarker(IMarker.PROBLEM);
+					marker.setAttribute(IMarker.LINE_NUMBER, error.Line);
+					marker.setAttribute(IMarker.MESSAGE, error.Message);
+					marker.setAttribute(IMarker.SEVERITY, (error.Level == 0) ? IMarker.SEVERITY_ERROR : IMarker.SEVERITY_WARNING);
+					marker.setAttribute(IMarker.PRIORITY, IMarker.PRIORITY_HIGH);
+				} catch (CoreException e) {
+					Environment.logException(e);
+				}
+			}
 		}
 	}
 }

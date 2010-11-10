@@ -167,6 +167,7 @@ package stab.tools.eclipse.helpers {
 				var results = compileCore(new SubProgressMonitor(monitor, 2));
 				if (results.MissingType == null) {
 					if (results.Failed) {
+						Environment.trace(this, "Errors: all dependent types rebuild required");
 						// Try to build with all the dependencies
 						parameters.ProgressiveBuild = false;
 						results = compileCore(new SubProgressMonitor(monitor, 3));
@@ -178,12 +179,12 @@ package stab.tools.eclipse.helpers {
 						var newTypes = results.CompiledFiles.selectMany(p => newDependencyInfo.getFileContents(p)).toList();
 						var typesToRebuild = Query.empty<String>();
 						foreach (var type in oldTypes.except(newTypes)) {
-							typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
+							typesToRebuild = typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
 						}
 						foreach (var type in oldTypes.intersect(newTypes)) {
 								if (JvmTypeSystemHelper.hasStructureChanged(JvmTypeSystemHelper.getType(parameters.TypeSystem, type),
 											JvmTypeSystemHelper.getType(results.TypeSystem, type))) {
-								typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
+								typesToRebuild = typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
 							}
 						}
 						var filesToRebuild = typesToRebuild.selectMany(p => oldDependencyInfo.getTypeLocations(p));
@@ -191,6 +192,8 @@ package stab.tools.eclipse.helpers {
 						monitor.worked(1);
 						
 						if (filesToRebuild.any()) {
+							Environment.trace(this, "Structural changes: referencing types rebuild required (" + filesToRebuild.count() + " files)");
+							
 							// If some types have changed, rebuild the referencing types
 							var oldResult = results;
 							this.parameters = new SourceCompilerParameters();
@@ -355,7 +358,8 @@ package stab.tools.eclipse.helpers {
 						// Copy the types ignored by this compilation
 						var missingTypes = new HashSet<JvmTypeInfo>();
 						foreach (var t in allTypes.where(p => p.indexOf('$') == -1 && !typeSystem.typeExists(p))) {
-							if (hasErrors = parameters.DependencyInfo.getReferencedTypes(t).all(p => allTypes.contains(p))) {
+							if (hasErrors = !parameters.DependencyInfo.getReferencedTypes(t).all(p => allTypes.contains(p))) {
+								Environment.trace(this, "Incremental build failed: a type was deleted");
 								break;
 							}
 							missingTypes.add(parameters.TypeSystem.getType(t));

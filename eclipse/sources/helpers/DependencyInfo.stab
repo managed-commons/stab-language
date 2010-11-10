@@ -93,11 +93,10 @@ package stab.tools.eclipse.helpers {
 		public Iterable<String> getAllReferencingFiles(Iterable<String> fileNames) {
 			int nfiles;
 			var result = fileNames;
-			var query = getAllReferencingTypes(result.selectMany(p => getFileContents(p))).selectMany(p => getTypeLocations(p)).distinct();
-			result = query.toList();
+			result = getAllReferencingTypes(result.selectMany(p => getFileContents(p))).selectMany(p => getTypeLocations(p)).toSet();
 			do {
 				nfiles = result.count();
-				result = query.toList();
+				result = getAllReferencingTypes(result.selectMany(p => getFileContents(p))).selectMany(p => getTypeLocations(p)).toSet();
 			} while (result.count() > nfiles);
 			return result.union(fileNames);
 		}
@@ -113,11 +112,10 @@ package stab.tools.eclipse.helpers {
 		public Iterable<String> getAllReferencedFiles(Iterable<String> fileNames) {
 			int nfiles;
 			var result = fileNames;
-			var query = getAllReferencedTypes(result.selectMany(p => getFileContents(p))).selectMany(p => getTypeLocations(p)).distinct();
-			result = query.toList();
+			result = getAllReferencedTypes(result.selectMany(p => getFileContents(p))).selectMany(p => getTypeLocations(p)).toSet();
 			do {
 				nfiles = result.count();
-				result = query.toList();
+				result = getAllReferencedTypes(result.selectMany(p => getFileContents(p))).selectMany(p => getTypeLocations(p)).toSet();
 			} while (result.count() > nfiles);
 			return result.union(fileNames);
 		}
