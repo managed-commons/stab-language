@@ -3018,6 +3018,22 @@ package stab.query {
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////////
+		// skip
+		//
+		
+		public static Iterable<TSource> skip<TSource>(this Iterable<TSource> source, int count) {
+			if (source == null) throw new NullPointerException("source");
+			
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+				it.next();
+			}
+			while (it.hasNext()) {
+				yield return it.next();
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
 		// take
 		//
         

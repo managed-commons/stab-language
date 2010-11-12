@@ -684,7 +684,7 @@ package stab.tools.compiler {
                 if (t != null) {
                     var fit = t.GenericArguments.iterator();
                     var tit = toType.GenericArguments.iterator();
-                    while (fit.hasNext()) {
+                    while (fit.hasNext() && tit.hasNext()) {
                         makeExactInference(fit.next(), tit.next(), typeVariables);
                     }
                 }

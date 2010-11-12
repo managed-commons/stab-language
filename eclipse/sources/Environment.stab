@@ -17,6 +17,7 @@
 using java.lang;
 using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
+using org.eclipse.jface.preference;
 using Image = org.eclipse.swt.graphics.Image;
 using org.eclipse.ui.console;
 using org.eclipse.ui.editors.text;
@@ -58,8 +59,16 @@ package stab.tools.eclipse {
 
 		private static MessageConsoleStream consoleStream;
 
-		public static Bundle getBundle() {
-			return Activator.getBundle();
+		public static IPreferenceStore PreferenceStore {
+			get {
+				return Activator.getPreferenceStore();
+			}
+		}
+
+		public static Bundle Bundle {
+			get {
+				return Activator.getBundle();
+			}
 		}
 
 		public static Image getIcon(Icon icon) {

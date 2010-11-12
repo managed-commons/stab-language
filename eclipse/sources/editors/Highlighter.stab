@@ -1,0 +1,593 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+#undef TRACE
+ 
+using java.lang;
+using java.util;
+using org.eclipse.core.resources;
+using org.eclipse.jface.text;
+using org.eclipse.jface.text.source;
+using org.eclipse.swt;
+using org.eclipse.swt.custom;
+using org.eclipse.swt.graphics;
+using stab.query;
+using stab.tools.helpers;
+using stab.tools.parser;
+
+package stab.tools.eclipse.editors {
+
+	class StyledPosition : Position {
+		private ISharedTextColors sharedTextColors;
+	
+		StyledPosition(int offset, int length, ISharedTextColors sharedTextColors)
+				: super(offset, length) {
+			this.sharedTextColors = sharedTextColors;
+		}
+
+		public SemanticStyle SemanticStyle {
+			get;
+			set;
+		}
+
+		public Color Foreground {
+			get {
+				return sharedTextColors.getColor(this.SemanticStyle.Foreground);
+			}
+		}
+		
+		public Color Background {
+			get {
+				return sharedTextColors.getColor(this.SemanticStyle.Background);
+			}
+		}
+		
+		public int FontStyle {
+			get {
+				return this.SemanticStyle.FontStyle;
+			}
+		}
+		
+		public boolean Underline {
+			get {
+				return this.SemanticStyle.Underline;
+			}
+		}
+		
+		public boolean Strikethrough {
+			get {
+				return this.SemanticStyle.Strikethrough;
+			}
+		}
+	}
+
+	class Token : StyledPosition {
+		Token(int offset, int length, ISharedTextColors sharedTextColors, LexicalUnit lexicalUnit, Keyword keyword)
+				: super(offset, length, sharedTextColors) {
+			this.LexicalUnit = lexicalUnit;
+			this.Keyword = keyword;
+		}
+		
+		public LexicalUnit LexicalUnit {
+			get;
+			private set;
+		}
+		
+		public Keyword Keyword {
+			get;
+			private set;
+		}
+	}
+
+	public class Highlighter {
+		private IDocument document;
+		private IFile file;
+		private ISourceViewer sourceViewer;
+		private TextListener textListener;
+		private ISharedTextColors sharedTextColors;
+
+		private List<StyledPosition> preprocessorPositions;
+		private List<Token> tokens;
+	
+		public Highlighter(ISourceViewer sourceViewer, IDocument document, IFile file, ISharedTextColors sharedTextColors) {
+			this.sourceViewer = sourceViewer;
+			this.document = document;
+			this.sharedTextColors = sharedTextColors;
+			textListener = new TextListener(this);
+			
+			initialize(document.get().toCharArray());
+		}
+
+		//
+		// Gets the index of the position in the list which contains the offset, or -1.
+		// positions: a list of non-overlapping Position objects, sorted by offset
+		// offset: an arbitrary integer
+		//
+		public static int getPositionIndex(List<? : StyledPosition> positions, int offset) {
+			int start = 0;
+			int end = positions.size() - 1;
+			while (start <= end) {
+				int index = start + (end - start + 1) / 2;
+				var position = positions[index];
+				int poffset = position.offset;
+				if (poffset <= offset && poffset + position.length > offset) {
+					return index;
+				}
+				if (poffset < offset) {
+					start = index + 1;
+				} else {
+					end = index - 1;
+				}
+			}
+			return -1;
+		}
+
+		//
+		// Gets the index of the position in the list which contains the offset, or is just after the offset, or -1.
+		// positions: a list of non-overlapping Position objects, sorted by offset
+		// offset: an arbitrary integer
+		//
+		public static int getNextPositionIndex(List<? : StyledPosition> positions, int offset) {
+			int start = 0;
+			int end = positions.size() - 1;
+			int prev = -1;
+			while (start <= end) {
+				int index = start + (end - start + 1) / 2;
+				var position = positions[index];
+				int poffset = position.offset;
+				if (poffset <= offset && poffset + position.length > offset) {
+					return index;
+				}
+				if (poffset < offset) {
+					start = index + 1;
+				} else {
+					prev = index;
+					end = index - 1;
+				}
+			}
+			return prev;
+		}
+		
+		public char[] Text {
+			get;
+			private set;
+		}
+		
+		public void dispose() {
+			if (textListener != null) {
+				textListener.dispose();
+				textListener = null;
+			}
+		}
+		
+		private void initialize(char[] text) {
+			Environment.trace(this, "initialization");
+			var t0 = System.nanoTime();
+
+			try {
+				this.Text = text;
+	
+				var errorManager = new CodeErrorManager();
+				var preprocessor = new Preprocessor(errorManager, this.Text);
+				var preprocessedText = preprocessor.preprocess();
+				if (!errorManager.HasErrors) {
+					var scanner = new PreprocessedTextScanner(errorManager, preprocessedText);
+					var newTokens = new ArrayList<Token>();
+					LexicalUnit lu;
+					while ((lu = scanner.nextLexicalUnit()) != LexicalUnit.EndOfStream) {
+						int sp = scanner.StartPosition;
+						newTokens.add(new Token(sp, scanner.EndPosition - sp, sharedTextColors, lu, scanner.Keyword));
+					}
+					if (!errorManager.HasErrors) {
+						this.preprocessorPositions = new ArrayList<StyledPosition>();
+						computePreprocessorStyles(preprocessedText.InputSectionParts);
+						foreach (var tk in newTokens) {
+							tk.SemanticStyle = getSemanticStyle(tk.LexicalUnit);
+						}
+						this.tokens = newTokens;
+						sourceViewer.invalidateTextPresentation();
+					}
+				}
+			} catch (CodeErrorException e) {
+			}
+			
+			Environment.trace(this, "initialization done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
+		}
+
+		private void addPreprocessorSymbols(Set<String> symbols) {
+			var it = Query.empty<String>();
+			if (file != null) {
+				var projectManager = Environment.getProjectManager(file);
+				if (projectManager != null) {
+					it = projectManager.Properties.PreprocessorSymbols;
+				}
+			}
+			foreach (var s in it) {
+				symbols.add(s);
+			}
+		}
+		
+		private void computePreprocessorStyles(Iterable<InputSectionPart> inputSectionParts) {
+			foreach (var part in inputSectionParts) {
+				if (part.InputSectionPartKind == InputSectionPartKind.SourceCode) {
+					continue;
+				}
+				int line = document.getLineOfOffset(part.Position);
+				var style = new StyledPosition(document.getLineOffset(line), document.getLineLength(line), sharedTextColors);
+				style.SemanticStyle = SemanticStyle.Preprocessor;
+				preprocessorPositions.add(style);
+				switch (part.getInputSectionPartKind()) {
+				case If:
+				case Elif:
+				case Else:
+					if (part.getSkippedSection()) {
+						InputSectionPart skippedPart = Query.firstOrDefault(part.getInputSectionParts());
+						if (skippedPart != null) {
+							style = new StyledPosition(skippedPart.getPosition(), skippedPart.getLength(), sharedTextColors);
+							style.SemanticStyle = SemanticStyle.SkippedSource;
+							preprocessorPositions.add(style);
+						}
+					} else {
+						computePreprocessorStyles(part.getInputSectionParts());
+					}
+					break;
+				case Region:
+					computePreprocessorStyles(part.getInputSectionParts());
+					line = document.getLineOfOffset(part.getPosition() + part.getLength() - 1);
+					style = new StyledPosition(document.getLineOffset(line), document.getLineLength(line), sharedTextColors);
+					style.SemanticStyle = SemanticStyle.Preprocessor;
+					preprocessorPositions.add(style);
+					break;
+				}
+			}
+		}
+
+		private SemanticStyle getSemanticStyle(LexicalUnit lexicalUnit) {
+			switch (lexicalUnit) {
+			case SingleLineComment:
+				return SemanticStyle.SingleLineComment;
+			case DelimitedComment:
+				return SemanticStyle.DelimitedComment;
+			case Keyword:
+				return SemanticStyle.Keyword;
+			case StringLiteral:
+			case VerbatimStringLiteral:
+				return SemanticStyle.StringLiteral;
+			case CharacterLiteral:
+				return SemanticStyle.CharacterLiteral;
+			case DecimalIntegerLiteral:
+			case DoubleLiteral:
+			case FloatLiteral:
+			case HexadecimalIntegerLiteral:
+			case HexadecimalLongLiteral:
+			case RealLiteral:
+				return SemanticStyle.NumberLiteral;
+			}
+			return null;
+		}
+		
+		private void updateTextPresentation(TextPresentation textPresentation) {
+			var extent = textPresentation.getExtent();
+			Environment.trace(this, "applyTextPresentation " + extent);
+		
+			int startOffset = extent.getOffset();
+			int endOffset = startOffset + extent.getLength();
+			
+			var styleRanges = createStyleRanges(this.tokens, startOffset, endOffset);
+			if (styleRanges != null) {
+				textPresentation.mergeStyleRanges(styleRanges);
+			}
+			styleRanges = createStyleRanges(this.preprocessorPositions, startOffset, endOffset);
+			if (styleRanges != null) {
+				textPresentation.mergeStyleRanges(styleRanges);
+			}
+		}
+		
+		private static StyleRange[] createStyleRanges(List<? : StyledPosition> positions, int startOffset, int endOffset) {
+			if (positions == null || positions.size() == 0) {
+				return null;
+			}
+		
+			int index = getNextPositionIndex(positions, startOffset);
+			if (index == -1) {
+				return null;
+			}
+			var styleRanges = new ArrayList<StyleRange>();
+			int size = positions.size();
+			while (index < size) {
+				var position = positions[index++];
+				int offset = position.offset;
+				int length = position.length;
+				if (offset >= endOffset) {
+					break;
+				}
+				if (offset < startOffset) {
+					int delta = startOffset - offset;
+					offset -= delta;
+					length -= delta;
+				}
+				if (offset + length > endOffset) {
+					length = endOffset - offset;
+				}
+				var styleRange = createStyleRange(position, offset, length);
+				if (styleRange != null) {
+					styleRanges.add(styleRange);
+				}
+			}
+			size = styleRanges.size();
+			if (size == 0) {
+				return null;
+			} else {
+				return styleRanges.toArray(new StyleRange[size]);
+			}
+		}
+		
+		private static StyleRange createStyleRange(StyledPosition position, int offset, int length) {
+			if (position.SemanticStyle == null) {
+				return null;
+			}
+			var result = new StyleRange(offset, length, position.Foreground, position.Background, position.FontStyle);
+			result.strikeout = position.Strikethrough;
+			result.underline = position.Underline;
+			return result;
+		}
+
+		private void update(int offset, String insertedText, int removedLength) {
+			Environment.trace(this, "update(" + offset + ", \"" + insertedText + "\", " + removedLength + ")");
+			var t0 = System.nanoTime();
+
+			var oldText = this.Text;
+			int insertedLength = insertedText.length();
+			var text = new char[sizeof(oldText) + insertedLength - removedLength];
+			int index;
+			for (index = 0; index < offset; index++) {
+				text[index] = oldText[index];
+			}
+			for (int i = 0; i < insertedLength; i++) {
+				text[index++] = insertedText.charAt(i);
+			}
+			for (int i = offset + removedLength; i < sizeof(oldText); i++) {
+				text[index++] = oldText[i];
+			}
+
+			if (tokens == null || tokens.size() == 0) {
+				initialize(text);
+				return;
+			}
+
+			// If the modified region overlaps a preprocessor directive: scan the document
+			var skippedSourceIndex = -1;
+			if (removedLength == 0) {
+				index = getPositionIndex(this.preprocessorPositions, offset);
+				if (index != -1) {
+					if (this.preprocessorPositions[index].SemanticStyle == SemanticStyle.Preprocessor) {
+						initialize(text);
+						return;
+					} else {
+						skippedSourceIndex = index;
+					}
+				}
+			} else {
+				index = 0;
+				foreach (var p in this.preprocessorPositions) {
+					if (p.overlapsWith(offset, removedLength)) {
+						if (p.SemanticStyle == SemanticStyle.Preprocessor) {
+							initialize(text);
+							return;
+						} else {
+							skippedSourceIndex = index;
+							break;
+						}
+					}
+					index++;
+				}
+			}
+			if (skippedSourceIndex != -1) {
+				var position = this.preprocessorPositions[skippedSourceIndex];
+				int delta = insertedLength - removedLength;
+				position.length = insertedLength + delta;
+				for (int i = skippedSourceIndex + 1; i < this.preprocessorPositions.size(); i++) {
+					var p = this.preprocessorPositions[i];
+					p.offset += delta;
+				}
+				index = getNextPositionIndex(this.tokens, position.offset + position.length);
+				if (index != -1) {
+					for (int i = index; i < this.tokens.size(); i++) {
+						var p = this.tokens[i];
+						p.offset += delta;
+					}
+				}
+				return;
+			}
+
+			if (insertedText.indexOf('#') != -1) {
+				initialize(text);
+				return;
+			}
+		
+			// Get the start and end tokens
+			int startIndex = getPositionIndex(this.tokens, offset);
+			int ppIndex = -1;
+			if (offset > 0 && startIndex == -1) {
+				if ((ppIndex = getPositionIndex(this.preprocessorPositions, offset - 1)) == -1) {
+					startIndex = getPositionIndex(this.tokens, offset - 1);
+				}
+			}
+			if (startIndex == -1) {
+				// No start token found: text inserted at the end of the document the line just after a preprocessor directive
+				var p = this.preprocessorPositions[ppIndex];
+				int start = p.offset + p.length;
+				var insertedTokens = scan(insertedText.toCharArray());
+				if (insertedTokens == null) {
+					// Something went wrong: document scan
+					initialize(text);
+					return;
+				}
+				var newTokens = new ArrayList<Token>(this.tokens);
+				foreach (var t in insertedTokens) {
+					t.offset += start;
+					newTokens.add(t);
+				}
+				this.tokens = newTokens;
+				return;
+			}
+			
+			var startToken = this.tokens[startIndex];
+			if (offset > 0 && startIndex > 0 && startToken.offset == offset &&
+					getPositionIndex(this.preprocessorPositions, offset - 1) == -1) {
+				// if offset is the token start position: take the preceding token
+				startToken = this.tokens[--startIndex];
+			}
+
+			int endIndex = getPositionIndex(this.tokens, offset + removedLength);
+			if (endIndex == -1) {
+				// The removed text is at the end of the document or in a preprocessor directive: take the preceding token
+				endIndex = getPositionIndex(this.tokens, offset + removedLength - 1);
+			}
+			var endToken = this.tokens[endIndex];
+
+			// Copy the text to scan into an array
+			index = startToken.offset;
+			int startPartLength = offset - index;
+			int endPartLength = endToken.length - offset - removedLength + endToken.offset;
+			var subText = new char[startPartLength + insertedLength + endPartLength];
+			for (int i = 0; i < sizeof(subText); i++) {
+				subText[i] = text[index++];
+			}
+			
+			// Update the offset of the trailing tokens, preprocessor directives and skipped sections
+			int delta = insertedLength - removedLength;
+			for (int i = endIndex + 1; i < this.tokens.size(); i++) {
+				var p = this.tokens[i];
+				p.offset += delta;
+			}
+			index = getNextPositionIndex(this.preprocessorPositions, endToken.offset + endToken.length);
+			if (index != -1) {
+				for (int i = index; i < this.preprocessorPositions.size(); i++) {
+					var p = this.preprocessorPositions[i];
+					p.offset += delta;
+				}
+			}
+			
+			// Create the new list of tokens
+			var newTokens = new ArrayList<Token>();
+			for (int i = 0; i < startIndex; i++) {
+				newTokens.add(this.tokens[i]);
+			}
+			var insertedTokens = scan(subText);
+			if (insertedTokens == null) {
+				// Something went wrong: try a full scan
+				initialize(text);
+				return;
+			}
+			int start = startToken.getOffset();
+			foreach (var t in insertedTokens) {
+				t.offset += start;
+				newTokens.add(t);
+			}
+			int ntokens = this.tokens.size();
+			// Fill the gap between the old and new tokens with a fake token if needed
+			if (newTokens.size() == 0) {
+				if (insertedLength > 0) {
+					newTokens.add(new Token(offset, insertedLength, sharedTextColors, null, null));
+				}
+			} else {
+				var tk1 = newTokens[newTokens.size() - 1];
+				int offset1 = tk1.offset;
+				int length1 = tk1.length;
+				int off = offset1 + length1;
+				if (endIndex + 1 < ntokens) {
+					var tk2 = this.tokens[endIndex + 1];
+					int offset2 = tk2.getOffset();
+					if (off < offset2 && getPositionIndex(this.preprocessorPositions, offset2 - 1) == -1) {
+						newTokens.add(new Token(off, offset2 - off, sharedTextColors, null, null));
+					}
+				} else {
+					int offsetEnd = endToken.offset + endToken.length + delta;
+					if (off < offsetEnd) {
+						newTokens.add(new Token(off, offsetEnd - off, sharedTextColors, null, null));
+					}
+				}
+			}
+			for (int i = endIndex + 1; i < ntokens; i++) {
+				newTokens.add(this.tokens[i]);
+			}
+			
+			this.tokens = newTokens;
+			this.Text = text;
+			((ITextViewerExtension2)sourceViewer).invalidateTextPresentation(offset - startPartLength, sizeof(subText));
+						
+			Environment.trace(this, "update done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
+		}
+
+		private List<Token> scan(char[] text) {
+			Environment.trace(this, "Scanning [" + new String(text) + "]");
+			var result = new ArrayList<Token>();
+			try {
+				var errorManager = new CodeErrorManager();
+				var scanner = new SourceCodeScanner(errorManager, text);
+				LexicalUnit lu;
+				while ((lu = scanner.nextLexicalUnit()) != LexicalUnit.EndOfStream) {
+					int sp = scanner.StartPosition;
+					result.add(new Token(sp, scanner.EndPosition - sp, sharedTextColors, lu, scanner.Keyword));
+				}
+				if (errorManager.HasErrors) {
+					return null;
+				}
+				foreach (var tk in result) {
+					tk.SemanticStyle = getSemanticStyle(tk.LexicalUnit);
+				}
+			} catch (CodeErrorException e) {
+				return null;
+			}
+			return result;
+		}
+
+		private class TextListener : IDocumentListener, ITextPresentationListener {
+			private Highlighter highlighter;
+			private boolean suspendTextPresentationUpdate;
+		
+			TextListener(Highlighter highlighter) {
+				this.highlighter = highlighter;
+				((ITextViewerExtension4)highlighter.sourceViewer).addTextPresentationListener(this);
+				highlighter.document.addDocumentListener(this);
+			}
+			
+			void dispose() {
+				if (highlighter != null) {
+					((ITextViewerExtension4)highlighter.sourceViewer).removeTextPresentationListener(this);
+					highlighter.document.removeDocumentListener(this);
+					highlighter = null;
+				}
+			}
+		
+			public void documentAboutToBeChanged(DocumentEvent event) {
+				suspendTextPresentationUpdate = true;
+			}
+			
+			public void documentChanged(DocumentEvent event) {
+				suspendTextPresentationUpdate = false;
+				highlighter.update(event.getOffset(), event.getText(), event.getLength());
+			}
+			
+			public void applyTextPresentation(TextPresentation textPresentation) {
+				if (!suspendTextPresentationUpdate) {
+					highlighter.updateTextPresentation(textPresentation);
+				}
+			}
+		}	
+	}
+}

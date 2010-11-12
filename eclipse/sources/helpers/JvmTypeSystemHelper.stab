@@ -462,7 +462,7 @@ package stab.tools.eclipse.helpers {
 					result = getType(typeSystem, type.DeclaringType, genericArgs).getNestedType(type.Name);
 				}
 				if (type != type.OriginalTypeDefinition) {
-					result = typeSystem.getGenericType(result, type.GenericArguments.select(p => getType(typeSystem, p, genericArgs)));
+					result = typeSystem.getGenericType(result, type.GenericArguments.select(p => getType(typeSystem, p, genericArgs)).toList());
 				}
 				if (result == null) {
 					throw new IllegalStateException("Type not found in target file system: " + type.FullName);

@@ -1780,6 +1780,9 @@ package stab.tools.compiler {
                 clinit.setReturnType(JvmTypeInfo.VOID);
                 constructorDeclaration.addUserData(clinit);
             } else {
+				if (typeBuilder.IsEnum) {
+					// TODO: check if the contructor is private
+				}
                 var methodBuilder = lookupMethod(typeBuilder, constructorDeclaration.TypeParameters, constructorDeclaration.Parameters, "<init>");
                 if (methodBuilder != null) {
                     context.addError(CompileErrorId.AlreadyDefinedConstructor, constructorDeclaration,

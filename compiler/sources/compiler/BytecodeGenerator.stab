@@ -2607,14 +2607,8 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Dup);
                     generator.emit(JvmOpcode.Ldc, field.Name);
                     BytecodeHelper.emitIntConstant(generator, nEnumConstant++);
-                    var it = constructor.Parameters.iterator();
-                    it.next();
-                    it.next();
-                    foreach (var arg in enumConstantDeclaration.Arguments) {
-                        var p = it.next();
-                        expressionGenerator.emitNestedExpression(arg, p.Type);
-                    }
-                    // TODO: varargs
+					expressionGenerator.emitArguments(enumConstantDeclaration.Arguments, constructor.Parameters.skip(2),
+							constructor.Parameters.count() - 2, constructor.IsVarargs);
                     generator.emit(JvmOpcode.Invokespecial, constructor);
                     generator.emit(JvmOpcode.Putstatic, field);
                     break;

@@ -64,6 +64,9 @@ package stab.tools.eclipse {
 				configureProject(project);
 			}
 			
+			
+			SemanticStyle.installListener(getPreferenceStore());
+			
 			var startupJob = new StartupJob();
 			startupJob.setPriority(Job.SHORT);
 			startupJob.schedule();
@@ -72,6 +75,8 @@ package stab.tools.eclipse {
 		// Called by Eclipse to dispose the plugin
 		//
 		public override void stop(BundleContext context) {
+			SemanticStyle.uninstallListener(getPreferenceStore());
+		
 			if (workspaceListener != null) {
 				ResourcesPlugin.getWorkspace().removeResourceChangeListener(workspaceListener);
 				workspaceListener = null;

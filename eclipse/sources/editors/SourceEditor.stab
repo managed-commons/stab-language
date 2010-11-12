@@ -14,6 +14,10 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using org.eclipse.core.resources;
+using org.eclipse.jface.text;
+using org.eclipse.swt.widgets;
+using org.eclipse.ui;
 using org.eclipse.ui.texteditor;
 
 package stab.tools.eclipse.editors {
@@ -26,6 +30,67 @@ package stab.tools.eclipse.editors {
 	// The editor for Stab source files.
 	//
 	public class SourceEditor : AbstractDecoratedTextEditor {
+		private TextInputListener textInputListener;
+
+		public override void createPartControl(Composite parent) {
+			super.createPartControl(parent);
+			
+			textInputListener = new TextInputListener(this);
+		}
+
+		public override void dispose() {
+			
+			if (textInputListener != null) {
+				textInputListener.dispose();
+				textInputListener = null;
+			}
+			super.dispose();
+		}
 	
+		IFile getFile() {
+			var editorInput = getEditorInput() as IFileEditorInput;
+			return (editorInput == null) ? null : editorInput.getFile();
+		}
+	
+		private class TextInputListener : ITextInputListener {
+			private SourceEditor editor;
+			private Highlighter highlighter;
+			
+			TextInputListener(SourceEditor editor) {
+				this.editor = editor;
+				var sourceViewer = editor.getSourceViewer();
+				sourceViewer.addTextInputListener(this);
+				var documentProvider = editor.getDocumentProvider();
+				if (documentProvider != null) {
+					var document = documentProvider.getDocument(editor.getEditorInput());
+					if (document != null) {
+						highlighter = new Highlighter(sourceViewer, document, editor.getFile(), editor.getSharedColors());
+					}
+				}
+			}
+			
+			void dispose() {
+				if (highlighter != null) {
+					highlighter.dispose();
+				}
+				if (editor != null) {
+					editor.getSourceViewer().removeTextInputListener(this);
+					editor = null;
+				}
+			}
+		
+			public void inputDocumentAboutToBeChanged(IDocument oldInput, IDocument newInput) {
+				if (highlighter != null) {
+					highlighter.dispose();
+					highlighter = null;
+				}
+			}
+			
+			public void inputDocumentChanged(IDocument oldInput, IDocument newInput) {
+				if (newInput != null) {
+					highlighter = new Highlighter(editor.getSourceViewer(), newInput, editor.getFile(), editor.getSharedColors());
+				}
+			}
+		}
 	}
 }

@@ -770,5 +770,10 @@ package stab.tools.compiler.test {
 		public void wildcardLowerConstraintArgument() {
 			doTest("WildcardLowerConstraintArgument", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void enumDeclaration() {
+			doTest("EnumDeclaration", new Class<?>[] {}, new Object[] {}, true);
+		}
     }
 }

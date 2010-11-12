@@ -465,14 +465,14 @@ package stab.tools.eclipse.helpers {
 				foreach (var p in m.Parameters) {
 					addDependencies(p.Type, dependencies);
 				}
-				statementHandler.handleStatement(lambda.Body, null);
+				statementHandler.handleStatement(lambda.Body, dependencies);
 				return null;
 			}
 	
 			protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, Set<JvmTypeInfo> dependencies, boolean nested) {
 				var info = memberAccess.getUserData(typeof(ExpressionInfo));
 				var member = info.getMember();
-				handleExpression(memberAccess.TargetObject, null, nested);
+				handleExpression(memberAccess.TargetObject, dependencies, nested);
 				if (member == null) {
 					var type = info.Type;
 		            if (type != null) {
