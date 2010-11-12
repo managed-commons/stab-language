@@ -922,7 +922,6 @@ package stab.tools.compiler {
                         }
                     }
                     int n = outerClass.Methods.count(p => p.Name.startsWith("access$"));
-                    var type = method.Parameters.first().Type;
                     var methodBuilder = outerClass.defineMethod("access$" + n);
                     methodBuilder.setReturnType(JvmTypeInfo.VOID);
                     methodBuilder.setStatic(method.IsStatic);
@@ -932,22 +931,18 @@ package stab.tools.compiler {
                         var param = methodBuilder.addParameter(p.Type);
                         param.setName(p.Name);
                     }
-                    var param = methodBuilder.addParameter(type);
-                    param.setName("value");
                     var gen = methodBuilder.CodeGenerator;
                     gen.beginScope();
                     if (method.IsStatic) {
                         foreach (var p in method.Parameters) {
                             gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
                         }
-                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
                         gen.emit(JvmOpcode.Invokestatic, method);
                     } else {
                         gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
                         foreach (var p in method.Parameters) {
                             gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
                         }
-                        gen.emit(BytecodeHelper.getLoadOpcode(type), gen.getLocal("value"));
                         gen.emit(JvmOpcode.Invokevirtual, method);
                     }
                     gen.emit(JvmOpcode.Return);

@@ -96,16 +96,11 @@ package stab.tools.eclipse.editors {
 				
 				var compiler = new SourceCompiler();
 				var results = compiler.compile(parameters, new SubProgressMonitor(monitor, 4));
-				if (results.Failed) {
-					if (results.MissingType != null) {
-						projectManager.DependencyInfo = null;
-					}
-				} else {
+				if (!results.Failed) {
 					var compilationUnit = results.CompilationUnits[filename];
 					if (compilationUnit != null && text == editor.Highlighter.Text) {
 						initialized = true;
-						var job = new HighlightJob(editor, text, compilationUnit);
-						job.schedule();
+						new HighlightJob(editor, text, compilationUnit).schedule();
 					}
 				}
 

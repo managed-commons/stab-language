@@ -775,5 +775,10 @@ package stab.tools.compiler.test {
 		public void enumDeclaration() {
 			doTest("EnumDeclaration", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void autoPropertyNestedAccess() {
+			doTest("AutoPropertyNestedAccess", new Class<?>[] {}, new Object[] {}, 1);
+		}
     }
 }

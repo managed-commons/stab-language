@@ -112,6 +112,7 @@ package stab.tools.eclipse {
 					}
 					
 					Environment.trace(this, results.ClassFiles.size() + " .class files saved in " + ((System.nanoTime() - t1) / 1e6) + "ms");
+					Environment.trace(this, "DependencyInfo " + results.DependencyInfo);
 
 					projectManager.DependencyInfo = results.DependencyInfo;
 					projectManager.ClassPathTypeSystem = classPathTypeSystem;
