@@ -155,7 +155,7 @@ package stab.tools.eclipse.helpers {
 			if (!oldMethod.Name.equals(newMethod.Name)) {
 				return false;
 			}
-			if (oldMethod.Parameters.count() != oldMethod.Parameters.count()) {
+			if (oldMethod.Parameters.count() != newMethod.Parameters.count()) {
 				return false;
 			}
 			var it1 = oldMethod.getParameters().iterator();

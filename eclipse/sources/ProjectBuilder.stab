@@ -37,6 +37,7 @@ package stab.tools.eclipse {
 		public override IProject[] build(int kind, Map args, IProgressMonitor monitor) {
 		#pragma warning restore 252
 			this.projectManager = Environment.getProjectManager(getProject());
+			getProject().getFile(".stabproperties").deleteMarkers(IMarker.PROBLEM, false, 0);
 			
 			if (kind == FULL_BUILD || projectManager.RequireFullBuild) {
 				return buildProject(monitor);
@@ -79,7 +80,10 @@ package stab.tools.eclipse {
 				if (results.Failed) {
 					if (results.MissingType != null) {
 						projectManager.DependencyInfo = null;
-						// TODO: display the marker
+						IMarker marker = getProject().getFile(".stabproperties").createMarker(IMarker.PROBLEM);
+						marker.setAttribute(IMarker.MESSAGE, results.MissingType);
+						marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR);
+						marker.setAttribute(IMarker.PRIORITY, IMarker.PRIORITY_HIGH);
 					} else {
 						projectManager.FilesToCompile = results.CompiledFiles;
 					}
@@ -115,6 +119,8 @@ package stab.tools.eclipse {
 					projectManager.AnnotatedTypeSystem = results.AnnotatedTypeSystem;
 					projectManager.CompilationUnits = results.CompilationUnits;
 					projectManager.FilesToCompile = Query.empty();
+					
+					Environment.fireProjectBuildEvent(projectManager);
 				}
 				updateMarkers(results.CodeErrors, parameters.AllFiles);
 
@@ -161,7 +167,10 @@ package stab.tools.eclipse {
 				if (results.Failed) {
 					if (results.MissingType != null) {
 						projectManager.DependencyInfo = null;
-						// TODO: display the marker
+						IMarker marker = getProject().getFile(".stabproperties").createMarker(IMarker.PROBLEM);
+						marker.setAttribute(IMarker.MESSAGE, results.MissingType);
+						marker.setAttribute(IMarker.SEVERITY, IMarker.SEVERITY_ERROR);
+						marker.setAttribute(IMarker.PRIORITY, IMarker.PRIORITY_HIGH);
 					} else {
 						projectManager.FilesToCompile = projectManager.FilesToCompile.union(results.CompiledFiles).toList();
 					}
@@ -212,6 +221,8 @@ package stab.tools.eclipse {
 						compilationUnits.remove(s);
 					}
 					projectManager.CompilationUnits = compilationUnits;
+					
+					Environment.fireProjectBuildEvent(projectManager);
 				}
 				updateMarkers(results.CodeErrors, parameters.AllFiles);
 

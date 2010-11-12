@@ -18,6 +18,7 @@
 
 using java.lang;
 using java.util;
+using org.eclipse.core.commands.common;
 using org.eclipse.core.resources;
 using org.eclipse.core.runtime.jobs;
 using org.eclipse.core.runtime;
@@ -39,9 +40,11 @@ package stab.tools.eclipse {
 
 		private IResourceChangeListener workspaceListener;
 		private Map<IProject, ProjectManager> projectManagers;
+		private ProjectBuildEventManager projectBuildEventManager;
 
 		public Activator() {
 			projectManagers = new HashMap<IProject, ProjectManager>();
+			projectBuildEventManager = new ProjectBuildEventManager();
 		}
 		
 		// Called by Eclipse to initialize the plugin
@@ -130,13 +133,36 @@ package stab.tools.eclipse {
 			}
 		}
 		
+		void addProjectBuildListener(IProjectBuildListener listener) {
+			projectBuildEventManager.addListener(listener);
+		}
+		
+		void removeProjectBuildListener(IProjectBuildListener listener) {
+			projectBuildEventManager.removeListener(listener);
+		}
+		
+		void fireProjectBuildEvent(ProjectManager projectManager) {
+			var listeners = projectBuildEventManager.getProjectBuildListeners();
+			if (sizeof(listeners) > 0) {
+				var event = new ProjectBuildEvent(projectManager);
+				for (int i = 0; i < sizeof(listeners); i++) {
+					var listener = (IProjectBuildListener)listeners[i];
+					try {
+						listener.projectBuilt(event);
+					} catch (Exception e) {
+						Environment.logException(e);
+					}
+				}
+			}
+		}
+		
 		private ProjectManager getProjectManager(IProject project) {
 			if (EclipseHelper.hasNature(project, Environment.NATURE_ID)) {
 				var result = projectManagers.get(project);
 				if (result == null) {
 					Environment.trace(this, "new ProjectManager for " + project);
 					
-					result = new ProjectManager(project);
+					result = new ProjectManager(this, project);
 					projectManagers.put(project, result);
 				}
 				return result;
@@ -161,6 +187,20 @@ package stab.tools.eclipse {
 					monitor.done();
 				}
 				return (monitor.isCanceled()) ? Status.CANCEL_STATUS : Status.OK_STATUS;
+			}
+		}
+		
+		private class ProjectBuildEventManager : EventManager {
+			void addListener(IProjectBuildListener listener) {
+				addListenerObject(listener);
+			}
+			
+			void removeListener(IProjectBuildListener listener) {
+				removeListenerObject(listener);
+			}
+			
+			Object[] getProjectBuildListeners() {
+				return getListeners();
 			}
 		}
 	}

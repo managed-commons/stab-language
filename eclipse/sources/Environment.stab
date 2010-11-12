@@ -59,6 +59,14 @@ package stab.tools.eclipse {
 
 		private static MessageConsoleStream consoleStream;
 
+		public static void addProjectBuildListener(IProjectBuildListener listener) {
+			Activator.addProjectBuildListener(listener);
+		}
+		
+		public static void removeProjectBuildListener(IProjectBuildListener listener) {
+			Activator.removeProjectBuildListener(listener);
+		}
+
 		public static IPreferenceStore PreferenceStore {
 			get {
 				return Activator.getPreferenceStore();
@@ -139,6 +147,10 @@ package stab.tools.eclipse {
 	
 		static void deconfigureProject(IProject project) {
 			Activator.deconfigureProject(project);
+		}
+		
+		static void fireProjectBuildEvent(ProjectManager projectManager) {
+			Activator.fireProjectBuildEvent(projectManager);
 		}
 		
 		private static Activator Activator {

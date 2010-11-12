@@ -27,6 +27,7 @@ using org.eclipse.swt.graphics;
 using stab.query;
 using stab.tools.helpers;
 using stab.tools.parser;
+using stab.tools.syntaxtree;
 
 package stab.tools.eclipse.editors {
 
@@ -98,6 +99,7 @@ package stab.tools.eclipse.editors {
 		private ISourceViewer sourceViewer;
 		private TextListener textListener;
 		private ISharedTextColors sharedTextColors;
+		private CompilationUnitHighlighter compilationUnitHighlighter;
 
 		private List<StyledPosition> preprocessorPositions;
 		private List<Token> tokens;
@@ -106,6 +108,7 @@ package stab.tools.eclipse.editors {
 			this.sourceViewer = sourceViewer;
 			this.document = document;
 			this.sharedTextColors = sharedTextColors;
+			this.compilationUnitHighlighter = new CompilationUnitHighlighter();
 			textListener = new TextListener(this);
 			
 			initialize(document.get().toCharArray());
@@ -166,13 +169,27 @@ package stab.tools.eclipse.editors {
 			private set;
 		}
 		
-		public void dispose() {
+		public List<Token> Tokens {
+			get {
+				return tokens;
+			}
+		}
+		
+		public void update(char[] text, CompilationUnitNode compilationUnit) {
+			if (text != this.Text) {
+				return;
+			}
+			compilationUnitHighlighter.highlight(compilationUnit, tokens);
+			sourceViewer.invalidateTextPresentation();
+		}
+		
+		void dispose() {
 			if (textListener != null) {
 				textListener.dispose();
 				textListener = null;
 			}
 		}
-		
+
 		private void initialize(char[] text) {
 			Environment.trace(this, "initialization");
 			var t0 = System.nanoTime();
@@ -427,6 +444,10 @@ package stab.tools.eclipse.editors {
 				}
 			}
 			if (startIndex == -1) {
+				if (ppIndex == -1) {
+					initialize(text);
+					return;
+				}
 				// No start token found: text inserted at the end of the document the line just after a preprocessor directive
 				var p = this.preprocessorPositions[ppIndex];
 				int start = p.offset + p.length;

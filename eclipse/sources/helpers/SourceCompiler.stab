@@ -373,7 +373,7 @@ package stab.tools.eclipse.helpers {
 						// Compute the dependencies in the compiled files
 						foreach (var member in filesToCompile.select(p => typeMembers[p]).where(p => p != null).selectMany(p => p)) {
 							foreach (var t in SyntaxTreeHelper.getTypeMemberDependencies(member)
-									.intersect(allTypes.select(p => typeSystem.getType(p)))) {
+									.intersect(allTypes.select(p => JvmTypeSystemHelper.getType(typeSystem, p)))) {
 								dependencyInfo.addTypeToTypeRelation(member.getUserData(typeof(JvmTypeInfo)).FullName, t.FullName);
 							}
 						}

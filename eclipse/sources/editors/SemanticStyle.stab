@@ -31,7 +31,7 @@ package stab.tools.eclipse {
 	}
 
 	public enum SemanticStyle {
-		Preprocessor(new RGB(0, 150, 230), null),
+		Preprocessor(new RGB(20, 170, 240), null),
 		SkippedSource(new RGB(180, 180, 180), null),
 		SingleLineComment(new RGB(155, 155, 155), null),
 		DelimitedComment(new RGB(128, 128, 128), null),

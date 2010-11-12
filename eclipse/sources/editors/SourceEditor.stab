@@ -14,8 +14,12 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using java.lang;
 using org.eclipse.core.resources;
+using org.eclipse.core.runtime;
 using org.eclipse.jface.text;
+using org.eclipse.jface.text.reconciler;
+using org.eclipse.jface.text.source;
 using org.eclipse.swt.widgets;
 using org.eclipse.ui;
 using org.eclipse.ui.texteditor;
@@ -31,15 +35,36 @@ package stab.tools.eclipse.editors {
 	//
 	public class SourceEditor : AbstractDecoratedTextEditor {
 		private TextInputListener textInputListener;
+		private BackgroundCompiler backgroundCompiler;
+		private Highlighter highlighter;
+		private PartListener partListener;
+		private boolean active;
+
+		public SourceEditor() {
+			setSourceViewerConfiguration(new SourceViewerConfiguration(this));
+		}
 
 		public override void createPartControl(Composite parent) {
 			super.createPartControl(parent);
 			
 			textInputListener = new TextInputListener(this);
+			backgroundCompiler = new BackgroundCompiler(this);
+			
+			IWorkbenchWindow window = getSite().getWorkbenchWindow();
+			partListener = new PartListener(this);
+			window.getPartService().addPartListener(partListener);
 		}
 
 		public override void dispose() {
-			
+			if (partListener != null) {
+				IWorkbenchWindow window = getSite().getWorkbenchWindow();
+				window.getPartService().removePartListener(partListener);
+				partListener = null;
+			}
+			if (backgroundCompiler != null) {
+				backgroundCompiler.dispose();
+				backgroundCompiler = null;
+			}
 			if (textInputListener != null) {
 				textInputListener.dispose();
 				textInputListener = null;
@@ -47,14 +72,66 @@ package stab.tools.eclipse.editors {
 			super.dispose();
 		}
 	
+		boolean IsActive {
+			get {
+				return active;
+			}
+		}
+	
+		Highlighter Highlighter {
+			get {
+				return highlighter;
+			}
+		}
+	
 		IFile getFile() {
 			var editorInput = getEditorInput() as IFileEditorInput;
 			return (editorInput == null) ? null : editorInput.getFile();
 		}
+
+		private class SourceViewerConfiguration : org.eclipse.jface.text.source.SourceViewerConfiguration {
+			private SourceEditor editor;
+			
+			SourceViewerConfiguration(SourceEditor editor) {
+				this.editor = editor;
+			}
+		
+			public override IReconciler getReconciler(ISourceViewer sourceViewer) {
+				return new MonoReconciler(new ReconcilingStrategy(editor), false);
+			}
+		}
+		
+		private class ReconcilingStrategy : IReconcilingStrategy, IReconcilingStrategyExtension {
+			private SourceEditor editor;
+			private IProgressMonitor monitor;
+			
+			ReconcilingStrategy(SourceEditor editor) {
+				this.editor = editor;
+			}
+			
+			public void setProgressMonitor(IProgressMonitor monitor) {
+				this.monitor = monitor;
+			}
+	
+			public void initialReconcile() {
+				editor.backgroundCompiler.compile(monitor);
+			}
+	
+			public void setDocument(IDocument document) {
+			}
+	
+			public void reconcile(DirtyRegion dirtyRegion, IRegion subRegion) {
+				// Incremental mode: never called
+				throw new UnsupportedOperationException();
+			}
+	
+			public void reconcile(IRegion partition) {
+				editor.backgroundCompiler.compile(monitor);
+			}
+		}
 	
 		private class TextInputListener : ITextInputListener {
 			private SourceEditor editor;
-			private Highlighter highlighter;
 			
 			TextInputListener(SourceEditor editor) {
 				this.editor = editor;
@@ -64,14 +141,15 @@ package stab.tools.eclipse.editors {
 				if (documentProvider != null) {
 					var document = documentProvider.getDocument(editor.getEditorInput());
 					if (document != null) {
-						highlighter = new Highlighter(sourceViewer, document, editor.getFile(), editor.getSharedColors());
+						editor.highlighter = new Highlighter(sourceViewer, document, editor.getFile(), editor.getSharedColors());
 					}
 				}
 			}
 			
 			void dispose() {
-				if (highlighter != null) {
-					highlighter.dispose();
+				if (editor.highlighter != null) {
+					editor.highlighter.dispose();
+					editor.highlighter = null;
 				}
 				if (editor != null) {
 					editor.getSourceViewer().removeTextInputListener(this);
@@ -80,17 +158,48 @@ package stab.tools.eclipse.editors {
 			}
 		
 			public void inputDocumentAboutToBeChanged(IDocument oldInput, IDocument newInput) {
-				if (highlighter != null) {
-					highlighter.dispose();
-					highlighter = null;
+				if (editor.highlighter != null) {
+					editor.highlighter.dispose();
+					editor.highlighter = null;
 				}
 			}
 			
 			public void inputDocumentChanged(IDocument oldInput, IDocument newInput) {
 				if (newInput != null) {
-					highlighter = new Highlighter(editor.getSourceViewer(), newInput, editor.getFile(), editor.getSharedColors());
+					editor.highlighter = new Highlighter(editor.getSourceViewer(), newInput, editor.getFile(), editor.getSharedColors());
 				}
 			}
 		}
+		
+		private class PartListener : IPartListener {
+			private SourceEditor editor;
+			
+			PartListener(SourceEditor editor) {
+				this.editor = editor;
+			}
+		
+			public void partActivated(IWorkbenchPart part) {
+				if (part == editor) {
+					editor.active = true;
+					editor.backgroundCompiler.compileInJob();
+				}
+			}
+	
+			public void partDeactivated(IWorkbenchPart part) {
+				if (part == editor) {
+					editor.active = false;
+				}
+			}
+	
+			public void partBroughtToTop(IWorkbenchPart part) {
+			}
+	
+			public void partClosed(IWorkbenchPart part) {
+			}
+	
+			public void partOpened(IWorkbenchPart part) {
+			}
+		}
+		
 	}
 }

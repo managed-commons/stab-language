@@ -26,11 +26,24 @@ using stab.tools.syntaxtree;
 
 package stab.tools.eclipse {
 
+	public interface IProjectBuildListener {
+		void projectBuilt(ProjectBuildEvent event);
+	}
+
+	public class ProjectBuildEvent : EventObject {
+		public ProjectBuildEvent(Object source)
+				: super(source) {
+		}
+	}
+
 	//
 	// Manages the resources associated to a project with the Stab nature.
 	//
 	public class ProjectManager {
-		ProjectManager(IProject project) {
+		private Activator activator;
+	
+		ProjectManager(Activator activator, IProject project) {
+			this.activator = activator;
 			this.Project = project;
 			this.Properties = new ProjectProperties();
 			

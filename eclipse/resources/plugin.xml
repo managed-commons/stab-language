@@ -165,4 +165,72 @@
 		</page>
 	</extension>
 
+	<!-- ==================================================================================== -->
+	<!-- Annotation                                                                           -->
+	<!-- ==================================================================================== -->
+
+	<extension
+			point="org.eclipse.ui.editors.annotationTypes">
+		<type
+				name="stab.tools.eclipse.parsingErrorAnnotation"
+				super="org.eclipse.ui.workbench.texteditor.error"
+				markerSeverity="2"/>
+		<type
+				name="stab.tools.eclipse.parsingWarningAnnotation"
+				super="org.eclipse.ui.workbench.texteditor.warning"
+				markerSeverity="1"/>
+	</extension>
+
+	<extension
+			point="org.eclipse.ui.editors.markerAnnotationSpecification">
+		<specification
+				annotationType="stab.tools.eclipse.parsingErrorAnnotation"
+				colorPreferenceKey="parsingErrorAnnotationColor"
+				colorPreferenceValue="255,100,100"
+				contributesToHeader="false"
+				highlightPreferenceKey="parsingErrorAnnotationHighlightKey"
+				highlightPreferenceValue="false"
+				includeOnPreferencePage="true"
+				isGoToNextNavigationTarget="true"
+				isGoToNextNavigationTargetKey="parsingErrorAnnotationIsGotoNextKey"
+				isGoToPreviousNavigationTarget="true"
+				isGoToPreviousNavigationTargetKey="parsingErrorAnnotationIsGotoPrevKey"
+				label="%parsingErrorAnnotation.label"
+				overviewRulerPreferenceKey="parsingErrorAnnotationOverviewKey"
+				overviewRulerPreferenceValue="true"
+				presentationLayer="5"
+				showInNextPrevDropdownToolbarAction="true"
+				symbolicIcon="error"
+				textPreferenceKey="parsingErrorAnnotationTextKey"
+				textPreferenceValue="true"
+				textStylePreferenceKey="parsingErrorAnnotationTextStyleKey"
+				textStylePreferenceValue="SQUIGGLES"
+				verticalRulerPreferenceKey="parsingErrorAnnotationVerticalKey"
+				verticalRulerPreferenceValue="true"/>
+		<specification
+				annotationType="stab.tools.eclipse.parsingWarningAnnotation"
+				colorPreferenceKey="parsingWarningAnnotationColor"
+				colorPreferenceValue="255,200,0"
+				contributesToHeader="false"
+				highlightPreferenceKey="parsingWarningAnnotationHighlightKey"
+				highlightPreferenceValue="false"
+				includeOnPreferencePage="true"
+				isGoToNextNavigationTarget="true"
+				isGoToNextNavigationTargetKey="parsingWarningAnnotationIsGotoNextKey"
+				isGoToPreviousNavigationTarget="true"
+				isGoToPreviousNavigationTargetKey="parsingWarningAnnotationIsGotoPrevKey"
+				label="%parsingWarningAnnotation.label"
+				overviewRulerPreferenceKey="parsingWarningAnnotationOverviewKey"
+				overviewRulerPreferenceValue="true"
+				presentationLayer="5"
+				showInNextPrevDropdownToolbarAction="true"
+				symbolicIcon="warning"
+				textPreferenceKey="parsingWarningAnnotationTextKey"
+				textPreferenceValue="true"
+				textStylePreferenceKey="parsingWarningAnnotationTextStyleKey"
+				textStylePreferenceValue="SQUIGGLES"
+				verticalRulerPreferenceKey="parsingWarningAnnotationVerticalKey"
+				verticalRulerPreferenceValue="true"/>
+	</extension>
+
 </plugin>
