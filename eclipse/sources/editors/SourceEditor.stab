@@ -22,6 +22,7 @@ using org.eclipse.jface.text.reconciler;
 using org.eclipse.jface.text.source;
 using org.eclipse.swt.widgets;
 using org.eclipse.ui;
+using org.eclipse.ui.editors.text;
 using org.eclipse.ui.texteditor;
 
 package stab.tools.eclipse.editors {
@@ -95,9 +96,41 @@ package stab.tools.eclipse.editors {
 			SourceViewerConfiguration(SourceEditor editor) {
 				this.editor = editor;
 			}
+
+			// Enables the tooltips on the markers in the margin.
+			public override IAnnotationHover getAnnotationHover(ISourceViewer sourceViewer) {
+				return new AnnotationHover(editor);
+			}
 		
 			public override IReconciler getReconciler(ISourceViewer sourceViewer) {
 				return new MonoReconciler(new ReconcilingStrategy(editor), false);
+			}
+		}
+		
+		private class AnnotationHover : DefaultAnnotationHover {
+			private SourceEditor editor;
+		
+			AnnotationHover(SourceEditor editor) {
+				this.editor = editor;
+			}
+		
+			protected override boolean isIncluded(Annotation annotation) {
+				if (annotation == null) {
+					return true;
+				}
+				var preferenceStore = editor.getPreferenceStore();
+				if (preferenceStore == null) {
+					return true;
+				}
+				var preference = EditorsUI.getAnnotationPreferenceLookup().getAnnotationPreference(annotation);
+				if (preference == null) {
+					return true;
+				}
+				var key = preference.getVerticalRulerPreferenceKey();
+				if (key != null && !preferenceStore.getBoolean(key)) {
+					return false;
+				}
+				return true;
 			}
 		}
 		

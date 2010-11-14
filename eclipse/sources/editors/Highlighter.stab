@@ -194,32 +194,35 @@ package stab.tools.eclipse.editors {
 			Environment.trace(this, "initialization");
 			var t0 = System.nanoTime();
 
+			var newTokens = new ArrayList<Token>();
+			var newPreprocessorPositions = new ArrayList<StyledPosition>();
 			try {
-				this.Text = text;
-	
 				var errorManager = new CodeErrorManager();
-				var preprocessor = new Preprocessor(errorManager, this.Text);
+				var preprocessor = new Preprocessor(errorManager, text);
 				var preprocessedText = preprocessor.preprocess();
 				if (!errorManager.HasErrors) {
 					var scanner = new PreprocessedTextScanner(errorManager, preprocessedText);
-					var newTokens = new ArrayList<Token>();
 					LexicalUnit lu;
 					while ((lu = scanner.nextLexicalUnit()) != LexicalUnit.EndOfStream) {
 						int sp = scanner.StartPosition;
 						newTokens.add(new Token(sp, scanner.EndPosition - sp, sharedTextColors, lu, scanner.Keyword));
 					}
 					if (!errorManager.HasErrors) {
-						this.preprocessorPositions = new ArrayList<StyledPosition>();
-						computePreprocessorStyles(preprocessedText.InputSectionParts);
+						computePreprocessorStyles(preprocessedText.InputSectionParts, newPreprocessorPositions);
 						foreach (var tk in newTokens) {
 							tk.SemanticStyle = getSemanticStyle(tk.LexicalUnit);
 						}
+						this.Text = text;
 						this.tokens = newTokens;
+						this.preprocessorPositions = newPreprocessorPositions;
 						sourceViewer.invalidateTextPresentation();
 					}
 				}
 			} catch (CodeErrorException e) {
 			}
+			this.Text = text;
+			this.tokens = newTokens;
+			this.preprocessorPositions = newPreprocessorPositions;
 			
 			Environment.trace(this, "initialization done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 		}
@@ -237,7 +240,7 @@ package stab.tools.eclipse.editors {
 			}
 		}
 		
-		private void computePreprocessorStyles(Iterable<InputSectionPart> inputSectionParts) {
+		private void computePreprocessorStyles(Iterable<InputSectionPart> inputSectionParts, List<StyledPosition> preprocessorPositions) {
 			foreach (var part in inputSectionParts) {
 				if (part.InputSectionPartKind == InputSectionPartKind.SourceCode) {
 					continue;
@@ -258,11 +261,11 @@ package stab.tools.eclipse.editors {
 							preprocessorPositions.add(style);
 						}
 					} else {
-						computePreprocessorStyles(part.getInputSectionParts());
+						computePreprocessorStyles(part.getInputSectionParts(), preprocessorPositions);
 					}
 					break;
 				case Region:
-					computePreprocessorStyles(part.getInputSectionParts());
+					computePreprocessorStyles(part.getInputSectionParts(), preprocessorPositions);
 					line = document.getLineOfOffset(part.getPosition() + part.getLength() - 1);
 					style = new StyledPosition(document.getLineOffset(line), document.getLineLength(line), sharedTextColors);
 					style.SemanticStyle = SemanticStyle.Preprocessor;
@@ -362,194 +365,150 @@ package stab.tools.eclipse.editors {
 			return result;
 		}
 
+		private static void updateOffsetsAfter(int offset, int delta, List<? : StyledPosition> positions) {
+			int index = getNextPositionIndex(positions, offset);
+			if (index != -1) {
+				while (index < positions.size()) {
+					var position = positions[index++];
+					position.offset += delta;
+				}
+			}
+		}
+
 		private void update(int offset, String insertedText, int removedLength) {
 			Environment.trace(this, "update(" + offset + ", \"" + insertedText + "\", " + removedLength + ")");
 			var t0 = System.nanoTime();
 
-			var oldText = this.Text;
+			var text = document.get().toCharArray();
 			int insertedLength = insertedText.length();
-			var text = new char[sizeof(oldText) + insertedLength - removedLength];
-			int index;
-			for (index = 0; index < offset; index++) {
-				text[index] = oldText[index];
-			}
-			for (int i = 0; i < insertedLength; i++) {
-				text[index++] = insertedText.charAt(i);
-			}
-			for (int i = offset + removedLength; i < sizeof(oldText); i++) {
-				text[index++] = oldText[i];
-			}
+			int ntokens = this.tokens.size();
 
-			if (tokens == null || tokens.size() == 0) {
+			if (tokens.size() == 0 || insertedText.indexOf('#') != -1) {
+				Environment.trace(this, "No token or #");
 				initialize(text);
 				return;
 			}
 
-			// If the modified region overlaps a preprocessor directive: scan the document
-			var skippedSourceIndex = -1;
+			var pppositions = this.preprocessorPositions;
+
+			// Check if a preprocessor directive was altered
 			if (removedLength == 0) {
-				index = getPositionIndex(this.preprocessorPositions, offset);
+				int index = getPositionIndex(pppositions, offset);
 				if (index != -1) {
-					if (this.preprocessorPositions[index].SemanticStyle == SemanticStyle.Preprocessor) {
+					var ppp = pppositions[index];
+					if (ppp.SemanticStyle == SemanticStyle.Preprocessor) {
+						Environment.trace(this, "Inside a preprocessor directive");
 						initialize(text);
-						return;
 					} else {
-						skippedSourceIndex = index;
+						Environment.trace(this, "Skipped source expanded");
+						
+						// Inside a skipped source
+						ppp.length += insertedLength;
+						updateOffsetsAfter(ppp.offset + ppp.length, insertedLength, pppositions);
+						updateOffsetsAfter(ppp.offset + ppp.length, insertedLength, tokens);
+						this.Text = text;
+						((ITextViewerExtension2)sourceViewer).invalidateTextPresentation(ppp.offset, ppp.length);
 					}
+					return;
 				}
 			} else {
-				index = 0;
-				foreach (var p in this.preprocessorPositions) {
-					if (p.overlapsWith(offset, removedLength)) {
-						if (p.SemanticStyle == SemanticStyle.Preprocessor) {
-							initialize(text);
-							return;
-						} else {
-							skippedSourceIndex = index;
-							break;
-						}
-					}
-					index++;
-				}
-			}
-			if (skippedSourceIndex != -1) {
-				var position = this.preprocessorPositions[skippedSourceIndex];
-				int delta = insertedLength - removedLength;
-				position.length = insertedLength + delta;
-				for (int i = skippedSourceIndex + 1; i < this.preprocessorPositions.size(); i++) {
-					var p = this.preprocessorPositions[i];
-					p.offset += delta;
-				}
-				index = getNextPositionIndex(this.tokens, position.offset + position.length);
+				int index = getNextPositionIndex(pppositions, offset);
 				if (index != -1) {
-					for (int i = index; i < this.tokens.size(); i++) {
-						var p = this.tokens[i];
-						p.offset += delta;
+					var ppp = pppositions[index];
+					if (ppp.overlapsWith(offset, removedLength)) {
+						Environment.trace(this, "Overlaps a preprocessor directive");
+						initialize(text);
+						return;
 					}
 				}
-				return;
 			}
 
-			if (insertedText.indexOf('#') != -1) {
-				initialize(text);
-				return;
-			}
-		
-			// Get the start and end tokens
+			// Get the start token
 			int startIndex = getPositionIndex(this.tokens, offset);
-			int ppIndex = -1;
-			if (offset > 0 && startIndex == -1) {
-				if ((ppIndex = getPositionIndex(this.preprocessorPositions, offset - 1)) == -1) {
-					startIndex = getPositionIndex(this.tokens, offset - 1);
-				}
-			}
 			if (startIndex == -1) {
+				// End of document just after a preprocessor directive
+				Environment.trace(this, "End of file");
+				var ppIndex = getPositionIndex(pppositions, offset - 1);
 				if (ppIndex == -1) {
-					initialize(text);
+					startIndex = ntokens - 1;
+				} else {
+					// Just after a preprocessor directive
+					var insertedTokens = scan(insertedText.toCharArray());
+					if (insertedTokens == null) {
+						// Something went wrong: document scan
+						initialize(text);
+						return;
+					}
+					var ppp = pppositions[ppIndex];
+					int start = ppp.offset + ppp.length;
+					var newTokens = new ArrayList<Token>(tokens);
+					foreach (var t in insertedTokens) {
+						t.offset += start;
+						newTokens.add(t);
+					}
+					this.tokens = newTokens;
+					this.Text = text;
+					((ITextViewerExtension2)sourceViewer).invalidateTextPresentation(offset, insertedLength);
 					return;
 				}
-				// No start token found: text inserted at the end of the document the line just after a preprocessor directive
-				var p = this.preprocessorPositions[ppIndex];
-				int start = p.offset + p.length;
-				var insertedTokens = scan(insertedText.toCharArray());
-				if (insertedTokens == null) {
-					// Something went wrong: document scan
-					initialize(text);
-					return;
-				}
-				var newTokens = new ArrayList<Token>(this.tokens);
-				foreach (var t in insertedTokens) {
-					t.offset += start;
-					newTokens.add(t);
-				}
-				this.tokens = newTokens;
-				return;
 			}
 			
 			var startToken = this.tokens[startIndex];
 			if (offset > 0 && startIndex > 0 && startToken.offset == offset &&
 					getPositionIndex(this.preprocessorPositions, offset - 1) == -1) {
-				// if offset is the token start position: take the preceding token
-				startToken = this.tokens[--startIndex];
+					// if offset is the token start position: take the preceding token
+					startToken = this.tokens[--startIndex];
 			}
 
+			// Get the end token
 			int endIndex = getPositionIndex(this.tokens, offset + removedLength);
 			if (endIndex == -1) {
-				// The removed text is at the end of the document or in a preprocessor directive: take the preceding token
-				endIndex = getPositionIndex(this.tokens, offset + removedLength - 1);
+				// End of document
+				endIndex = ntokens - 1;
+			} else {
+				// Find the token at the end of line
+				while (tokens[endIndex].LexicalUnit != LexicalUnit.NewLine && endIndex + 1 < ntokens) {
+					endIndex++;
+				}
 			}
 			var endToken = this.tokens[endIndex];
+			int delta = insertedLength - removedLength;
 
-			// Copy the text to scan into an array
-			index = startToken.offset;
-			int startPartLength = offset - index;
-			int endPartLength = endToken.length - offset - removedLength + endToken.offset;
-			var subText = new char[startPartLength + insertedLength + endPartLength];
+			// Copy the text to scan into an array and scan it
+			int index = startToken.offset;
+			var subText = new char[endToken.offset + endToken.length + delta - startToken.offset];
 			for (int i = 0; i < sizeof(subText); i++) {
 				subText[i] = text[index++];
 			}
 			
-			// Update the offset of the trailing tokens, preprocessor directives and skipped sections
-			int delta = insertedLength - removedLength;
-			for (int i = endIndex + 1; i < this.tokens.size(); i++) {
-				var p = this.tokens[i];
-				p.offset += delta;
-			}
-			index = getNextPositionIndex(this.preprocessorPositions, endToken.offset + endToken.length);
-			if (index != -1) {
-				for (int i = index; i < this.preprocessorPositions.size(); i++) {
-					var p = this.preprocessorPositions[i];
-					p.offset += delta;
-				}
-			}
-			
-			// Create the new list of tokens
-			var newTokens = new ArrayList<Token>();
-			for (int i = 0; i < startIndex; i++) {
-				newTokens.add(this.tokens[i]);
-			}
 			var insertedTokens = scan(subText);
 			if (insertedTokens == null) {
 				// Something went wrong: try a full scan
 				initialize(text);
 				return;
 			}
-			int start = startToken.getOffset();
-			foreach (var t in insertedTokens) {
-				t.offset += start;
-				newTokens.add(t);
+			updateOffsetsAfter(0, startToken.offset, insertedTokens);
+
+			// Update the offset of the trailing tokens and preprocessor parts
+			updateOffsetsAfter(endToken.offset + endToken.length, delta, pppositions);
+			updateOffsetsAfter(endToken.offset + endToken.length, delta, tokens);
+			
+			// Create the new list of tokens
+			var newTokens = new ArrayList<Token>();
+			for (int i = 0; i < startIndex; i++) {
+				newTokens.add(tokens[i]);
 			}
-			int ntokens = this.tokens.size();
-			// Fill the gap between the old and new tokens with a fake token if needed
-			if (newTokens.size() == 0) {
-				if (insertedLength > 0) {
-					newTokens.add(new Token(offset, insertedLength, sharedTextColors, null, null));
-				}
-			} else {
-				var tk1 = newTokens[newTokens.size() - 1];
-				int offset1 = tk1.offset;
-				int length1 = tk1.length;
-				int off = offset1 + length1;
-				if (endIndex + 1 < ntokens) {
-					var tk2 = this.tokens[endIndex + 1];
-					int offset2 = tk2.getOffset();
-					if (off < offset2 && getPositionIndex(this.preprocessorPositions, offset2 - 1) == -1) {
-						newTokens.add(new Token(off, offset2 - off, sharedTextColors, null, null));
-					}
-				} else {
-					int offsetEnd = endToken.offset + endToken.length + delta;
-					if (off < offsetEnd) {
-						newTokens.add(new Token(off, offsetEnd - off, sharedTextColors, null, null));
-					}
-				}
-			}
+			newTokens.addAll(insertedTokens);
 			for (int i = endIndex + 1; i < ntokens; i++) {
-				newTokens.add(this.tokens[i]);
+				newTokens.add(tokens[i]);
 			}
 			
-			this.tokens = newTokens;
 			this.Text = text;
-			((ITextViewerExtension2)sourceViewer).invalidateTextPresentation(offset - startPartLength, sizeof(subText));
+			this.tokens = newTokens;
+			
+			int off = startToken.offset;
+			int len = Math.min(sizeof(subText) + removedLength, sizeof(text) - off);
+			((ITextViewerExtension2)sourceViewer).invalidateTextPresentation(off, len);
 						
 			Environment.trace(this, "update done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 		}

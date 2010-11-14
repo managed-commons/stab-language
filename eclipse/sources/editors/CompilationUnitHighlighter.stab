@@ -127,6 +127,8 @@ package stab.tools.eclipse.editors {
 		private void highlightInterface(InterfaceDeclarationNode declaration) {
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.Interface;
 			
+			highlightAnnotations(declaration.Annotations);
+			
 			var t = declaration.getUserData(typeof(JvmTypeInfo));
 			int i = 0;
 			foreach (var si in t.Interfaces) {
@@ -275,6 +277,12 @@ package stab.tools.eclipse.editors {
 			foreach (var p in parameters) {
 				highlightType(p.Type, pit.next().Type);
 				getToken(p.NameOffset).SemanticStyle = SemanticStyle.Parameter;
+			}
+		}
+
+		private void highlightAnnotations(List<AnnotationSectionNode> annotations) {
+			foreach (var a in annotations.selectMany(p => p.Annotations)) {
+				highlightType(a.Type, a.getUserData(typeof(JvmTypeInfo)));
 			}
 		}
 	
