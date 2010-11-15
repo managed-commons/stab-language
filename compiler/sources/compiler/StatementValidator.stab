@@ -136,12 +136,12 @@ package stab.tools.compiler {
                                 BytecodeHelper.getDisplayName(sourceType),
                                 BytecodeHelper.getDisplayName(context.TypeSystem.getType("java/lang/Iterable")));
                     }
-                    foreachStatement.addUserData(iterableType);
+                    foreachStatement.addOrReplaceUserData(iterableType);
                     elementType = BytecodeHelper.getIterableOrIteratorElementType(iterableType);
                 }
                 var local = context.MemberResolver.defineLocal(context.getIdentifier(foreachStatement.NameOffset, foreachStatement.NameLength),
                         ValidationHelper.getVariableType(context, elementType), context.CodeValidationContext.CurrentMethod);
-                foreachStatement.addUserData(local);
+                foreachStatement.addOrReplaceUserData(local);
                 handleStatement(foreachStatement.Statement, null);
             } finally {
                 context.MemberResolver.leaveScope();

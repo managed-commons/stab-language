@@ -67,7 +67,7 @@ package stab.tools.eclipse.helpers {
 			private set;
 		}
 		
-		public JvmTypeSystem ClassPathTypeSystem {
+		public String[] ClassPath {
 			get;
 			set;
 		}
@@ -207,7 +207,7 @@ package stab.tools.eclipse.helpers {
 						}
 						this.parameters.AllFiles.addAll(parameters.AllFiles.getAllResources());
 						this.parameters.DependencyInfo = newDependencyInfo;
-						this.parameters.ClassPathTypeSystem = parameters.ClassPathTypeSystem;
+						this.parameters.ClassPath = parameters.ClassPath;
 						this.parameters.TypeSystem = results.TypeSystem;
 						
 						results = compileCore(new SubProgressMonitor(monitor, 2));
@@ -294,7 +294,7 @@ package stab.tools.eclipse.helpers {
 				// Compiling
 				var t1 = System.nanoTime();
 				
-				var typeSystem = new JvmTypeSystem(new String[0], parameters.ClassPathTypeSystem);
+				var typeSystem = new JvmTypeSystem(parameters.ClassPath);
 				JvmTypeSystemHelper.cloneTypes(typesToCopy, typeSystem);
 				
 				var annotatedTypeSystem = new JvmTypeSystem(new[] { Environment.getLibraryPath("stabal.jar") }, typeSystem);
@@ -306,8 +306,8 @@ package stab.tools.eclipse.helpers {
 				cparams.ProgressTracker = new CompilationProgressTracker(monitor);
 				
 				var cunits = compilationUnits.values().toArray(new CompilationUnitNode[compilationUnits.size()]);
-				var cresults = new StabCompiler().compileFromCompilationUnits(cparams, cunits); 
-
+				var cresults = new StabCompiler().compileFromCompilationUnits(cparams, cunits);
+				
 				Environment.trace(this, "compilation of " + sizeof(cunits) + " files done in " + ((System.nanoTime() - t1) / 1e6) + "ms");
 
 				foreach (var error in cresults.Errors) {

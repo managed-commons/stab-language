@@ -22,6 +22,7 @@ using org.eclipse.jface.text;
 using org.eclipse.jface.text.source;
 using org.eclipse.ui.progress;
 using org.eclipse.ui.texteditor;
+using stab.query;
 using stab.tools.eclipse.helpers;
 using stab.tools.syntaxtree;
 
@@ -72,7 +73,7 @@ package stab.tools.eclipse.editors {
 				}
 				var projectManager = Environment.getProjectManager(file);
 				if (projectManager == null || projectManager.RequireFullBuild) {
-					Environment.trace(this, "Aborted " + projectManager);
+					Environment.trace(this, "compilation aborted");
 					monitor.worked(5);
 					return;
 				}
@@ -81,7 +82,7 @@ package stab.tools.eclipse.editors {
 				var text = editor.Highlighter.Text;
 				var parameters = new SourceCompilerParameters {
 					ProgressiveBuild = true,
-					ClassPathTypeSystem = projectManager.ClassPathTypeSystem,
+					ClassPath = projectManager.ClassPath,
 					TypeSystem = projectManager.TypeSystem,
 					DependencyInfo = projectManager.DependencyInfo
 				};
@@ -116,8 +117,9 @@ package stab.tools.eclipse.editors {
 						break;
 					}
 				}
-				
-				if (!results.CodeErrors.isEmpty()) {
+
+				var errors = results.CodeErrors.where(p => p.Filename.equals(filename)).toList();
+				if (!errors.isEmpty()) {
 					IDocument document = null;
 					var documentProvider = editor.getDocumentProvider();
 					if (documentProvider != null) {
@@ -125,7 +127,7 @@ package stab.tools.eclipse.editors {
 					}
 					var markers = file.findMarkers(IMarker.PROBLEM, false, IFile.DEPTH_ZERO);
 					var tokens = editor.Highlighter.Tokens;
-					foreach (var error in results.CodeErrors) {
+					foreach (var error in errors) {
 						IMarker marker = null;
 						if (markers != null) {
 							foreach (var m in markers) {
@@ -174,10 +176,7 @@ package stab.tools.eclipse.editors {
 				
 				monitor.worked(1);
 			} finally {
-				try {
-					monitor.done();
-				} catch {
-				}
+				monitor.done();
 			}
 			
 			Environment.trace(this, "compiling done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
@@ -195,10 +194,13 @@ package stab.tools.eclipse.editors {
 			}
 		
 			public override IStatus runInUIThread(IProgressMonitor monitor) {
-				monitor.beginTask("1", 1);
-				editor.Highlighter.update(text, compilationUnit);
-				monitor.worked(1);
-				monitor.done();
+				try {
+					monitor.beginTask("", 1);
+					editor.Highlighter.update(text, compilationUnit);
+					monitor.worked(1);
+					monitor.done();
+				} catch {
+				}
 				return (monitor.isCanceled()) ? Status.CANCEL_STATUS : Status.OK_STATUS;
 			}
 		}
@@ -213,7 +215,10 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override IStatus run(IProgressMonitor monitor) {
-				compiler.compile(monitor);
+				try {
+					compiler.compile(monitor);
+				} catch {
+				}
 				return (monitor.isCanceled()) ? Status.CANCEL_STATUS : Status.OK_STATUS;
 			}
 		}

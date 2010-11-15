@@ -1407,7 +1407,7 @@ package stab.tools.compiler {
             
             expressionGenerator.handleExpression(synchronizedStatement.Lock, null, true);
             var local = generator.declareLocal(context.TypeSystem.getType("java/lang/Object"), "synchro$lock");
-            synchronizedStatement.addUserData(local);
+            synchronizedStatement.addOrReplaceUserData(local);
             generator.emit(JvmOpcode.Dup);
             generator.emit(JvmOpcode.Astore, local);
             generator.emit(JvmOpcode.Monitorenter);
@@ -1611,7 +1611,7 @@ package stab.tools.compiler {
         private void emitDispose(UsingStatementNode usingStatement) {
             var generator = context.MethodGenerationContext.Generator;
             var resource = usingStatement.ResourceAcquisition;
-            if (resource == StatementKind.Expression) {
+            if (resource.StatementKind == StatementKind.Expression) {
                 var local = resource.getUserData(typeof(JvmLocalInfo));
                 var endLabel = generator.defineLabel();
                 generator.emit(JvmOpcode.Aload, local);

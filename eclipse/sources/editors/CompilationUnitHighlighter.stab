@@ -333,6 +333,12 @@ package stab.tools.eclipse.editors {
 				var array = (ArrayTypeReferenceNode)type;
 				highlightType(array.ElementType, (t.TypeKind == TypeKind.Array) ? t.ElementType : t);
 				break;
+				
+			case LowerBoundedWildcard:
+			case UpperBoundedWildcard:
+				var wildcard = (WildcardTypeReferenceNode)type;
+				highlightType(wildcard.Bound, t.WildcardBound);
+				break;
 			}
 		}
 		

@@ -93,7 +93,7 @@ package stab.tools.eclipse {
 			set;
 		}
 
-		public JvmTypeSystem ClassPathTypeSystem {
+		public String[] ClassPath {
 			get;
 			set;
 		}

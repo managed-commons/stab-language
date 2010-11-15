@@ -109,7 +109,7 @@ package stab.tools.eclipse.editors {
 			this.document = document;
 			this.sharedTextColors = sharedTextColors;
 			this.compilationUnitHighlighter = new CompilationUnitHighlighter();
-			textListener = new TextListener(this);
+			this.textListener = new TextListener(this);
 			
 			initialize(document.get().toCharArray());
 		}
@@ -179,8 +179,13 @@ package stab.tools.eclipse.editors {
 			if (text != this.Text) {
 				return;
 			}
-			compilationUnitHighlighter.highlight(compilationUnit, tokens);
-			sourceViewer.invalidateTextPresentation();
+			try {
+				compilationUnitHighlighter.highlight(compilationUnit, tokens);
+				sourceViewer.invalidateTextPresentation();
+			} catch (Exception e) {
+				Environment.logException(e);
+				initialize(text);
+			}
 		}
 		
 		void dispose() {
@@ -216,16 +221,37 @@ package stab.tools.eclipse.editors {
 						this.tokens = newTokens;
 						this.preprocessorPositions = newPreprocessorPositions;
 						sourceViewer.invalidateTextPresentation();
+					} else {
+						newTokens.clear();
 					}
 				}
 			} catch (CodeErrorException e) {
+				newTokens.clear();
 			}
 			this.Text = text;
 			this.tokens = newTokens;
 			this.preprocessorPositions = newPreprocessorPositions;
+			//checkPositionsConsistency();
 			
 			Environment.trace(this, "initialization done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 		}
+		
+		/*
+		private void checkPositionsConsistency() {
+			int offset = 0;
+			int tindex = 0;
+			int ppindex = 0;
+			while (tindex < tokens.size() || ppindex < preprocessorPositions.size()) {
+				if (tindex < tokens.size() && tokens[tindex].offset == offset) {
+					offset += tokens[tindex++].length;
+				} else if (ppindex < preprocessorPositions.size() && preprocessorPositions[ppindex].offset == offset) {
+					offset += preprocessorPositions[ppindex++].length;
+				} else {
+					throw new IllegalStateException("offset: " + offset);
+				}
+			}
+		}
+		*/
 
 		private void addPreprocessorSymbols(Set<String> symbols) {
 			var it = Query.empty<String>();
@@ -249,24 +275,24 @@ package stab.tools.eclipse.editors {
 				var style = new StyledPosition(document.getLineOffset(line), document.getLineLength(line), sharedTextColors);
 				style.SemanticStyle = SemanticStyle.Preprocessor;
 				preprocessorPositions.add(style);
-				switch (part.getInputSectionPartKind()) {
+				switch (part.InputSectionPartKind) {
 				case If:
 				case Elif:
 				case Else:
-					if (part.getSkippedSection()) {
-						InputSectionPart skippedPart = Query.firstOrDefault(part.getInputSectionParts());
+					if (part.SkippedSection) {
+						InputSectionPart skippedPart = Query.firstOrDefault(part.InputSectionParts);
 						if (skippedPart != null) {
-							style = new StyledPosition(skippedPart.getPosition(), skippedPart.getLength(), sharedTextColors);
+							style = new StyledPosition(skippedPart.Position, skippedPart.Length, sharedTextColors);
 							style.SemanticStyle = SemanticStyle.SkippedSource;
 							preprocessorPositions.add(style);
 						}
 					} else {
-						computePreprocessorStyles(part.getInputSectionParts(), preprocessorPositions);
+						computePreprocessorStyles(part.InputSectionParts, preprocessorPositions);
 					}
 					break;
 				case Region:
-					computePreprocessorStyles(part.getInputSectionParts(), preprocessorPositions);
-					line = document.getLineOfOffset(part.getPosition() + part.getLength() - 1);
+					computePreprocessorStyles(part.InputSectionParts, preprocessorPositions);
+					line = document.getLineOfOffset(part.Position + part.Length - 1);
 					style = new StyledPosition(document.getLineOffset(line), document.getLineLength(line), sharedTextColors);
 					style.SemanticStyle = SemanticStyle.Preprocessor;
 					preprocessorPositions.add(style);
@@ -383,7 +409,7 @@ package stab.tools.eclipse.editors {
 			int insertedLength = insertedText.length();
 			int ntokens = this.tokens.size();
 
-			if (tokens.size() == 0 || insertedText.indexOf('#') != -1) {
+			if (ntokens == 0 || insertedText.indexOf('#') != -1) {
 				Environment.trace(this, "No token or #");
 				initialize(text);
 				return;
@@ -476,8 +502,9 @@ package stab.tools.eclipse.editors {
 
 			// Copy the text to scan into an array and scan it
 			int index = startToken.offset;
-			var subText = new char[endToken.offset + endToken.length + delta - startToken.offset];
-			for (int i = 0; i < sizeof(subText); i++) {
+			int subLength = endToken.offset + endToken.length + delta - index;
+			var subText = new char[subLength];
+			for (int i = 0; i < subLength; i++) {
 				subText[i] = text[index++];
 			}
 			
@@ -507,8 +534,10 @@ package stab.tools.eclipse.editors {
 			this.tokens = newTokens;
 			
 			int off = startToken.offset;
-			int len = Math.min(sizeof(subText) + removedLength, sizeof(text) - off);
+			int len = Math.min(subLength + removedLength, sizeof(text) - off);
 			((ITextViewerExtension2)sourceViewer).invalidateTextPresentation(off, len);
+
+			//checkPositionsConsistency();
 						
 			Environment.trace(this, "update done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 		}

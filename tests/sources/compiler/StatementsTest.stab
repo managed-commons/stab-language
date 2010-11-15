@@ -555,5 +555,10 @@ package stab.tools.compiler.test {
 		public void tryFinallyLocal() {
 			doTest("TryFinallyLocal", new Class<?>[] {}, new Object[] {}, 1);
 		}
+		
+		[Test]
+		public void tryInFinally2() {
+			doTest("TryInFinally2", new Class<?>[] {}, new Object[] {}, 3);
+		}
 	}
 }

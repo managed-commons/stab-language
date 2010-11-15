@@ -67,9 +67,8 @@ package stab.tools.eclipse {
 				foreach (var file in libFiles) {
 					classPath[--i] = file.getLocation().toOSString();
 				}
-				var classPathTypeSystem = new JvmTypeSystem(classPath);
 				
-				var parameters = new SourceCompilerParameters { FullBuild = true, ClassPathTypeSystem = classPathTypeSystem };
+				var parameters = new SourceCompilerParameters { FullBuild = true, ClassPath = classPath };
 				parameters.AllFiles.addAll(projectManager.getSourceFiles());
 				foreach (var s in projectManager.Properties.PreprocessorSymbols) {
 					parameters.PreprocessorSymbols.add(s);
@@ -112,10 +111,9 @@ package stab.tools.eclipse {
 					}
 					
 					Environment.trace(this, results.ClassFiles.size() + " .class files saved in " + ((System.nanoTime() - t1) / 1e6) + "ms");
-					Environment.trace(this, "DependencyInfo " + results.DependencyInfo);
 
 					projectManager.DependencyInfo = results.DependencyInfo;
-					projectManager.ClassPathTypeSystem = classPathTypeSystem;
+					projectManager.ClassPath = classPath;
 					projectManager.TypeSystem = results.TypeSystem;
 					projectManager.AnnotatedTypeSystem = results.AnnotatedTypeSystem;
 					projectManager.CompilationUnits = results.CompilationUnits;
@@ -147,7 +145,7 @@ package stab.tools.eclipse {
 
 				var parameters = new SourceCompilerParameters {
 					ProgressiveBuild = true,
-					ClassPathTypeSystem = projectManager.ClassPathTypeSystem,
+					ClassPath = projectManager.ClassPath,
 					TypeSystem = projectManager.TypeSystem,
 					DependencyInfo = projectManager.DependencyInfo
 				};
@@ -209,6 +207,7 @@ package stab.tools.eclipse {
 					}
 					
 					// TODO: delete the .class generated from the types contained in deletedFiles
+					
 					projectManager.DependencyInfo = results.DependencyInfo;
 					projectManager.TypeSystem = results.TypeSystem;
 					projectManager.AnnotatedTypeSystem = results.AnnotatedTypeSystem;

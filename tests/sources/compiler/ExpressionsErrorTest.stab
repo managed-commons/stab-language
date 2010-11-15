@@ -145,14 +145,14 @@ package stab.tools.compiler.test {
 		[Test]
 		public void enumEquals() {
 			doTest("EnumEquals", new String[]{
-				"EnumEquals.stab (6, 16) error 175: Operator '==' cannot applied to operand of type 'C.E1' and 'C.E2'" },
+				"EnumEquals.stab (6, 16) error 175: Operator '==' cannot be applied to operand of type 'C.E1' and 'C.E2'" },
 				new String[] {});
 		}
 		
 		[Test]
 		public void genericSubtract() {
 			doTest("GenericSubtract", new String[]{
-				"GenericSubtract.stab (3, 16) error 175: Operator '-' cannot applied to operand of type 'T' and 'U'",
+				"GenericSubtract.stab (3, 16) error 175: Operator '-' cannot be applied to operand of type 'T' and 'U'",
 				"GenericSubtract.stab (3, 16) error 234: Cannot implicitly convert type 'T' to 'int'" },
 				new String[] {});
 		}
@@ -160,7 +160,14 @@ package stab.tools.compiler.test {
 		[Test]
 		public void stringSubtract() {
 			doTest("StringSubtract", new String[]{
-				"StringSubtract.stab (6, 16) error 175: Operator '-' cannot applied to operand of type 'java.lang.String' and 'int'" },
+				"StringSubtract.stab (6, 16) error 175: Operator '-' cannot be applied to operand of type 'java.lang.String' and 'int'" },
+				new String[] {});
+		}
+
+		[Test]
+		public void equalsOperator() {
+			doTest("EqualsOperator", new String[]{
+				"EqualsOperator.stab (5, 13) error 175: Operator '==' cannot be applied to operand of type 'java.lang.Object' and 'int'" },
 				new String[] {});
 		}
 	}

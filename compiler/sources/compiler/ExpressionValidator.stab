@@ -648,10 +648,10 @@ package stab.tools.compiler {
             case Xor:
                 if (lt == null) {
                     binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
-                    addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.getOperator()), left, right);
+                    addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 } else if (lt.IsNumeric) {
                     if (ri == null || !rt.IsNumeric) {
-                        addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.getOperator()), left, right);
+                        addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
                     if (lt.NumericTypeKind == NumericTypeKind.Long || rt.NumericTypeKind == NumericTypeKind.Long) {
                         lt = rt = JvmTypeInfo.LONG;
@@ -671,7 +671,7 @@ package stab.tools.compiler {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                 } else {
                     binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
-                    addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.getOperator()), left, right);
+                    addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 }
                 break;
                 
@@ -715,8 +715,8 @@ package stab.tools.compiler {
                 } else if (rt == null) {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(lt);
-                } else if (lt.IsNumeric) {
-                    if (!rt.IsNumeric) {
+                } else if (lt.IsNumeric || rt.IsNumeric) {
+                    if (!lt.IsNumeric || !rt.IsNumeric) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
                         if (lt.IsPrimitive || rt.IsPrimitive) {
@@ -737,13 +737,13 @@ package stab.tools.compiler {
                         }
                     }
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
-                } else if (lt == JvmTypeInfo.BOOLEAN) {
-                    if (rt != JvmTypeInfo.BOOLEAN) {
+                } else if (lt == JvmTypeInfo.BOOLEAN || rt == JvmTypeInfo.BOOLEAN) {
+                    if (lt != JvmTypeInfo.BOOLEAN || rt != JvmTypeInfo.BOOLEAN) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(JvmTypeInfo.BOOLEAN);
-				} else if (lt.IsEnum) {
+				} else if (lt.IsEnum || rt.IsEnum) {
 					if (lt != rt) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
 					}
