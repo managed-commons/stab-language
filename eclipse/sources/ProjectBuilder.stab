@@ -124,6 +124,7 @@ package stab.tools.eclipse {
 				updateMarkers(results.CodeErrors, parameters.AllFiles);
 
 				monitor.worked(1);
+			} catch (InterruptedException) {
 			} finally {
 				monitor.done();
 			}
@@ -227,7 +228,7 @@ package stab.tools.eclipse {
 				updateMarkers(results.CodeErrors, parameters.AllFiles);
 
 				monitor.worked(1);
-				
+			} catch (InterruptedException) {
 			} finally {
 				monitor.done();
 			}

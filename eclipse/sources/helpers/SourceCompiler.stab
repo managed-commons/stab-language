@@ -279,6 +279,9 @@ package stab.tools.eclipse.helpers {
 				}
 				Environment.trace(this, "compiling " + filesToCompile.count() + " files");
 				monitor.worked(1);
+				if (monitor.isCanceled()) {
+					throw new InterruptedException();
+				}
 
 				var compilationUnits = new HashMap<String, CompilationUnitNode>();
 				
@@ -290,6 +293,9 @@ package stab.tools.eclipse.helpers {
 					}
 				}
 				monitor.worked(1);
+				if (monitor.isCanceled()) {
+					throw new InterruptedException();
+				}
 				
 				// Compiling
 				var t1 = System.nanoTime();
@@ -469,10 +475,16 @@ package stab.tools.eclipse.helpers {
 			}
 			
 			public void compilationStageFinished(CompilationStage stage) {
+				if (monitor.isCanceled()) {
+					throw new InterruptedException();
+				}
 				monitor.worked(1);
 				ticks++;
 			}
 			public void compilationFinished() {
+				if (monitor.isCanceled()) {
+					throw new InterruptedException();
+				}
 				monitor.worked(7 - ticks);
 			}
 		}

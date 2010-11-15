@@ -96,7 +96,7 @@ package stab.tools.eclipse.editors {
 				parameters.GenerateClassFiles = false;
 				
 				var compiler = new SourceCompiler();
-				var results = compiler.compile(parameters, new SubProgressMonitor(monitor, 4));
+				var results = compiler.compile(parameters, new SubProgressMonitor(new ProgressMonitor(monitor, text, editor.Highlighter), 4));
 				if (!results.Failed) {
 					var compilationUnit = results.CompilationUnits[filename];
 					if (compilationUnit != null && text == editor.Highlighter.Text) {
@@ -175,11 +175,56 @@ package stab.tools.eclipse.editors {
 				}
 				
 				monitor.worked(1);
+			} catch (InterruptedException) {
 			} finally {
 				monitor.done();
 			}
 			
 			Environment.trace(this, "compiling done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
+		}
+		
+		private class ProgressMonitor : IProgressMonitor {
+			private IProgressMonitor monitor;
+			private char[] text;
+			private Highlighter highlighter;
+		
+			ProgressMonitor(IProgressMonitor monitor, char[] text, Highlighter highlighter) {
+				this.monitor = monitor;
+				this.text = text;
+				this.highlighter = highlighter;
+			}
+		
+			public void beginTask(String name, int totalWork) {
+				monitor.beginTask(name, totalWork);
+			}
+			
+			public void done() {
+				monitor.done();
+			}
+			
+			public void internalWorked(double work) {
+				monitor.internalWorked(work);
+			}
+			
+			public boolean isCanceled() {
+				return text != highlighter.Text || monitor.isCanceled();
+			}
+			
+			public void setCanceled(boolean value) {
+				monitor.setCanceled(value);
+			}
+			
+			public void setTaskName(String name) {
+				monitor.setTaskName(name);
+			}
+			
+			public void subTask(String name) {
+				monitor.subTask(name);
+			}
+			
+			public void worked(int work) {
+				monitor.worked(work);
+			}
 		}
 		
 		private class HighlightJob : UIJob {
