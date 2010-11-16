@@ -560,5 +560,15 @@ package stab.tools.compiler.test {
 		public void tryInFinally2() {
 			doTest("TryInFinally2", new Class<?>[] {}, new Object[] {}, 3);
 		}
+		
+		[Test]
+		public void for2() {
+			doTest("For2", new Class<?>[] {}, new Object[] {}, "AC");
+		}
+		
+		[Test]
+		public void for3() {
+			doTest("For3", new Class<?>[] {}, new Object[] {}, 3);
+		}
 	}
 }

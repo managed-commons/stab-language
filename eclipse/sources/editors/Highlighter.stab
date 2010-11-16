@@ -111,7 +111,7 @@ package stab.tools.eclipse.editors {
 			this.compilationUnitHighlighter = new CompilationUnitHighlighter();
 			this.textListener = new TextListener(this);
 			
-			initialize(document.get().toCharArray());
+			initialize(document.get().toCharArray(), true);
 		}
 
 		//
@@ -184,7 +184,7 @@ package stab.tools.eclipse.editors {
 				sourceViewer.invalidateTextPresentation();
 			} catch (Exception e) {
 				Environment.logException(e);
-				initialize(text);
+				initialize(text, false);
 			}
 		}
 		
@@ -195,7 +195,7 @@ package stab.tools.eclipse.editors {
 			}
 		}
 
-		private void initialize(char[] text) {
+		private void initialize(char[] text, boolean invalidate) {
 			Environment.trace(this, "initialization");
 			var t0 = System.nanoTime();
 
@@ -220,7 +220,9 @@ package stab.tools.eclipse.editors {
 						this.Text = text;
 						this.tokens = newTokens;
 						this.preprocessorPositions = newPreprocessorPositions;
-						sourceViewer.invalidateTextPresentation();
+						if (invalidate) {
+							sourceViewer.invalidateTextPresentation();
+						}
 					} else {
 						newTokens.clear();
 					}
@@ -411,7 +413,7 @@ package stab.tools.eclipse.editors {
 
 			if (ntokens == 0 || insertedText.indexOf('#') != -1) {
 				Environment.trace(this, "No token or #");
-				initialize(text);
+				initialize(text, false);
 				return;
 			}
 
@@ -424,7 +426,7 @@ package stab.tools.eclipse.editors {
 					var ppp = pppositions[index];
 					if (ppp.SemanticStyle == SemanticStyle.Preprocessor) {
 						Environment.trace(this, "Inside a preprocessor directive");
-						initialize(text);
+						initialize(text, false);
 					} else {
 						Environment.trace(this, "Skipped source expanded");
 						
@@ -443,7 +445,7 @@ package stab.tools.eclipse.editors {
 					var ppp = pppositions[index];
 					if (ppp.overlapsWith(offset, removedLength)) {
 						Environment.trace(this, "Overlaps a preprocessor directive");
-						initialize(text);
+						initialize(text, false);
 						return;
 					}
 				}
@@ -462,7 +464,7 @@ package stab.tools.eclipse.editors {
 					var insertedTokens = scan(insertedText.toCharArray());
 					if (insertedTokens == null) {
 						// Something went wrong: document scan
-						initialize(text);
+						initialize(text, false);
 						return;
 					}
 					var ppp = pppositions[ppIndex];
@@ -511,7 +513,7 @@ package stab.tools.eclipse.editors {
 			var insertedTokens = scan(subText);
 			if (insertedTokens == null) {
 				// Something went wrong: try a full scan
-				initialize(text);
+				initialize(text, false);
 				return;
 			}
 			updateOffsetsAfter(0, startToken.offset, insertedTokens);

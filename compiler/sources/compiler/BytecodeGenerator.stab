@@ -705,11 +705,10 @@ package stab.tools.compiler {
             }
             var generator = context.MethodGenerationContext.Generator;
             generator.beginScope();
+            emitBeginLabel(info);
+            
             var startLabel = generator.defineLabel();
-            if (info.BeginLabel == null) {
-                info.BeginLabel = generator.defineLabel();
-            }
-            var conditionLabel = info.getBeginLabel();
+            var conditionLabel = generator.defineLabel();
             JvmLabelMarker continueLabel;
             if (forStatement.Iterator.isEmpty()) {
                 continueLabel = conditionLabel;
@@ -724,6 +723,9 @@ package stab.tools.compiler {
             if (cinfo != null) {
                 cinfo.Negate = false;
             }
+            foreach (var s in forStatement.Initializer) {
+                handleStatement(s, source);
+            }
             if (cinfo != null && cinfo.IsConstant) {
                 if (((Boolean)cinfo.Value).booleanValue()) {
                     generator.markLabel(startLabel);
@@ -736,9 +738,6 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Goto, startLabel);
                 }
             } else {
-                foreach (var s in forStatement.Initializer) {
-                    handleStatement(s, source);
-                }
                 if (forStatement.Condition != null) {
                     generator.emit(JvmOpcode.Goto, conditionLabel);
                 }
