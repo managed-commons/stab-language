@@ -221,7 +221,13 @@ package stab.tools.build {
 			deleteFile("runtime/stabrt.jar");
 			deleteFile("runtime/doc.xml");
 			deleteFile("tests/tests.jar");
-
+			
+			foreach (var f in new File("eclipse").listFiles()) {
+				if (f.getName().startsWith("stab.tools.eclipse_")) {
+					f.delete();
+				}
+			}
+			
 			deleteDir("tests/resources/ExpressionsTest/generated");
 			deleteDir("tests/resources/LibraryTest/generated");
 			deleteDir("tests/resources/IntegrationTest/generated");

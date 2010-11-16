@@ -307,7 +307,7 @@ package stab.tools.compiler {
                 }
             }
             if (initializer != null) {
-                handleExpression(initializer, (type == null) ? targetType : type, true);
+                handleExpression(initializer, (type == null) ? targetType : null, true);
                 var iinfo = initializer.getUserData(typeof(ExpressionInfo));
                 if (iinfo == null) {
                     if (type == null || type.IsPrimitive) {

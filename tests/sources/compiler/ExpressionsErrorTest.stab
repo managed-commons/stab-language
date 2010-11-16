@@ -170,5 +170,12 @@ package stab.tools.compiler.test {
 				"EqualsOperator.stab (5, 13) error 175: Operator '==' cannot be applied to operand of type 'java.lang.Object' and 'int'" },
 				new String[] {});
 		}
+
+		[Test]
+		public void arrayInitializer() {
+			doTest("ArrayInitializer", new String[]{
+				"ArrayInitializer.stab (5, 27) error 234: Cannot implicitly convert type 'java.lang.String[]' to 'java.lang.Class<?>[]'" },
+				new String[] {});
+		}
 	}
 }
