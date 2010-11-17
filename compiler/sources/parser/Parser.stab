@@ -57,7 +57,7 @@ package stab.tools.parser {
         }
 
         private CompilationUnitNode parseCompilationUnit() {
-            CompilationUnitNode compilationUnit = new CompilationUnitNode(scanner.getText()) { Body = parsePackageBody(true, 0) };
+            var compilationUnit = new CompilationUnitNode(scanner.Text) { Body = parsePackageBody(true, 0) };
 			compilationUnit.StartPosition = 0;
 			compilationUnit.EndPosition = sizeof(compilationUnit.Text);
 			return compilationUnit;

@@ -23,12 +23,12 @@ package stab.tools.eclipse.helpers {
 
 	public class JvmTypeSystemHelper {
 	
-		public static boolean hasStructureChanged(JvmTypeInfo oldType, JvmTypeInfo newType) {
+		public static boolean isStructurallyEqual(JvmTypeInfo oldType, JvmTypeInfo newType) {
 			if (oldType.IsNestedPrivate) {
-				return false;
+				return true;
 			}
 			if (!sameTypes(oldType.BaseType, newType.BaseType)) {
-				return true;
+				return false;
 			}
 			
 			foreach (var i in oldType.Interfaces) {
@@ -40,38 +40,38 @@ package stab.tools.eclipse.helpers {
 					}
 				}
 				if (!found) {
-					return true;
+					return false;
 				}
 			}
 			
 			foreach (var f in oldType.Fields.where(p => !p.IsSynthetic && !p.IsPrivate)) {
 				var g = newType.getField(f.Name);
 				if (g == null) {
-					return true;
+					return false;
 				}
 				if (!sameTypes(f.Type, g.Type)) {
-					return true;
+					return false;
 				}
 				if (f.IsStatic != g.IsStatic) {
-					return true;
+					return false;
 				}
 				if (f.IsPublic != g.IsPublic) {
-					return true;
+					return false;
 				}
 				if (f.IsProtected != g.IsProtected) {
-					return true;
+					return false;
 				}
 				if (f.IsPrivate != g.IsPrivate) {
-					return true;
+					return false;
 				}
 				if (f.IsFinal != g.IsFinal) {
-					return true;
+					return false;
 				}
 			}
 			foreach (var f in newType.Fields.where(p => !p.IsSynthetic && !p.IsPrivate)) {
 				var g = oldType.getField(f.Name);
 				if (g == null) {
-					return true;
+					return false;
 				}
 			}
 	
@@ -80,26 +80,26 @@ package stab.tools.eclipse.helpers {
 				foreach (var n in newType.Methods.where(p => !p.IsSynthetic && !p.IsPrivate)) {
 					if (sameMethods(m, n)) {
 						if (m.IsStatic != n.IsStatic) {
-							return true;
+							return false;
 						}
 						if (m.IsPublic != n.IsPublic) {
-							return true;
+							return false;
 						}
 						if (m.IsProtected != n.IsProtected) {
-							return true;
+							return false;
 						}
 						if (m.IsPrivate != n.IsPrivate) {
-							return true;
+							return false;
 						}
 						if (m.IsFinal != n.IsFinal) {
-							return true;
+							return false;
 						}
 						found = true;
 						break;
 					}
 				}
 				if (!found) {
-					return true;
+					return false;
 				}
 			}
 			
@@ -112,10 +112,10 @@ package stab.tools.eclipse.helpers {
 					}
 				}
 				if (!found) {
-					return true;
+					return false;
 				}
 			}
-			return false;
+			return true;
 		}
 		
 		public static JvmTypeInfo getType(JvmTypeSystem typeSystem, String fullName) {

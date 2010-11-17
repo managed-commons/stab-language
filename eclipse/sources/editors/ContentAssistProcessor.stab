@@ -1,0 +1,150 @@
+/*
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
+using java.lang;
+using org.eclipse.jface.text;
+using org.eclipse.jface.text.contentassist;
+using org.eclipse.jface.text.source;
+using stab.query;
+using stab.tools.helpers;
+using stab.tools.parser;
+using stab.tools.syntaxtree;
+
+package stab.tools.eclipse.editors {
+
+	public class ContentAssistProcessor : IContentAssistProcessor {
+		private static final ICompletionProposal[] EMPTY_PROPOSALS = CompletionProposalHelper.createEmpty();
+	
+		private SourceEditor editor;
+		private ISourceViewer sourceViewer;
+
+		public ContentAssistProcessor(SourceEditor editor, ISourceViewer sourceViewer) {
+			this.editor = editor;
+			this.sourceViewer = sourceViewer;
+		}
+		
+		public IContextInformation[] computeContextInformation(ITextViewer viewer, int offset) {
+			return null;
+		}
+		
+		public char[] getContextInformationAutoActivationCharacters() {
+			return null;
+		}
+	
+		public String getErrorMessage() {
+			return null;
+		}
+		
+		public IContextInformationValidator getContextInformationValidator() {
+			return null;
+		}
+		
+		public char[] getCompletionProposalAutoActivationCharacters() {
+			return new[] { '.' };
+		}
+		
+		public ICompletionProposal[] computeCompletionProposals(ITextViewer viewer, int offset) {
+			Environment.trace(this, "compute completion");
+			var t0 = System.nanoTime();
+
+			var file = editor.getFile();
+			if (file == null) {
+				Environment.trace(this, "no file");
+				return EMPTY_PROPOSALS;
+			}
+			
+			var projectManager = Environment.getProjectManager(file);
+			if (projectManager == null) {
+				Environment.trace(this, "not a project with Stab nature");
+				return EMPTY_PROPOSALS;
+			}
+			
+			var highlighter = editor.Highlighter;
+			if (highlighter == null) {
+				Environment.trace(this, "no highlighter");
+				return EMPTY_PROPOSALS;
+			}
+			
+			var tokens = highlighter.Tokens;
+			if (tokens == null || tokens.size() == 0) {
+				Environment.trace(this, "no tokens");
+				return EMPTY_PROPOSALS;
+			}
+			
+			var tokenIndex = Highlighter.getPositionIndex(tokens, offset);
+			if (tokenIndex == -1) {
+				Environment.trace(this, "no token at " + offset);
+				return EMPTY_PROPOSALS;
+			}
+
+			var token = tokens[tokenIndex];
+			var beforeToken = token.offset == offset;
+
+			Environment.trace(this, "token " + token.LexicalUnit);
+			
+			if (token.SemanticStyle != null && !beforeToken) {
+				switch (token.SemanticStyle) {
+				case Preprocessor:
+				case SkippedSource:
+					Environment.trace(this, "in preprocessor part");
+					return EMPTY_PROPOSALS;
+				case DelimitedComment:
+				case SingleLineComment:
+					Environment.trace(this, "in comment");
+					return EMPTY_PROPOSALS;
+				}
+			}
+			if (token.LexicalUnit == LexicalUnit.NewLine) {
+				if (tokenIndex > 0 && tokens[tokenIndex - 1].LexicalUnit == LexicalUnit.SingleLineComment) {
+					Environment.trace(this, "in comment");
+					return EMPTY_PROPOSALS;
+				}
+			}
+
+			var compilationUnit = highlighter.CompilationUnit;
+			if (compilationUnit == null) {
+				Environment.trace(this, "no AST");
+				return EMPTY_PROPOSALS;
+			}
+
+			var result = computeCompletionProposalsInPackage(compilationUnit.Body, offset);
+			Environment.trace(this, "compute completion done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
+			return result;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInPackage(PackageBodyNode body, int offset) {
+			if (body == null) {
+				Environment.trace(this, "empty package");
+				return EMPTY_PROPOSALS;
+			}
+			foreach (var m in body.Members) {
+				var tokens = ((UserDataContainer)m).getAllUserData(typeof(Token)).toList();
+				if (tokens[0].offset >= offset) {
+					break;
+				}
+				if (tokens[1].offset + tokens[1].length < offset) {
+					continue;
+				}
+				switch (m.PackageMemberKind) {
+				case Package:
+					return computeCompletionProposalsInPackage(((PackageDeclarationNode)m).Body, offset);
+				}
+			}
+			Environment.trace(this, "package");
+			return EMPTY_PROPOSALS;
+		}
+	}
+}

@@ -28,7 +28,7 @@ using stab.tools.syntaxtree;
 
 package stab.tools.eclipse.editors {
 
-	public class BackgroundCompiler : IProjectBuildListener {
+	class BackgroundCompiler : IProjectBuildListener {
 		private SourceEditor editor;
 		private boolean initialized;
 	
@@ -51,11 +51,11 @@ package stab.tools.eclipse.editors {
 			}
 			var projectManager = Environment.getProjectManager(file);
 			if (event.getSource() == projectManager) {
-				compileInJob();
+				compileAsync();
 			}
 		}
 
-		public void compileInJob() {
+		public void compileAsync() {
 			new CompileJob(this).schedule();
 		}
 	
@@ -232,7 +232,8 @@ package stab.tools.eclipse.editors {
 			private char[] text;
 			private CompilationUnitNode compilationUnit;
 		
-			HighlightJob(SourceEditor editor, char[] text, CompilationUnitNode compilationUnit) : super("Semantic Highlight") {
+			HighlightJob(SourceEditor editor, char[] text, CompilationUnitNode compilationUnit)
+					: super("Semantic Highlight") {
 				this.editor = editor;
 				this.text = text;
 				this.compilationUnit = compilationUnit;

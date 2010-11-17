@@ -24,12 +24,12 @@ using stab.tools.syntaxtree;
 
 package stab.tools.eclipse.editors {
 
-	public class CompilationUnitHighlighter {
+	class CompilationUnitHighlighter {
 		private List<Token> tokens;
 		private StatementHandler<Void, Void> statementHighlighter;
 		private ExpressionHandler<Void, Void> expressionHighlighter;
 	
-		public CompilationUnitHighlighter() {
+		CompilationUnitHighlighter() {
 			this.statementHighlighter = new StatementHighlightHandler(this);
 			this.expressionHighlighter = new ExpressionHighlightHandler(this);
 		}
@@ -54,7 +54,9 @@ package stab.tools.eclipse.editors {
 					switch (m.getPackageMemberKind()) {
 					case Package:
 						PackageDeclarationNode pd = (PackageDeclarationNode)m;
-						highlightPackage(pd.getBody());
+						pd.addUserData(getToken(pd.StartPosition));
+						pd.addUserData(getToken(pd.EndPosition - 1));
+						highlightPackage(pd.Body);
 						break;
 					case Class:
 						highlightClass((ClassDeclarationNode)m);
@@ -71,6 +73,8 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private void highlightClass(ClassDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
+			declaration.addUserData(getToken(declaration.EndPosition - 1));
 			getToken(declaration.NameOffset).SemanticStyle = (declaration.IsEnum) ? SemanticStyle.Enum : SemanticStyle.Class;
 			
 			var t = declaration.getUserData(typeof(JvmTypeInfo));
@@ -125,6 +129,7 @@ package stab.tools.eclipse.editors {
 		}
 
 		private void highlightInterface(InterfaceDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.Interface;
 			
 			highlightAnnotations(declaration.Annotations);
@@ -153,11 +158,13 @@ package stab.tools.eclipse.editors {
 		}
 
 		private void highlightDelegate(DelegateDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.MethodDeclaration;
 			// TODO
 		}
 
 		private void highlightEnumConstant(EnumConstantDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.ConstantField;
 			
 			foreach (var e in declaration.Arguments) {
@@ -167,6 +174,7 @@ package stab.tools.eclipse.editors {
 		}
 
 		private void highlightField(FieldDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			var f = declaration.Declarators[0].getUserData(typeof(JvmFieldInfo));
 			highlightType(declaration.Type, f.Type);
 			SemanticStyle style;
@@ -188,6 +196,7 @@ package stab.tools.eclipse.editors {
 		}
 
 		private void highlightProperty(PropertyDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.PropertyDeclaration;
 			
 			var get = declaration.GetAccessor;
@@ -221,6 +230,7 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private void highlightIndexer(IndexerDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			JvmMethodInfo m = null;
 			var get = declaration.GetAccessor;
 			if (get != null) {
@@ -238,6 +248,7 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private void highlightMethod(MethodDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.MethodDeclaration;
 			
 			var m = declaration.getUserData(typeof(JvmMethodInfo));
@@ -252,6 +263,7 @@ package stab.tools.eclipse.editors {
 		}
 
 		private void highlightConstructor(ConstructorDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.MethodDeclaration;
 			
 			var m = declaration.getUserData(typeof(JvmMethodInfo));
@@ -265,6 +277,7 @@ package stab.tools.eclipse.editors {
 		}
 	
 		private void highlightDestructor(DestructorDeclarationNode declaration) {
+			declaration.addUserData(getToken(declaration.StartPosition));
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.MethodDeclaration;
 			
 			if (declaration.Body != null) {

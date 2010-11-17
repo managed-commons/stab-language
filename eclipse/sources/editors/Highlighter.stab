@@ -175,6 +175,11 @@ package stab.tools.eclipse.editors {
 			}
 		}
 		
+		public CompilationUnitNode CompilationUnit {
+			get;
+			private set;
+		}
+		
 		public void update(char[] text, CompilationUnitNode compilationUnit) {
 			if (text != this.Text) {
 				return;
@@ -182,6 +187,7 @@ package stab.tools.eclipse.editors {
 			try {
 				compilationUnitHighlighter.highlight(compilationUnit, tokens);
 				sourceViewer.invalidateTextPresentation();
+				this.CompilationUnit = compilationUnit;
 			} catch (Exception e) {
 				Environment.logException(e);
 				initialize(text, false);
@@ -233,6 +239,7 @@ package stab.tools.eclipse.editors {
 			this.Text = text;
 			this.tokens = newTokens;
 			this.preprocessorPositions = newPreprocessorPositions;
+			this.CompilationUnit = null;
 			//checkPositionsConsistency();
 			
 			Environment.trace(this, "initialization done in " + ((System.nanoTime() - t0) / 1e6) + "ms");

@@ -187,7 +187,7 @@ package stab.tools.eclipse.helpers {
 						typesToRebuild = typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
 					}
 					foreach (var type in oldTypes.intersect(newTypes)) {
-							if (JvmTypeSystemHelper.hasStructureChanged(JvmTypeSystemHelper.getType(parameters.TypeSystem, type),
+							if (!JvmTypeSystemHelper.isStructurallyEqual(JvmTypeSystemHelper.getType(parameters.TypeSystem, type),
 										JvmTypeSystemHelper.getType(results.TypeSystem, type))) {
 							typesToRebuild = typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
 						}

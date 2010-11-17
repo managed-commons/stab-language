@@ -18,6 +18,7 @@ using java.lang;
 using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
 using org.eclipse.jface.text;
+using org.eclipse.jface.text.contentassist;
 using org.eclipse.jface.text.reconciler;
 using org.eclipse.jface.text.source;
 using org.eclipse.swt.widgets;
@@ -37,9 +38,7 @@ package stab.tools.eclipse.editors {
 	public class SourceEditor : AbstractDecoratedTextEditor {
 		private TextInputListener textInputListener;
 		private BackgroundCompiler backgroundCompiler;
-		private Highlighter highlighter;
 		private PartListener partListener;
-		private boolean active;
 
 		public SourceEditor() {
 			setSourceViewerConfiguration(new SourceViewerConfiguration(this));
@@ -51,14 +50,14 @@ package stab.tools.eclipse.editors {
 			textInputListener = new TextInputListener(this);
 			backgroundCompiler = new BackgroundCompiler(this);
 			
-			IWorkbenchWindow window = getSite().getWorkbenchWindow();
+			var window = getSite().getWorkbenchWindow();
 			partListener = new PartListener(this);
 			window.getPartService().addPartListener(partListener);
 		}
 
 		public override void dispose() {
 			if (partListener != null) {
-				IWorkbenchWindow window = getSite().getWorkbenchWindow();
+				var window = getSite().getWorkbenchWindow();
 				window.getPartService().removePartListener(partListener);
 				partListener = null;
 			}
@@ -74,15 +73,13 @@ package stab.tools.eclipse.editors {
 		}
 	
 		boolean IsActive {
-			get {
-				return active;
-			}
+			get;
+			private set;
 		}
 	
 		Highlighter Highlighter {
-			get {
-				return highlighter;
-			}
+			get;
+			private set;
 		}
 	
 		IFile getFile() {
@@ -104,6 +101,15 @@ package stab.tools.eclipse.editors {
 		
 			public override IReconciler getReconciler(ISourceViewer sourceViewer) {
 				return new MonoReconciler(new ReconcilingStrategy(editor), false);
+			}
+			
+			public override IContentAssistant getContentAssistant(ISourceViewer sourceViewer) {
+				ContentAssistant contentAssistant = new ContentAssistant();
+				contentAssistant.enableAutoActivation(true);
+				contentAssistant.enableAutoInsert(true);
+				contentAssistant.enablePrefixCompletion(true);
+				contentAssistant.setContentAssistProcessor(new ContentAssistProcessor(editor, sourceViewer), IDocument.DEFAULT_CONTENT_TYPE);
+				return contentAssistant;
 			}
 		}
 		
@@ -174,15 +180,15 @@ package stab.tools.eclipse.editors {
 				if (documentProvider != null) {
 					var document = documentProvider.getDocument(editor.getEditorInput());
 					if (document != null) {
-						editor.highlighter = new Highlighter(sourceViewer, document, editor.getFile(), editor.getSharedColors());
+						editor.Highlighter = new Highlighter(sourceViewer, document, editor.getFile(), editor.getSharedColors());
 					}
 				}
 			}
 			
 			void dispose() {
-				if (editor.highlighter != null) {
-					editor.highlighter.dispose();
-					editor.highlighter = null;
+				if (editor.Highlighter != null) {
+					editor.Highlighter.dispose();
+					editor.Highlighter = null;
 				}
 				if (editor != null) {
 					editor.getSourceViewer().removeTextInputListener(this);
@@ -191,15 +197,15 @@ package stab.tools.eclipse.editors {
 			}
 		
 			public void inputDocumentAboutToBeChanged(IDocument oldInput, IDocument newInput) {
-				if (editor.highlighter != null) {
-					editor.highlighter.dispose();
-					editor.highlighter = null;
+				if (editor.Highlighter != null) {
+					editor.Highlighter.dispose();
+					editor.Highlighter = null;
 				}
 			}
 			
 			public void inputDocumentChanged(IDocument oldInput, IDocument newInput) {
 				if (newInput != null) {
-					editor.highlighter = new Highlighter(editor.getSourceViewer(), newInput, editor.getFile(), editor.getSharedColors());
+					editor.Highlighter = new Highlighter(editor.getSourceViewer(), newInput, editor.getFile(), editor.getSharedColors());
 				}
 			}
 		}
@@ -213,14 +219,14 @@ package stab.tools.eclipse.editors {
 		
 			public void partActivated(IWorkbenchPart part) {
 				if (part == editor) {
-					editor.active = true;
-					editor.backgroundCompiler.compileInJob();
+					editor.IsActive = true;
+					editor.backgroundCompiler.compileAsync();
 				}
 			}
 	
 			public void partDeactivated(IWorkbenchPart part) {
 				if (part == editor) {
-					editor.active = false;
+					editor.IsActive = false;
 				}
 			}
 	
