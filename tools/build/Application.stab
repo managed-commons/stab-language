@@ -32,6 +32,10 @@ package stab.tools.build {
 				case "clean":
 					clean();
 					return 0;
+				case "compiler":
+					return buildCompiler();
+				case "runtime":
+					return buildRuntimeLibrary();
 				case "eclipse":
 					return buildEclipse();
 				case "build":
@@ -132,7 +136,7 @@ package stab.tools.build {
 
 		private int buildEclipse() {
 			System.out.println();
-			System.out.println("Build Eclipse");
+			System.out.println("Eclipse Plugin");
 			System.out.println("--------------------------");
 
 			var args = new ArrayList<String>();

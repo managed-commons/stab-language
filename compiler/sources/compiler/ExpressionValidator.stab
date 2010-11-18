@@ -307,22 +307,23 @@ package stab.tools.compiler {
                 }
             }
             if (initializer != null) {
-                handleExpression(initializer, (type == null) ? targetType : null, true);
+                handleExpression(initializer, (type == null) ? targetType : type, true);
                 var iinfo = initializer.getUserData(typeof(ExpressionInfo));
                 if (iinfo == null) {
                     if (type == null || type.IsPrimitive) {
                         throw context.error(CompileErrorId.ImplicitlyTypedArrayTypeNotFound, arrayCreation);
-                    }
-                    arrayCreation.addOrReplaceUserData(new ExpressionInfo(type));
-                    initializer.addOrReplaceUserData(new ExpressionInfo(type));
+                    } else {
+						throw context.error(CompileErrorId.ArrayInitializerTypeMismatch, arrayCreation,
+								BytecodeHelper.getDisplayName(type));
+					}
                 } else if (type == null) {
                     arrayCreation.addOrReplaceUserData(new ExpressionInfo(ValidationHelper.getType(context, initializer)));
                 } else {
                     var itype = ValidationHelper.getType(context, initializer);
-                    if (!type.isAssignableFrom(itype)) {
-                        context.addError(CompileErrorId.NoImplicitConversion, arrayCreation,
-                                BytecodeHelper.getDisplayName(itype), BytecodeHelper.getDisplayName(type));
-                    }
+					if (!type.isAssignableFrom(itype)) {
+						context.addError(CompileErrorId.NoImplicitConversion, arrayCreation,
+								BytecodeHelper.getDisplayName(itype), BytecodeHelper.getDisplayName(type));
+					}
                     arrayCreation.addOrReplaceUserData(new ExpressionInfo(type));
                     setArrayInitializersTypes(initializer, type);
                 }

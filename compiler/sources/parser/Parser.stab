@@ -3770,7 +3770,7 @@ package stab.tools.parser {
             node.Line = scanner.StartLine;
             node.Column = scanner.StartColumn;
             node.DisabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
-			if (node.StartPosition == 0) {
+			if (node.StartPosition == -1) {
 				node.StartPosition = scanner.StartPosition;
 			}
         }
@@ -3780,7 +3780,7 @@ package stab.tools.parser {
             node.Line = savedLine;
             node.Column = savedColumn;
             node.DisabledWarnings = savedDisabledWarnings;
-			if (node.StartPosition == 0) {
+			if (node.StartPosition == -1) {
 				node.StartPosition = savedPosition;
 			}
         }

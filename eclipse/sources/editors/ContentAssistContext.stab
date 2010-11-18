@@ -14,46 +14,34 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-using java.lang;
-using stab.lang;
-using stab.tools.helpers;
+using stab.tools.syntaxtree;
 
-package stab.tools.syntaxtree {
+package stab.tools.eclipse.editors {
 
-	public abstract class SyntaxNode : UserDataContainer {
-		protected SyntaxNode() {
-			this.StartPosition = -1;
-		}
+	public class ContentAssistContext {
 		
-		public String Filename {
-			get;
-			set;
-		}
-		
-		public int Line {
-			get;
-			set;
-		}
-		
-		public int Column {
-			get;
-			set;
+		public void enterPackage(PackageBodyNode body) {
+			
 		}
 
-        public int StartPosition {
-            get;
-			set;
-        }
-
-        public int EndPosition {
-            get;
-			set;
-        }
+		public void leavePackage() {
 		
-		public IntIterable DisabledWarnings {
-			get;
-			set;
+		}
+		
+		public void enterClass(ClassDeclarationNode declaration) {
+		
+		}
+		
+		public void leaveClass() {
+		
+		}
+		
+		public void enterInterface(InterfaceDeclarationNode declaration) {
+		
+		}
+		
+		public void leaveInterface() {
+		
 		}
 	}
-
 }

@@ -188,6 +188,7 @@ package stab.tools.compiler {
 		BaseMissingConstructor,
 		GenericParameterInCatch,
 		UnresolvedStaticName,
+		ArrayInitializerTypeMismatch,
     }
 
     class Resources {

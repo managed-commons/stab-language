@@ -15,6 +15,7 @@
    limitations under the License.
  */
 using java.lang;
+using java.util;
 using org.eclipse.jface.text;
 using org.eclipse.jface.text.contentassist;
 using org.eclipse.jface.text.source;
@@ -30,6 +31,12 @@ package stab.tools.eclipse.editors {
 	
 		private SourceEditor editor;
 		private ISourceViewer sourceViewer;
+		
+		private int offset;
+		private int tokenIndex;
+		private Token token;
+		private List<Token> tokens;
+		private ContentAssistContext context;
 
 		public ContentAssistProcessor(SourceEditor editor, ISourceViewer sourceViewer) {
 			this.editor = editor;
@@ -120,30 +127,178 @@ package stab.tools.eclipse.editors {
 				return EMPTY_PROPOSALS;
 			}
 
-			var result = computeCompletionProposalsInPackage(compilationUnit.Body, offset);
+			this.offset = offset;
+			this.tokenIndex = tokenIndex;
+			this.token = token;
+			this.tokens = tokens;
+			this.context = new ContentAssistContext();
+
+			var result = computeCompletionProposalsInPackage(compilationUnit.Body);
 			Environment.trace(this, "compute completion done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 			return result;
 		}
 		
-		private ICompletionProposal[] computeCompletionProposalsInPackage(PackageBodyNode body, int offset) {
-			if (body == null) {
-				Environment.trace(this, "empty package");
-				return EMPTY_PROPOSALS;
+		private ICompletionProposal[] computeCompletionProposalsInPackage(PackageBodyNode body) {
+			if (body != null) {
+				try {
+					context.enterPackage(body);
+					foreach (var m in body.Members) {
+						var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+						var startToken = it.next();
+						var endToken = it.next();
+						if (startToken.offset >= offset) {
+							break;
+						}
+						if (endToken.offset + endToken.length < offset) {
+							continue;
+						}
+						switch (m.PackageMemberKind) {
+						case Package:
+							return computeCompletionProposalsInPackage(((PackageDeclarationNode)m).Body);
+						case Class:
+							return computeCompletionProposalsInClass((ClassDeclarationNode)m);
+						case Interface:
+							return computeCompletionProposalsInInterface((InterfaceDeclarationNode)m);
+						case Delegate:
+							return computeCompletionProposalsInDelegate((DelegateDeclarationNode)m);
+						}
+					}
+				} finally {
+					context.leavePackage();
+				}
 			}
-			foreach (var m in body.Members) {
-				var tokens = ((UserDataContainer)m).getAllUserData(typeof(Token)).toList();
-				if (tokens[0].offset >= offset) {
-					break;
-				}
-				if (tokens[1].offset + tokens[1].length < offset) {
-					continue;
-				}
-				switch (m.PackageMemberKind) {
-				case Package:
-					return computeCompletionProposalsInPackage(((PackageDeclarationNode)m).Body, offset);
-				}
-			}
+			// TODO
 			Environment.trace(this, "package");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInClass(ClassDeclarationNode declaration) {
+			try {
+				context.enterClass(declaration);
+				foreach (var m in declaration.Members) {
+					var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= offset) {
+						break;
+					}
+					if (endToken.offset + endToken.length < offset) {
+						continue;
+					}
+					switch (m.TypeMemberKind) {
+					case Class:
+						return computeCompletionProposalsInClass((ClassDeclarationNode)m);
+					case Interface:
+						return computeCompletionProposalsInInterface((InterfaceDeclarationNode)m);
+					case Delegate:
+						return computeCompletionProposalsInDelegate((DelegateDeclarationNode)m);
+					case Method:
+						return computeCompletionProposalsInMethod((MethodDeclarationNode)m);
+					case Property:
+						return computeCompletionProposalsInProperty((PropertyDeclarationNode)m);
+					case Indexer:
+						return computeCompletionProposalsInIndexer((IndexerDeclarationNode)m);
+					case Constructor:
+						return computeCompletionProposalsInConstructor((ConstructorDeclarationNode)m);
+					case Destructor:
+						return computeCompletionProposalsInDestructor((DestructorDeclarationNode)m);
+					case Field:
+						return computeCompletionProposalsInField((FieldDeclarationNode)m);
+					case EnumConstant:
+						return computeCompletionProposalsInEnumConstant((EnumConstantDeclarationNode)m);
+					}
+				}
+			} finally {
+				context.leaveClass();
+			}
+			// TODO
+			Environment.trace(this, "class");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInInterface(InterfaceDeclarationNode declaration) {
+			try {
+				context.enterInterface(declaration);
+				foreach (var m in declaration.Members) {
+					var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= offset) {
+						break;
+					}
+					if (endToken.offset + endToken.length < offset) {
+						continue;
+					}
+					switch (m.TypeMemberKind) {
+					case Method:
+						return computeCompletionProposalsInMethod((MethodDeclarationNode)m);
+					case Property:
+						return computeCompletionProposalsInProperty((PropertyDeclarationNode)m);
+					case Indexer:
+						return computeCompletionProposalsInIndexer((IndexerDeclarationNode)m);
+					}
+				}
+			} finally {
+				context.leaveInterface();
+			}
+			// TODO
+			Environment.trace(this, "interface");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInDelegate(DelegateDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "delegate");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInMethod(MethodDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "method");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInProperty(PropertyDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "property");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInIndexer(IndexerDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "indexer");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInConstructor(ConstructorDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "constructor");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInDestructor(DestructorDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "destructor");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInField(FieldDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "field");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInEnumConstant(EnumConstantDeclarationNode declaration) {
+		
+			// TODO
+			Environment.trace(this, "enum constant");
 			return EMPTY_PROPOSALS;
 		}
 	}
