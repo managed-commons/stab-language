@@ -149,7 +149,7 @@ package stab.tools.eclipse.editors {
 						if (startToken.offset >= offset) {
 							break;
 						}
-						if (endToken.offset + endToken.length < offset) {
+						if (endToken.offset + endToken.length <= offset) {
 							continue;
 						}
 						switch (m.PackageMemberKind) {
@@ -182,7 +182,7 @@ package stab.tools.eclipse.editors {
 					if (startToken.offset >= offset) {
 						break;
 					}
-					if (endToken.offset + endToken.length < offset) {
+					if (endToken.offset + endToken.length <= offset) {
 						continue;
 					}
 					switch (m.TypeMemberKind) {
@@ -226,7 +226,7 @@ package stab.tools.eclipse.editors {
 					if (startToken.offset >= offset) {
 						break;
 					}
-					if (endToken.offset + endToken.length < offset) {
+					if (endToken.offset + endToken.length <= offset) {
 						continue;
 					}
 					switch (m.TypeMemberKind) {

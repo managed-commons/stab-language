@@ -312,9 +312,6 @@ package stab.tools.compiler {
                 if (iinfo == null) {
                     if (type == null || type.IsPrimitive) {
                         throw context.error(CompileErrorId.ImplicitlyTypedArrayTypeNotFound, arrayCreation);
-                    } else {
-						throw context.error(CompileErrorId.ArrayInitializerTypeMismatch, arrayCreation,
-								BytecodeHelper.getDisplayName(type));
 					}
                 } else if (type == null) {
                     arrayCreation.addOrReplaceUserData(new ExpressionInfo(ValidationHelper.getType(context, initializer)));
@@ -352,16 +349,16 @@ package stab.tools.compiler {
                 } else if (!ValidationHelper.isAssignable(context, type, e)) {
                     if (info == null) {
                         if (type.IsPrimitive) {
-                            type = null;
-                            break;
+							throw context.error(CompileErrorId.ArrayInitializerTypeMismatch, arrayInitializer,
+									BytecodeHelper.getDisplayName(type));
                         }
                     } else {
                         var etype = ValidationHelper.getType(context, e);
                         if (etype.isAssignableFrom(type)) {
                             type = etype;
                         } else {
-                            type = null;
-                            break;
+							throw context.error(CompileErrorId.ArrayInitializerTypeMismatch, arrayInitializer,
+									BytecodeHelper.getDisplayName(type));
                         }
                     }
                 }

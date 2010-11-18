@@ -594,12 +594,6 @@ package stab.tools.parser.test {
 						}
 						sb.append(")");
 					}
-					if (!enumConstant.Members.isEmpty()) {
-						sb.append(" {\r\n");
-						print(enumConstant.Members, indent, sb);
-						sb.append(indentText);
-						sb.append("}\r\n");
-					}
 					sb.append(",\r\n");
 				}
 			}

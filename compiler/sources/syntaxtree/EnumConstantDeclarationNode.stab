@@ -22,7 +22,6 @@ package stab.tools.syntaxtree {
 		public EnumConstantDeclarationNode()
 			: super(TypeMemberKind.EnumConstant) {
 			this.Arguments = new ArrayList<ExpressionNode>();
-			this.Members = new ArrayList<ITypeMember>();
 		}
 		
 		public int NameOffset {
@@ -36,11 +35,6 @@ package stab.tools.syntaxtree {
 		}
 		
 		public List<ExpressionNode> Arguments {
-			get;
-			private set;
-		}
-		
-		public List<ITypeMember> Members {
 			get;
 			private set;
 		}

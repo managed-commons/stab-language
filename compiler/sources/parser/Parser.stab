@@ -906,9 +906,6 @@ package stab.tools.parser {
                     nextLexicalUnit(true);
                 }
             }
-            if (lexicalUnit == LexicalUnit.OpenBrace) {
-                parseClassBody(annotations, EnumSet.noneOf(typeof(Modifier)), false, result.Members);
-            }
 			result.EndPosition = scanner.StartPosition;
             return result;
         }
@@ -3201,6 +3198,7 @@ package stab.tools.parser {
 
         private ArrayInitializerExpressionNode parseArrayInitializer() {
             var result = new ArrayInitializerExpressionNode();
+			setSavedScannerState(result);
             while (lexicalUnit != LexicalUnit.CloseBrace) {
                 if (lexicalUnit == LexicalUnit.OpenBrace) {
                     nextLexicalUnit(true);
@@ -3210,6 +3208,7 @@ package stab.tools.parser {
                 }
                 parseCommaOrCloseBrace();
             }
+			result.EndPosition = scanner.EndPosition;
             nextLexicalUnit(false);
             return result;
         }

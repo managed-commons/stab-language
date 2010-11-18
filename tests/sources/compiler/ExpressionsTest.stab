@@ -1526,5 +1526,10 @@ package stab.tools.compiler.test {
 		public void lexicalDecomposition4() {
 			doTest("LexicalDecomposition4", new Class<?>[] {}, new Object[] {}, 845);
 		}
+		
+		[Test]
+		public void arrayInitializerAutoboxing() {
+			doTest("ArrayInitializerAutoboxing", new Class<?>[] { typeof(short) }, new Object[] { (short)3 }, 3);
+		}
 	}
 }
