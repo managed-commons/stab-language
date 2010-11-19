@@ -790,5 +790,10 @@ package stab.tools.compiler.test {
 		public void wildcardBoundInheritance2() {
 			doTest("WildcardBoundInheritance2", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void genericConstraintInheritance() {
+			doTest("GenericConstraintInheritance", new Class<?>[] {}, new Object[] {}, true);
+		}
     }
 }

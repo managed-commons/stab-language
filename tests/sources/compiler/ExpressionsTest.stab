@@ -1541,5 +1541,15 @@ package stab.tools.compiler.test {
 		public void wildcardBoundAssignment2() {
 			doTest("WildcardBoundAssignment2", new Class<?>[] {}, new Object[] {}, 3);
 		}
+		
+		[Test]
+		public void genericConstraintAssignment() {
+			doTest("GenericConstraintAssignment", new Class<?>[] {}, new Object[] {}, 3);
+		}
+		
+		[Test]
+		public void genericConstraintAssignment2() {
+			doTest("GenericConstraintAssignment2", new Class<?>[] {}, new Object[] {}, 3);
+		}
 	}
 }

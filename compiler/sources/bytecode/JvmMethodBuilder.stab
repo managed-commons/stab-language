@@ -93,11 +93,12 @@ package stab.tools.bytecode {
             return type;
         }
         
-        public JvmTypeInfo addGenericConstraint(String name, JvmTypeInfo bound) {
+        public void addGenericConstraint(String name, JvmTypeInfo bound) {
             checkCreated();
             foreach (var arg in genericArguments) {
                 if (arg.FullName.equals(name)) {
                     ((GenericParameterType)arg).genericParameterBounds.add(bound);
+					return;
                 }
             }
             throw new IllegalStateException("name = " + name);

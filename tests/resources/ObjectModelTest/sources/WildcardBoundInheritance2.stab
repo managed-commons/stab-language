@@ -3,6 +3,7 @@ using java.util;
 public class WildcardBoundInheritance2 {
 	public static boolean test() {
 		// Just test that it compiles
+		method1(new ArrayList<WildcardBoundInheritance2Aux>());
 		method2(new ArrayList<WildcardBoundInheritance2Aux>());
 		return true;
 	}

@@ -112,9 +112,17 @@ package stab.tools.compiler {
         private static Iterable<MemberInfo> getMembersRecursively(JvmTypeSystem typeSystem, JvmTypeInfo scope, JvmTypeInfo type, String name,
                 Iterable<JvmTypeInfo> typeArguments, boolean useCache, LookupContext context) {
             Iterable<MemberInfo> members;
-            if (type.IsArray) {
-                members = getMembersRecursively(typeSystem, scope, typeSystem.ObjectType, name, typeArguments, useCache, context);
-            } else if (type.IsGenericParameter) {
+			switch (type.TypeKind) {
+			case Array:
+			case LowerBoundedWildcard:
+			case UnboundedWildcard:
+				type = typeSystem.ObjectType;
+				break;
+			case UpperBoundedWildcard:
+				type = type.WildcardBound;
+				break;
+			}
+            if (type.IsGenericParameter) {
                 if (type.GenericParameterBounds.any()) {
                     members = Query.empty();
                     foreach (var t in type.GenericParameterBounds) {
