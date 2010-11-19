@@ -1446,7 +1446,14 @@ package stab.tools.compiler {
                             var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, type, property, true);
                             MemberInfo memb = null;
                             foreach (var m in members) {
-                                if (m.MemberKind == MemberKind.Property || m.MemberKind == MemberKind.Field) {
+                                if (m.MemberKind == MemberKind.Property) {
+									var setter = m.SetAccessor;
+									if (setter != null && context.CurrentType.canAccessMembers(setter.DeclaringType, setter.IsPublic,
+											setter.IsProtected, setter.IsPrivate)) {
+										memb = m;
+										break;
+									}
+								} else if (m.MemberKind == MemberKind.Field) {
                                     memb = m;
                                     break;
                                 }
@@ -1832,7 +1839,9 @@ package stab.tools.compiler {
                     }
                     break;
                 case Property:
-                    if (member.SetAccessor == null) {
+					var setter = member.SetAccessor;
+                    if (setter == null ||
+						!context.CurrentType.canAccessMembers(setter.DeclaringType, setter.IsPublic, setter.IsProtected, setter.IsPrivate)) {
                         context.addError(CompileErrorId.ReadonlyPropertyModification, left);
                     }
                     break;

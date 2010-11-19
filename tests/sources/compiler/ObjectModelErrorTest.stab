@@ -285,5 +285,19 @@ package stab.tools.compiler.test {
 				"NonStaticField.stab (5, 13) error 327: A static member 'field' cannot be resolved in this context" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void privateAccessor() {
+			doTest("PrivateAccessor", new String[]{
+				"PrivateAccessor.stab (10, 17) error 231: Type 'C' does not contain an accessible 'Prop' member" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void privateAccessor2() {
+			doTest("PrivateAccessor2", new String[]{
+				"PrivateAccessor2.stab (11, 9) error 254: A read only property cannot be assigned to" },
+				new String[] {});
+		}
 	}
 }
