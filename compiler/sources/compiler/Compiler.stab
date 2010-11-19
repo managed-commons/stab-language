@@ -2850,6 +2850,10 @@ package stab.tools.compiler {
             arguments.add(arg2);
             arguments.addAll(enumConstant.Arguments);
             var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, arguments, JvmTypeInfo.VOID);
+			if (constructor == null) {
+				context.addError(CompileErrorId.NoAccessibleConstructors, enumConstant,
+						BytecodeHelper.getDisplayName(typeBuilder));
+			}
             var info = new ExpressionInfo(typeBuilder);
             info.setMethod(constructor);
             enumConstant.addUserData(info);

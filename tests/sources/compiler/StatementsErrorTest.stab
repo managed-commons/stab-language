@@ -110,5 +110,19 @@ package stab.tools.compiler.test {
 				"GenericExceptionHandler.stab (5, 18) error 326: Cannot use the type parameter 'T' in a catch clause" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void enumSwitchDuplicateCase() {
+			doTest("EnumSwitchDuplicateCase", new String[]{ 
+				"EnumSwitchDuplicateCase.stab (8, 9) error 190: The same case already occurs in the 'switch' statement" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void enumConstantArgument() {
+			doTest("EnumConstantArgument", new String[]{ 
+				"EnumConstantArgument.stab (2, 5) error 230: Type 'E' does not contain an accessible constructor with the specified arguments" },
+				new String[] {});
+		}
 	}
 }

@@ -1343,76 +1343,6 @@ package stab.tools.compiler.test {
 		}
 		
 		[Test]
-		public void expressionTreeParameter() {
-			doTest("ExpressionTreeParameter", new Class<?>[] {}, new Object[] {}, "p");
-		}
-		
-		[Test]
-		public void expressionTreeConstant() {
-			doTest("ExpressionTreeConstant", new Class<?>[] {}, new Object[] {}, 1);
-		}
-		
-		[Test]
-		public void expressionTreeVariable() {
-			doTest("ExpressionTreeVariable", new Class<?>[] {}, new Object[] {}, 1);
-		}
-		
-		[Test]
-		public void expressionTreeMethodCall() {
-			doTest("ExpressionTreeMethodCall", new Class<?>[] {}, new Object[] {}, "method");
-		}
-		
-		[Test]
-		public void expressionTreeInvoke() {
-			doTest("ExpressionTreeInvoke", new Class<?>[] {}, new Object[] {}, "ExpressionTreeInvoke$D");
-		}
-		
-		[Test]
-		public void expressionTreeField() {
-			doTest("ExpressionTreeField", new Class<?>[] {}, new Object[] {}, "field");
-		}
-		
-		[Test]
-		public void expressionTreeProperty() {
-			doTest("ExpressionTreeProperty", new Class<?>[] {}, new Object[] {}, "getProperty");
-		}
-		
-		[Test]
-		public void expressionTreeIncrement() {
-			doTest("ExpressionTreeIncrement", new Class<?>[] {}, new Object[] {}, "PreIncrement");
-		}
-		
-		[Test]
-		public void expressionTreeAdd() {
-			doTest("ExpressionTreeAdd", new Class<?>[] {}, new Object[] {}, "Add");
-		}
-		
-		[Test]
-		public void expressionTreeField2() {
-			doTest("ExpressionTreeField2", new Class<?>[] {}, new Object[] {}, "field");
-		}
-		
-		[Test]
-		public void expressionTreeTypeof() {
-			doTest("ExpressionTreeTypeof", new Class<?>[] {}, new Object[] {}, "ExpressionTreeTypeof");
-		}
-		
-		[Test]
-		public void expressionTreeIndexer() {
-			doTest("ExpressionTreeIndexer", new Class<?>[] {}, new Object[] {}, 1);
-		}
-		
-		[Test]
-		public void expressionTreeAddAssign() {
-			doTest("ExpressionTreeAddAssign", new Class<?>[] {}, new Object[] {}, "AddAssign");
-		}
-		
-		[Test]
-		public void expressionTreeCast() {
-			doTest("ExpressionTreeCast", new Class<?>[] {}, new Object[] {}, "Cast");
-		}
-		
-		[Test]
 		public void lambdaAsArgument() {
 			doTest("LambdaAsArgument", new Class<?>[] {}, new Object[] {}, 2);
 		}
@@ -1443,53 +1373,13 @@ package stab.tools.compiler.test {
 		}
 		
 		[Test]
-		public void expressionTreeObjectCreation() {
-			doTest("ExpressionTreeObjectCreation", new Class<?>[] {}, new Object[] {}, "java.lang.Object");
-		}
-		
-		[Test]
-		public void expressionTreeObjectCreation2() {
-			doTest("ExpressionTreeObjectCreation2", new Class<?>[] {}, new Object[] {}, "field");
-		}
-		
-		[Test]
-		public void expressionTreeObjectCreation3() {
-			doTest("ExpressionTreeObjectCreation3", new Class<?>[] {}, new Object[] {}, "setProperty");
-		}
-		
-		[Test]
-		public void expressionTreeObjectCreation4() {
-			doTest("ExpressionTreeObjectCreation4", new Class<?>[] {}, new Object[] {}, "add");
-		}
-		
-		[Test]
 		public void objectInitializer2() {
 			doTest("ObjectInitializer2", new Class<?>[] {}, new Object[] {}, 3);
 		}
 		
 		[Test]
-		public void expressionTreeAnonymousObjectCreation() {
-			doTest("ExpressionTreeAnonymousObjectCreation", new Class<?>[] {}, new Object[] {}, "p");
-		}
-		
-		[Test]
-		public void expressionTreeArrayCreation() {
-			doTest("ExpressionTreeArrayCreation", new Class<?>[] {}, new Object[] {}, 3);
-		}
-		
-		[Test]
-		public void expressionTreeArrayCreation2() {
-			doTest("ExpressionTreeArrayCreation2", new Class<?>[] {}, new Object[] {}, 3);
-		}
-		
-		[Test]
 		public void inferenceCascaded4() {
 			doTest("InferenceCascaded4", new Class<?>[] {}, new Object[] {}, null);
-		}
-		
-		[Test]
-		public void expressionTreeReturn() {
-			doTest("ExpressionTreeReturn", new Class<?>[] {}, new Object[] {}, 1);
 		}
 		
 		[Test]

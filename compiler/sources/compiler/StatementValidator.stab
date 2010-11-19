@@ -338,7 +338,7 @@ package stab.tools.compiler {
                 int i = 0;
                 foreach (var f in type.Fields) {
                     if (f.IsEnum) {
-                        enumOrdinals[f.getName()] = Integer.valueOf(i++);
+                        enumOrdinals[f.Name] = Integer.valueOf(i++);
                     }
                 }
             }
@@ -357,7 +357,7 @@ package stab.tools.compiler {
                             }
                             var name = (SimpleNameExpressionNode)section.CaseExpression;
                             var text = context.getIdentifier(name.NameOffset, name.NameLength);
-                            if (cases.contains(text)) {
+                            if (!cases.add(text)) {
                                 throw context.error(CompileErrorId.DuplicateCase, section);
                             }
                             if (!enumOrdinals.containsKey(text)) {
