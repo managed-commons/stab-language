@@ -1531,5 +1531,15 @@ package stab.tools.compiler.test {
 		public void arrayInitializerAutoboxing() {
 			doTest("ArrayInitializerAutoboxing", new Class<?>[] { typeof(short) }, new Object[] { (short)3 }, 3);
 		}
+		
+		[Test]
+		public void wildcardBoundAssignment() {
+			doTest("WildcardBoundAssignment", new Class<?>[] {}, new Object[] {}, 3);
+		}
+		
+		[Test]
+		public void wildcardBoundAssignment2() {
+			doTest("WildcardBoundAssignment2", new Class<?>[] {}, new Object[] {}, 3);
+		}
 	}
 }

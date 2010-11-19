@@ -424,6 +424,9 @@ package stab.tools.bytecode {
             if (this == type || this.IsObject) {
                 return true;
             }
+			if (type.TypeKind == TypeKind.UpperBoundedWildcard) {
+				type = type.WildcardBound;
+			}
             if (this.IsNumeric) {
                 if (!type.IsNumeric) {
                     return false;
@@ -508,11 +511,17 @@ package stab.tools.bytecode {
                         case UnboundedWildcard:
                             break;
                         case UpperBoundedWildcard:
+							if (t2.TypeKind == TypeKind.UpperBoundedWildcard) {
+								t2 = t2.WildcardBound;
+							}
                             if (!t1.WildcardBound.isAssignableFrom(t2)) {
                                 isCompatible = false;
                             }
                             break;
                         case LowerBoundedWildcard:
+							if (t2.TypeKind == TypeKind.LowerBoundedWildcard) {
+								t2 = t2.WildcardBound;
+							}
                             if (!t2.isAssignableFrom(t1.WildcardBound)) {
                                 isCompatible = false;
                             }

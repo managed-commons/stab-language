@@ -1360,6 +1360,9 @@ package stab.tools.compiler {
                     }
                     ttype = ttype.OriginalTypeDefinition;
                 }
+				if (ttype.TypeKind == TypeKind.UpperBoundedWildcard) {
+					ttype = ttype.WildcardBound;
+				}
                 var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, context.CurrentType, ttype, name, typeArgs, true);
                 if (staticOnly) {
                     members = members.where(p => p.IsStatic).toList();
