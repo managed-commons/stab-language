@@ -84,7 +84,7 @@ package stab.tools.bytecode {
             }
         }
         
-        public override JvmAnnotationValue DefaultValue {
+        public override JvmAnnotationArgument DefaultValue {
             get {
                 return genericMethodDefinition.DefaultValue;
             }

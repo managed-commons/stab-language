@@ -34,6 +34,9 @@ package stab.tools.bytecode {
             case UpperBoundedWildcard:
                 return type.WildcardBound;
             
+            case Array:
+            	return getRawType(referenceType, type.ElementType).ArrayType;
+            
             default:
                 return (type.GenericArguments.any()) ? type.RawGenericType : type;
             }

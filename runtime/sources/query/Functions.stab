@@ -54,6 +54,12 @@ package stab.query {
 
 	public interface FunctionTT<TArgument, TResult> { TResult invoke(TArgument argument); }
 
+	public interface FunctionTIntBoolean<TArgument>  { boolean invoke(TArgument argument1, int argument2); }
+	public interface FunctionIntIntBoolean           { boolean invoke(int argument1, int argument2); }
+	public interface FunctionLongIntBoolean          { boolean invoke(long argument1, int argument2); }
+	public interface FunctionFloatIntBoolean         { boolean invoke(float argument1, int argument2); }
+	public interface FunctionDoubleIntBoolean        { boolean invoke(double argument1, int argument2); }
+
 	public interface FunctionIntIntInt            { int invoke(int argument1, int argument2); }
 	public interface FunctionLongLongLong         { long invoke(long argument1, long argument2); }
 	public interface FunctionFloatFloatFloat      { float invoke(float argument1, float argument2); }

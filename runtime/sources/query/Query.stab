@@ -3175,6 +3175,12 @@ package stab.query {
 			return result;
 		}
 
+		public static IntList toList(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			return new IntArrayList(source);
+		}
+
 		///////////////////////////////////////////////////////////////////////////////////////////////
 		// toSet
 		//
@@ -3336,6 +3342,70 @@ package stab.query {
 			
 			foreach (var s in source) {
 				if (predicate.invoke(s)) {
+					yield return s;
+				}
+			}
+		}
+        
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// where indexed
+		//
+		
+		public static Iterable<TSource> where<TSource>(this Iterable<TSource> source, FunctionTIntBoolean<TSource> predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var index = 0;
+			foreach (var s in source) {
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				}
+			}
+		}
+		
+		public static IntIterable where(this IntIterable source, FunctionIntIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var index = 0;
+			foreach (var s in source) {
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				}
+			}
+		}
+		
+		public static LongIterable where(this LongIterable source, FunctionLongIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var index = 0;
+			foreach (var s in source) {
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				}
+			}
+		}
+		
+		public static FloatIterable where(this FloatIterable source, FunctionFloatIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var index = 0;
+			foreach (var s in source) {
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				}
+			}
+		}
+		
+		public static DoubleIterable where(this DoubleIterable source, FunctionDoubleIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var index = 0;
+			foreach (var s in source) {
+				if (predicate.invoke(s, index++)) {
 					yield return s;
 				}
 			}

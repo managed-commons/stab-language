@@ -107,7 +107,7 @@ package stab.tools.bytecode {
         
         public abstract Iterable<JvmTypeInfo> GenericArguments { get; }
 
-        public abstract JvmAnnotationValue DefaultValue { get; }
+        public abstract JvmAnnotationArgument DefaultValue { get; }
 
         public boolean IsAbstract {
             get {

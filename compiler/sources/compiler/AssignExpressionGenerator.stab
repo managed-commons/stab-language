@@ -748,7 +748,14 @@ package stab.tools.compiler {
                 BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 BytecodeGenerator.emitConversion(context, ttype.ElementType, rightExpression);
-                
+                if (boxingKind == BoxingKind.Box) {
+                    var rtype = ttype.ElementType;
+                    if (rtype.IsObject) {
+		                var rinfo = rightExpression.getUserData(typeof(ExpressionInfo));
+                        rtype = rinfo.Type;
+                    }
+                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
+                }
                 switch (ttype.ElementType.TypeKind) {
                 case Boolean:
                 case Byte:

@@ -2205,7 +2205,7 @@ package stab.tools.compiler {
 
         private void generateInterfaceAnnotations(InterfaceDeclarationNode interfaceDeclaration, boolean annotationTypesOnly) {
             var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
-            var isAnnotation = typeBuilder.Interfaces.where(p => p.FullName.equals("java/lang/annotation/Annotation")).any();
+            var isAnnotation = typeBuilder.Interfaces.any(p => p.FullName.equals("java/lang/annotation/Annotation"));
             if (annotationTypesOnly) {
                 if (isAnnotation) {
                     validateAnnotationSection(interfaceDeclaration.Annotations, ElementType.TYPE);
@@ -2459,7 +2459,7 @@ package stab.tools.compiler {
             foreach (var section in annotations) {
                 foreach (var annotation in section.Annotations) {
                     var type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, annotation.Type);
-                    if (!type.IsAnnotation) {
+                    if (!type.Interfaces.any(p => p.FullName.equals("java/lang/annotation/Annotation"))) {
                         throw context.error(CompileErrorId.AnnotationTypeExpected, annotation, BytecodeHelper.getDisplayName(type));
                     }
                     annotation.addUserData(type);
@@ -2653,6 +2653,8 @@ package stab.tools.compiler {
                     validateClassCode((ClassDeclarationNode)member);
                     break;
                 case Interface:
+                    validateInterfaceCode((InterfaceDeclarationNode)member);
+                	break;
                 case Delegate:
                     break;
                 default:
@@ -2673,6 +2675,29 @@ package stab.tools.compiler {
                         context.MemberResolver.leavePackage();
                     }
                 }
+            }
+        }
+
+        private void validateInterfaceCode(InterfaceDeclarationNode interfaceDeclaration) {
+            foreach (var m in interfaceDeclaration.Members) {
+            	var node = (SyntaxNode)m;
+                switch (m.TypeMemberKind) {
+				case Method:
+		            var methodBuilder = node.getUserData(typeof(JvmMethodBuilder));
+	                var member = MemberInfo.getInfo(methodBuilder);
+	                foreach (var mi in member.getOverridenMembers(context.AnnotatedTypeSystem)) {
+	                    var meth = mi.Method;
+	                    if (methodBuilder.ReturnType.IsPrimitive != meth.ReturnType.IsPrimitive ||
+	                 		!meth.ReturnType.isAssignableFrom(methodBuilder.ReturnType)) {
+	                        context.addError(CompileErrorId.IncompatibleOverridingReturnType, node,
+	                                BytecodeHelper.getDisplayName(methodBuilder.DeclaringType),
+	                                BytecodeHelper.getDisplayName(methodBuilder),
+	                                BytecodeHelper.getDisplayName(meth.DeclaringType));
+	                    }
+	                }
+					break;
+				// TODO: same checking for properties and indexers
+				}
             }
         }
 

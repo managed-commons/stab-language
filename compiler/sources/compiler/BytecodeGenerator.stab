@@ -469,64 +469,81 @@ package stab.tools.compiler {
             generator.endScope();
         }
         
-        void emitBridgeMethod(JvmTypeBuilder typeBuilder, JvmMethodInfo bridgedMethod, Iterable<JvmMethodInfo> overloadedMethods) {
-            JvmMethodInfo overloadedMethod = null;
-            foreach (var method in overloadedMethods) {
-                if (method == null || !method.DeclaringType.GenericArguments.any()) {
+        void emitBridgeMethod(JvmTypeBuilder typeBuilder, JvmMethodInfo bridgedMethod, Iterable<JvmMethodInfo> overridenMethods) {
+        	var methods = new HashSet<JvmMethodInfo>();
+        	var returnTypes = new HashSet<JvmTypeInfo>();
+            foreach (var method in overridenMethods) {
+                if (method == null) {
+                	continue;
+                }
+                if (!requireBridge(context, bridgedMethod, method)) {
+                	continue;
+                }
+                if (!isBridgeDefined(context, method.DeclaringType, method) && returnTypes.add(method.ReturnType)) {
+                	methods.add(method);
+                }
+            }
+            foreach (var method in methods) {
+            	emitBridgeMethod(context, typeBuilder, bridgedMethod, method);
+            }
+        }
+        
+        private static boolean requireBridge(CompilerContext context, JvmMethodInfo bridgedMethod, JvmMethodInfo method) {
+            var def = method.OriginalMethodDefinition;
+            var pit = bridgedMethod.Parameters.iterator();
+            foreach (var p in def.Parameters) {
+                var mp = pit.next();
+            	if (getTypeErasure(context, p.Type).OriginalTypeDefinition != getTypeErasure(context, mp.Type).OriginalTypeDefinition) {
+            		return true;
+            	}
+            }
+        	return getTypeErasure(context, bridgedMethod.ReturnType).OriginalTypeDefinition != getTypeErasure(context, def.ReturnType).OriginalTypeDefinition;
+        }
+
+		private static boolean isBridgeDefined(CompilerContext context, JvmTypeInfo type, JvmMethodInfo method) {
+            method = method.OriginalMethodDefinition;
+        	var pcount = method.Parameters.count();
+            foreach (var m in type.Methods) {
+                if (m == method 
+                        || !m.Name.equals(method.Name)
+                        || m.IsVarargs != method.IsVarargs
+                        || m.IsPublic != method.IsPublic
+                        || m.Parameters.count() != pcount
+                        || getTypeErasure(context, m.ReturnType) != getTypeErasure(context, method.ReturnType)) {
                     continue;
                 }
-                if (overloadedMethod == null) {
-                    overloadedMethod = method;
-                }
-                foreach (var m in method.DeclaringType.Methods) {
-                    if (m == method 
-                            || !m.IsBridge
-                            || !m.Name.equals(method.Name)
-                            || m.IsVarargs != method.IsVarargs
-                            || m.IsPublic != method.IsPublic
-                            || m.Parameters.count() != method.Parameters.count()
-                            || !m.ReturnType.isAssignableFrom(method.ReturnType)) {
-                        continue;
-                    }
-                    var pit = method.Parameters.iterator();
-                    var found = true;
-                    foreach (var p in m.Parameters) {
-                        var mp = pit.next();
-                        if (!p.Type.isAssignableFrom(mp.Type)) {
-                            found = false;
-                        }
-                    }
-                    if (found) {
-                        return;
+            	var compatibleParams = true;
+                var pit = method.Parameters.iterator();
+                foreach (var p in m.Parameters) {
+                    var mp = pit.next();
+                    if (getTypeErasure(context, p.Type) != getTypeErasure(context, mp.Type)) {
+                        compatibleParams = false;
+                        break;
                     }
                 }
+                if (compatibleParams) {
+                	return true;
+                }
             }
-            if (overloadedMethod != null) {
-                emitBridgeMethod(context, typeBuilder, bridgedMethod, overloadedMethod);
-            }
+			return false;
+		}
+        
+        private static JvmTypeInfo getTypeErasure(CompilerContext context, JvmTypeInfo type) {
+        	if (type.IsGenericParameter) {
+        		return BytecodeHelper.getGenericParameterTypeErasure(context.TypeSystem, type);
+        	} else if (type.IsArray) {
+        		return getTypeErasure(context, type.ElementType).ArrayType;
+        	} else {
+        		return type;
+        	}
         }
         
         static void emitBridgeMethod(CompilerContext context, JvmTypeBuilder typeBuilder, JvmMethodInfo bridgedMethod,
                 JvmMethodInfo overloadedMethod) {
+            if (isBridgeDefined(context, typeBuilder, overloadedMethod)) {
+            	return;
+            }
             overloadedMethod = overloadedMethod.OriginalMethodDefinition;
-            var typeParams = new HashSet<JvmTypeInfo>();
-            foreach (var t in overloadedMethod.DeclaringType.GenericArguments) {
-                typeParams.add(t);
-            }
-            var useTypeParams = false;
-            var bit = bridgedMethod.Parameters.iterator();
-            foreach (var p in overloadedMethod.Parameters) {
-                var bp = bit.next();
-                // TODO: check that the types have the same compiled types (not only different from Object)
-                if (typeParams.contains(p.Type) && !BytecodeHelper.isCompiledToObject(bp.Type)) {
-                    useTypeParams = true;
-                    break;
-                }
-            }
-            if (!useTypeParams && (!typeParams.contains(overloadedMethod.ReturnType) ||
-                    BytecodeHelper.isCompiledToObject(bridgedMethod.ReturnType))) {
-                return;
-            }
 
             var methodBuilder = typeBuilder.defineMethod(overloadedMethod.Name);
             methodBuilder.setBridge(true);

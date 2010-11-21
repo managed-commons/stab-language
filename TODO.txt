@@ -12,3 +12,5 @@ Issues ================================
 - test partial methods
 - check that #define/#undef is used before any lexical unit
 - try/catch and switch support in expression trees
+- check that enum constructors are private
+- check indexers override

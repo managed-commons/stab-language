@@ -141,7 +141,7 @@ package stab.tools.bytecode {
             return result;
         }
         
-        public override JvmAnnotationValue DefaultValue {
+        public override JvmAnnotationArgument DefaultValue {
             get {
                 return defaultValue;
             }

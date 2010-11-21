@@ -1074,7 +1074,7 @@ package stab.tools.parser {
             int len = getLexicalUnitLength();
             saveScannerState();
             if (nextLexicalUnit(true) == LexicalUnit.OpenBrace) {
-                var declaration = new PropertyDeclarationNode { Type = type, NameOffset = sp, NameLength = len };
+                var declaration = new PropertyDeclarationNode { Type = type, NameOffset = sp, NameLength = len, StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     declaration.DocumentationOffset = docCommentStartPosition;
                     declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -1088,10 +1088,11 @@ package stab.tools.parser {
                 if (lexicalUnit != LexicalUnit.CloseBrace) {
                     parseAccessorDeclaration(declaration, true);
                 }
+				declaration.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
                 return declaration;
             } else {
-                var declaration = new MethodDeclarationNode { ReturnType = type, NameOffset = sp, NameLength = len };
+                var declaration = new MethodDeclarationNode { ReturnType = type, NameOffset = sp, NameLength = len, StartPosition = startPosition };
                 if (docCommentEndPosition > 0) {
                     declaration.DocumentationOffset = docCommentStartPosition;
                     declaration.DocumentationLength = docCommentEndPosition - docCommentStartPosition;
@@ -1116,6 +1117,7 @@ package stab.tools.parser {
                     parseTypeParameterConstraintsClauses(declaration.ConstraintsClauses);
                 }
                 docCommentEndPosition = 0;
+				declaration.EndPosition = scanner.EndPosition;
                 parseSemiColon(false, false);
                 return declaration;
             }

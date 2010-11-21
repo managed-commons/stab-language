@@ -471,7 +471,7 @@ package stab.tools.bytecode {
                 if (this.FullName.equals("java/lang/Cloneable") || this.FullName.equals("java/io/Serializable")) {
                     return true;
                 } else if (this.IsArray) {
-                    if (this.ElementType.IsPrimitive) {
+                    if (this.ElementType.IsPrimitive || type.ElementType.IsPrimitive) {
                         return this.ElementType == type.ElementType;
                     } else {
                         return this.ElementType.isAssignableFrom(type.ElementType);
@@ -479,12 +479,24 @@ package stab.tools.bytecode {
                 }
             }
 			if (type.IsGenericParameter) {
-				foreach (var bound in type.GenericParameterBounds) {
-					if (this.isAssignableFrom(bound)) {
+				if (this.IsGenericParameter) {
+					var gparams1 = this.GenericParameterBounds.count();
+					var gparams2 = type.GenericParameterBounds.count();
+					if (gparams1 == 0) {
 						return true;
 					}
+					if (this.GenericParameterBounds.first().IsObject && (gparams2 == 0 || type.GenericParameterBounds.first().IsObject)) {
+						return true;
+					}
+					return false;
+				} else {
+					foreach (var bound in type.GenericParameterBounds) {
+						if (this.isAssignableFrom(bound)) {
+							return true;
+						}
+					}
+					return false;
 				}
-				return false;
 			}
             int typeArgs = this.GenericArguments.count();
             if (type.GenericArguments.count() != typeArgs) {

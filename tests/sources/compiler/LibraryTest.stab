@@ -366,5 +366,19 @@ package stab.tools.compiler.test {
 			doTest("ExpressionTreeReturn", new Class<?>[] {}, new Object[] {}, 1);
 		}
 		
+		[Test]
+		public void intList1() {
+			doTest("IntList1", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void intIterable1() {
+			doTest("IntIterable1", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void intIterable2() {
+			doTest("IntIterable2", new Class<?>[] {}, new Object[] {}, true);
+		}
 	}
 }
