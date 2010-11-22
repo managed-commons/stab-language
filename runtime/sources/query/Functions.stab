@@ -65,6 +65,16 @@ package stab.query {
 	public interface FunctionFloatFloatFloat      { float invoke(float argument1, float argument2); }
 	public interface FunctionDoubleDoubleDouble   { double invoke(double argument1, double argument2); }
 
+	public interface FunctionIntTInt<TArgument>           { int invoke(int argument1, TArgument argument2); }
+	public interface FunctionLongTLong<TArgument>         { long invoke(long argument1, TArgument argument2); }
+	public interface FunctionFloatTFloat<TArgument>       { float invoke(float argument1, TArgument argument2); }
+	public interface FunctionDoubleTDouble<TArgument>     { double invoke(double argument1, TArgument argument2); }
+	
+	public interface FunctionTIntT<TArgument, TResult>    { TResult invoke(TArgument argument1, int argument2); }
+	public interface FunctionTLongT<TArgument, TResult>   { TResult invoke(TArgument argument1, long argument2); }
+	public interface FunctionTFloatT<TArgument, TResult>  { TResult invoke(TArgument argument1, float argument2); }
+	public interface FunctionTDoubleT<TArgument, TResult> { TResult invoke(TArgument argument1, double argument2); }
+
 	public interface FunctionTTT<TArgument1, TArgument2, TResult> { TResult invoke(TArgument1 argument1, TArgument2 argument2); }
 
 }

@@ -21,56 +21,130 @@ using stab.lang;
 
 package stab.query {
 
-	class IntArrayList : PrimitiveList<Integer>, IntList {
-		private final static int[] Empty = new int[0];
+	class LongArrayList : PrimitiveList<Long>, LongList {
+		private final static long[] Empty = new long[0];
 	
-		private int[] items;
+		private long[] items;
 		
-		IntArrayList(IntIterable source) {
+		LongArrayList(LongIterable source) {
 			items = Empty;
-			foreach (var i in source) {
-				add(i);
+			foreach (var d in source) {
+				add(d);
 			}
 		}
 		
 		// Collection
 		
-		public boolean add(Integer i) {
-			return add(i.intValue());
+		public boolean add(Long l) {
+			return add(l.longValue());
 		}
 		
 		public boolean contains(Object o) {
-			var i = o as Integer;
-			if (i == null) {
+			var l = o as Long;
+			if (l == null) {
 				return false;
 			}
-			return contains(i.intValue());
+			return contains(l.longValue());
 		}
 		
 		public boolean remove(Object o) {
-			var i = o as Integer;
-			if (i == null) {
+			var l = o as Long;
+			if (l == null) {
 				return false;
 			}
-			return removeItem(i.intValue());
+			return removeItem(l.longValue());
 		}
 
 		public boolean retainAll(Collection<?> c) {
 			if (this.isEmpty() || c.isEmpty()) {
 				return false;
 			}
-			var set = new IntHashSet(7);
+			var set = new LongHashSet(7);
 			foreach (var o in c) {
-				var i = o as Integer;
-				if (i != null) {
-					set.add(i.intValue());
+				var l = o as Long;
+				if (l != null) {
+					set.add(l.longValue());
 				}
 			}
 			return retainAll(set);
 		}
 		
-		private boolean retainAll(IntHashSet set) {
-			var t = new int[Math.min(size, set.count())];
+		// LongCollection
+		
+		public boolean add(long l) {
+			if (size == sizeof(items)) {
+				resize(size * 2);
+			}
+			items[size++] = l;
+			return true;
+		}
+		
+		public boolean addAll(LongCollection c) {
+			var result = false;
+			foreach (var i in c) {
+				result = true;
+				add(i);
+			}
+			return result;
+		}
+		
+		public boolean contains(long l) {
+			for (int index = 0; index < size; index++) {
+				if (items[index] == l) {
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		public boolean containsAll(LongCollection c) {
+			foreach (var l in c) {
+				if (!contains(l)) {
+					return false;
+				}
+			}
+			return true;
+		}
+		
+		public LongIterator iterator() {
+			for (int i = 0; i < size; i++) {
+				yield return items[i];
+			}
+		}
+		
+		public boolean removeItem(long l) {
+			for (int index = 0; index < size; index++) {
+				if (items[index] == l) {
+					removeAt(index);
+					return true;
+				}
+			}
+			return false;
+		}
+		
+		public boolean removeAll(LongCollection c) {
+			var result = false;
+			foreach (var l in c) {
+				if (removeItem(l)) {
+					result = true;
+				}
+			}
+			return result;
+		}
+		
+		public boolean retainAll(LongCollection c) {
+			if (this.isEmpty() || c.isEmpty()) {
+				return false;
+			}
+			var set = new LongHashSet(7);
+			foreach (var l in c) {
+				set.add(l);
+			}
+			return retainAll(set);
+		}
+
+		private boolean retainAll(LongHashSet set) {
+			var t = new long[Math.min(size, set.count())];
 			int len = 0;
 			for (int i = 0; i < size; i++) {
 				var item = items[i];
@@ -85,97 +159,23 @@ package stab.query {
 			}
 			return false;
 		}
-
-		// IntCollection
 		
-		public boolean add(int i) {
-			if (size == sizeof(items)) {
-				resize(size * 2);
-			}
-			items[size++] = i;
-			return true;
-		}
-		
-		public boolean addAll(IntCollection c) {
-			var result = false;
-			foreach (var i in c) {
-				result = true;
-				add(i);
-			}
-			return result;
-		}
-		
-		public boolean contains(int i) {
-			for (int index = 0; index < size; index++) {
-				if (items[index] == i) {
-					return true;
-				}
-			}
-			return false;
-		}
-		
-		public boolean containsAll(IntCollection c) {
-			foreach (var i in c) {
-				if (!contains(i)) {
-					return false;
-				}
-			}
-			return true;
-		}
-		
-		public IntIterator iterator() {
-			for (int i = 0; i < size; i++) {
-				yield return items[i];
-			}
-		}
-		
-		public boolean removeItem(int i) {
-			for (int index = 0; index < size; index++) {
-				if (items[index] == i) {
-					removeAt(index);
-					return true;
-				}
-			}
-			return false;
-		}
-		
-		public boolean removeAll(IntCollection c) {
-			var result = false;
-			foreach (var i in c) {
-				if (removeItem(i)) {
-					result = true;
-				}
-			}
-			return result;
-		}
-		
-		public boolean retainAll(IntCollection c) {
-			if (this.isEmpty() || c.isEmpty()) {
-				return false;
-			}
-			var set = new IntHashSet(7);
-			foreach (var i in c) {
-				set.add(i);
-			}
-			return retainAll(set);
-		}
-		
-		public int[] toArray(int[] a) {
-			int[] result = (sizeof(a) < size) ? new int[size] : a;
+		public long[] toArray(long[] a) {
+			var result = (sizeof(a) < size) ? new long[size] : a;
 			System.arraycopy(items, 0, result, 0, size);
 			return result;
 		}
 
 		// List
 		
-		public void add(int index, Integer i) {
-			if (i == null) {
-				throw new NullPointerException("i");
+		public void add(int index, Long l) {
+			if (l == null) {
+				throw new NullPointerException("l");
 			}
-			add(index, i.intValue());
+			add(index, l.longValue());
 		}
 
-		public boolean addAll(int index, Collection<Integer> c) {
+		public boolean addAll(int index, Collection<Long> c) {
 			if (index < 0 || index > size) {
 				throw new IndexOutOfBoundsException("index = " + index);
 			}
@@ -187,48 +187,48 @@ package stab.query {
 				System.arraycopy(items, index, items, index + len, size - index);
 			}
 			var result = false;
-			foreach (var i in c) {
+			foreach (var l in c) {
 				result = true;
-				items[index++] = i;
+				items[index++] = l;
 			}
 			size += len;
 			return result;
 		}
 
-		public Integer get(int index) {
+		public Long get(int index) {
 			return getItem(index);
 		}
 
 		public int indexOf(Object o) {
-			var i = o as Integer;
-			if (i == null) {
+			var l = o as Long;
+			if (l == null) {
 				return -1;
 			}
-			return indexOf(i.intValue());
+			return indexOf(l.longValue());
 		}
 		
 		public int lastIndexOf(Object o) {
-			var i = o as Integer;
-			if (i == null) {
+			var l = o as Long;
+			if (l == null) {
 				return -1;
 			}
-			return lastIndexOf(i.intValue());
+			return lastIndexOf(l.longValue());
 		}
-
-		public Integer remove(int index) {
+		
+		public Long remove(int index) {
 			return removeAt(index);
 		}
 
-		public Integer set(int index, Integer i) {
-			if (i == null) {
-				throw new NullPointerException("i");
+		public Long set(int index, Long l) {
+			if (l == null) {
+				throw new NullPointerException("l");
 			}
-			return setItem(index, i.intValue());
+			return setItem(index, l.longValue());
 		}
 		
-		// IntList
+		// LongList
 		
-		public void add(int index, int i) {
+		public void add(int index, long l) {
 			if (index < 0 || index > size) {
 				throw new IndexOutOfBoundsException("index = " + index);
 			}
@@ -238,11 +238,11 @@ package stab.query {
 			if (index < size) {
 				System.arraycopy(items, index, items, index + 1, size - index);
 			}
-			items[index] = i;
+			items[index] = l;
 			size++;
 		}
 		
-		public boolean addAll(int index, IntCollection c) {
+		public boolean addAll(int index, LongCollection c) {
 			if (index < 0 || index > size) {
 				throw new IndexOutOfBoundsException("index = " + index);
 			}
@@ -254,60 +254,60 @@ package stab.query {
 				System.arraycopy(items, index, items, index + len, size - index);
 			}
 			var result = false;
-			foreach (var i in c) {
+			foreach (var l in c) {
 				result = true;
-				items[index++] = i;
+				items[index++] = l;
 			}
 			size += len;
 			return result;
 		}
 		
-		public int indexOf(int i) {
+		public int indexOf(long l) {
 			for (int index = 0; index < size; index++) {
-				if (items[index] == i) {
+				if (items[index] == l) {
 					return index;
 				}
 			}
 			return -1;
 		}
 		
-		public int lastIndexOf(int i) {
+		public int lastIndexOf(long l) {
 			for (int index = size - 1; index >= 0; index++) {
-				if (items[index] == i) {
+				if (items[index] == l) {
 					return index;
 				}
 			}
 			return -1;
 		}
 		
-		public int removeAt(int index) {
+		public long removeAt(int index) {
 			if (index < 0 || index >= size) {
 				throw new IndexOutOfBoundsException("index = " + index);
 			}
 			size--;
-			int result = items[index];
+			var result = items[index];
 			if (index < size) {
 				System.arraycopy(items, index + 1, items, index, size - index);
 			}
 			return result;
 		}
 		
-		public IntList subList(int fromIndex, int toIndex) {
+		public LongList subList(int fromIndex, int toIndex) {
 			throw new UnsupportedOperationException();
 		}
 
-		public int getItem(int index) {
+		public long getItem(int index) {
 			if (index < 0 || index >= size) {
 				throw new IndexOutOfBoundsException("index = " + index);
 			}
 			return items[index];
 		}
 		
-		public int setItem(int index, int value) {
+		public long setItem(int index, long value) {
 			if (index < 0 || index >= size) {
 				throw new IndexOutOfBoundsException("index = " + index);
 			}
-			int result = items[index];
+			var result = items[index];
 			items[index] = value;
 			return result;
 		}
@@ -315,9 +315,9 @@ package stab.query {
 		private void resize(int newSize) {
 			var length = sizeof(items);
 			if (length == 0) {
-				items = new int[(newSize == 0) ? 4 : newSize];
+				items = new long[(newSize == 0) ? 4 : newSize];
 			} else {
-				var t = new int[newSize];
+				var t = new long[newSize];
 				System.arraycopy(items, 0, t, 0, length);
 				items = t;
 			}

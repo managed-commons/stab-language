@@ -533,6 +533,9 @@ package stab.tools.compiler {
         		return BytecodeHelper.getGenericParameterTypeErasure(context.TypeSystem, type);
         	} else if (type.IsArray) {
         		return getTypeErasure(context, type.ElementType).ArrayType;
+        	} else if (type.GenericArguments.any()) {
+        		return context.TypeSystem.getGenericType(type.OriginalTypeDefinition,
+        				type.GenericArguments.select(p => getTypeErasure(context, p)).toList());
         	} else {
         		return type;
         	}
@@ -550,19 +553,10 @@ package stab.tools.compiler {
             methodBuilder.setPublic(true);
             methodBuilder.setFinal(true);
             methodBuilder.setVarargs(overloadedMethod.IsVarargs);
-            if (overloadedMethod.ReturnType.IsGenericParameter) {
-                methodBuilder.setReturnType(BytecodeHelper.getGenericParameterTypeErasure(context.TypeSystem, overloadedMethod.ReturnType));
-            } else {
-                methodBuilder.setReturnType(overloadedMethod.ReturnType);
-            }
+            methodBuilder.setReturnType(getTypeErasure(context, overloadedMethod.ReturnType));
             var pit = bridgedMethod.Parameters.iterator();
             foreach (var p in overloadedMethod.Parameters) {
-                JvmParameterBuilder pb;
-                if (p.Type.IsGenericParameter) {
-                    pb = methodBuilder.addParameter(BytecodeHelper.getGenericParameterTypeErasure(context.TypeSystem, p.Type));
-                } else {
-                    pb = methodBuilder.addParameter(p.Type);
-                }
+                JvmParameterBuilder pb = methodBuilder.addParameter(getTypeErasure(context, p.Type));
                 pb.setName(pit.next().Name);
             }
             foreach (var t in overloadedMethod.Exceptions) {

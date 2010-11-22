@@ -20,7 +20,7 @@ using java.util;
 package stab.lang {
 
 	/// <summary>
-    /// Provides methods to manipulate a list of int without boxing / unboxing.
+    /// Provides methods to manipulate a list of ints without boxing / unboxing.
     /// </summary>
 	public interface IntList : List<Integer>, IntCollection {
 		void add(int index, int i);
@@ -29,7 +29,49 @@ package stab.lang {
 		int lastIndexOf(int i);
 		int removeAt(int index);
 		IntList subList(int fromIndex, int toIndex);
-		int getInt(int index);
-		int setInt(int index, int value);
+		int getItem(int index);
+		int setItem(int index, int value);
+	}
+
+	/// <summary>
+    /// Provides methods to manipulate a list of longs without boxing / unboxing.
+    /// </summary>
+	public interface LongList : List<Long>, LongCollection {
+		void add(int index, long l);
+		boolean addAll(int index, LongCollection c);
+		int indexOf(long l);
+		int lastIndexOf(long l);
+		long removeAt(int index);
+		LongList subList(int fromIndex, int toIndex);
+		long getItem(int index);
+		long setItem(int index, long value);
+	}
+
+	/// <summary>
+    /// Provides methods to manipulate a list of floats without boxing / unboxing.
+    /// </summary>
+	public interface FloatList : List<Float>, FloatCollection {
+		void add(int index, float f);
+		boolean addAll(int index, FloatCollection c);
+		int indexOf(float f);
+		int lastIndexOf(float f);
+		float removeAt(int index);
+		FloatList subList(int fromIndex, int toIndex);
+		float getItem(int index);
+		float setItem(int index, float value);
+	}
+
+	/// <summary>
+    /// Provides methods to manipulate a list of doubles without boxing / unboxing.
+    /// </summary>
+	public interface DoubleList : List<Double>, DoubleCollection {
+		void add(int index, double d);
+		boolean addAll(int index, DoubleCollection c);
+		int indexOf(double d);
+		int lastIndexOf(double d);
+		double removeAt(int index);
+		DoubleList subList(int fromIndex, int toIndex);
+		double getItem(int index);
+		double setItem(int index, double value);
 	}
 }

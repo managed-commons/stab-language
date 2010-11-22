@@ -313,5 +313,19 @@ package stab.tools.compiler.test {
 				"Covariance4.stab (10, 18) error 239: No method 'm()' found to override in base types of 'C2'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void propertyCovariance() {
+			doTest("PropertyCovariance", new String[]{
+				"PropertyCovariance.stab (2, 23) error 208: 'B.Prop' has a return type incompatible with the return type of 'A.Prop'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void indexerCovariance() {
+			doTest("IndexerCovariance", new String[]{
+				"IndexerCovariance.stab (2, 23) error 208: 'B.this[]' has a return type incompatible with the return type of 'A.this[]'" },
+				new String[] {});
+		}
 	}
 }

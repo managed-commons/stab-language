@@ -2898,6 +2898,15 @@ package stab.tools.compiler {
             
             var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder);
             indexerDeclaration.addUserData(memberInfo);
+
+            foreach (var mi in memberInfo.getOverridenMembers(context.AnnotatedTypeSystem)) {
+                if (mi.Type != memberInfo.Type) {
+                    context.addError(CompileErrorId.IncompatibleOverridingReturnType, indexerDeclaration,
+                            BytecodeHelper.getDisplayName(memberInfo.DeclaringType),
+                            "this[]",
+                            BytecodeHelper.getDisplayName(mi.DeclaringType));
+                }
+            }
             
             var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
             if (indexerDeclaration.Modifiers.contains(Modifier.Override)) {
@@ -2949,6 +2958,15 @@ package stab.tools.compiler {
             var name = context.getIdentifier(propertyDeclaration.NameOffset, propertyDeclaration.NameLength);
             var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder, name);
             propertyDeclaration.addUserData(memberInfo);
+
+            foreach (var mi in memberInfo.getOverridenMembers(context.AnnotatedTypeSystem)) {
+                if (mi.Type != memberInfo.Type) {
+                    context.addError(CompileErrorId.IncompatibleOverridingReturnType, propertyDeclaration,
+                            BytecodeHelper.getDisplayName(memberInfo.DeclaringType),
+                            memberInfo.Name,
+                            BytecodeHelper.getDisplayName(mi.DeclaringType));
+                }
+            }
             
             var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
             if (propertyDeclaration.Modifiers.contains(Modifier.Override)) {

@@ -23,6 +23,174 @@ package stab.query {
 	public static class Query {
 
 		///////////////////////////////////////////////////////////////////////////////////////////
+		// aggregate
+		//
+		
+		public static TSource aggregate<TSource>(this Iterable<TSource> source, FunctionTTT<TSource, TSource, TSource> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var it = source.iterator();
+			var result = it.next();
+			while (it.hasNext()) {
+				result = accumulator.invoke(result, it.next());
+			}
+			return result;
+		}
+		
+		public static int aggregate(this IntIterable source, FunctionIntIntInt accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var it = source.iterator();
+			var result = it.nextInt();
+			while (it.hasNext()) {
+				result = accumulator.invoke(result, it.nextInt());
+			}
+			return result;
+		}
+		
+		public static long aggregate(this LongIterable source, FunctionLongLongLong accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var it = source.iterator();
+			var result = it.nextLong();
+			while (it.hasNext()) {
+				result = accumulator.invoke(result, it.nextLong());
+			}
+			return result;
+		}
+		
+		public static float aggregate(this FloatIterable source, FunctionFloatFloatFloat accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var it = source.iterator();
+			var result = it.nextFloat();
+			while (it.hasNext()) {
+				result = accumulator.invoke(result, it.nextFloat());
+			}
+			return result;
+		}
+		
+		public static double aggregate(this DoubleIterable source, FunctionDoubleDoubleDouble accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var it = source.iterator();
+			var result = it.nextDouble();
+			while (it.hasNext()) {
+				result = accumulator.invoke(result, it.nextDouble());
+			}
+			return result;
+		}
+
+		public static TAccumulate aggregate<TSource, TAccumulate>(this Iterable<TSource> source, TAccumulate seed,
+				FunctionTTT<TAccumulate, TSource, TAccumulate> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static int aggregate<TSource>(this Iterable<TSource> source, int seed, FunctionIntTInt<TSource> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static TAccumulate aggregate<TAccumulate>(this IntIterable source, TAccumulate seed,
+				FunctionTIntT<TAccumulate, TAccumulate> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static long aggregate<TSource>(this Iterable<TSource> source, long seed, FunctionLongTLong<TSource> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static TAccumulate aggregate<TAccumulate>(this LongIterable source, TAccumulate seed,
+				FunctionTLongT<TAccumulate, TAccumulate> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static float aggregate<TSource>(this Iterable<TSource> source, float seed, FunctionFloatTFloat<TSource> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static TAccumulate aggregate<TAccumulate>(this FloatIterable source, TAccumulate seed,
+				FunctionTFloatT<TAccumulate, TAccumulate> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static double aggregate<TSource>(this Iterable<TSource> source, double seed, FunctionDoubleTDouble<TSource> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		public static TAccumulate aggregate<TAccumulate>(this DoubleIterable source, TAccumulate seed,
+				FunctionTDoubleT<TAccumulate, TAccumulate> accumulator) {
+			if (source == null) throw new NullPointerException("source");
+			if (accumulator == null) throw new NullPointerException("accumulator");
+
+			var result = seed;
+			foreach (var s in source) {
+				result = accumulator.invoke(result, s);
+			}
+			return result;
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
 		// all
 		//
 		
@@ -195,6 +363,14 @@ package stab.query {
 			}
 		}
 
+		public static CharIterable asIterable(CharSequence s) {
+			if (s == null) throw new NullPointerException("s");
+			
+			for (int i = 0; i < s.length(); i++) {
+				yield return s[i];
+			}
+		}
+
 		public static ShortIterable asIterable(short[] array) {
 			if (array == null) throw new NullPointerException("array");
 			
@@ -233,6 +409,86 @@ package stab.query {
 			foreach (var s in array) {
 				yield return s;
 			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// average
+		//
+		
+		public static double average(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+			
+			var sum = 0L;
+			var count = 0L;
+			foreach (var s in source) {
+				sum += s;
+				count++;
+			}
+			if (count == 0L) {
+				throw new NoSuchElementException();
+			}
+			return ((double)sum) / ((double)count);
+		}
+		
+		public static double average<TSource>(this Iterable<TSource> source, FunctionTInt<TSource> selector) {
+			return source.select(selector).average();
+		}
+		
+		public static double average(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+			
+			var sum = 0L;
+			var count = 0L;
+			foreach (var s in source) {
+				sum += s;
+				count++;
+			}
+			if (count == 0L) {
+				throw new NoSuchElementException();
+			}
+			return ((double)sum) / ((double)count);
+		}
+		
+		public static double average<TSource>(this Iterable<TSource> source, FunctionTLong<TSource> selector) {
+			return source.select(selector).average();
+		}
+		
+		public static double average(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+			
+			var sum = 0d;
+			var count = 0L;
+			foreach (var s in source) {
+				sum += s;
+				count++;
+			}
+			if (count == 0L) {
+				throw new NoSuchElementException();
+			}
+			return sum / ((double)count);
+		}
+		
+		public static double average<TSource>(this Iterable<TSource> source, FunctionTFloat<TSource> selector) {
+			return source.select(selector).average();
+		}
+		
+		public static double average(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+			
+			var sum = 0d;
+			var count = 0L;
+			foreach (var s in source) {
+				sum += s;
+				count++;
+			}
+			if (count == 0L) {
+				throw new NoSuchElementException();
+			}
+			return sum / ((double)count);
+		}
+		
+		public static double average<TSource>(this Iterable<TSource> source, FunctionTDouble<TSource> selector) {
+			return source.select(selector).average();
 		}
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
@@ -753,56 +1009,180 @@ package stab.query {
 			if (source == null) throw new NullPointerException("source");
 			if (index < 0) throw new IllegalArgumentException("index");
 
-			int i = 0;
-			foreach (var s in source) {
-				if (i == index) {
-					return s;
+			if (source instanceof IntList) {
+				return ((IntList)source).getItem(index);
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
 				}
-				i++;
+				throw new IndexOutOfBoundsException("index: " + i);
 			}
-			throw new IndexOutOfBoundsException("index: " + i);
 		}
 
 		public static long elementAt(this LongIterable source, int index) {
 			if (source == null) throw new NullPointerException("source");
 			if (index < 0) throw new IllegalArgumentException("index");
 
-			int i = 0;
-			foreach (var s in source) {
-				if (i == index) {
-					return s;
+			if (source instanceof LongList) {
+				return ((LongList)source).getItem(index);
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
 				}
-				i++;
+				throw new IndexOutOfBoundsException("index: " + i);
 			}
-			throw new IndexOutOfBoundsException("index: " + i);
 		}
 
 		public static float elementAt(this FloatIterable source, int index) {
 			if (source == null) throw new NullPointerException("source");
 			if (index < 0) throw new IllegalArgumentException("index");
 
-			int i = 0;
-			foreach (var s in source) {
-				if (i == index) {
-					return s;
+			if (source instanceof FloatList) {
+				return ((FloatList)source).getItem(index);
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
 				}
-				i++;
+				throw new IndexOutOfBoundsException("index: " + i);
 			}
-			throw new IndexOutOfBoundsException("index: " + i);
 		}
 
 		public static double elementAt(this DoubleIterable source, int index) {
 			if (source == null) throw new NullPointerException("source");
 			if (index < 0) throw new IllegalArgumentException("index");
 
-			int i = 0;
-			foreach (var s in source) {
-				if (i == index) {
-					return s;
+			if (source instanceof DoubleList) {
+				return ((DoubleList)source).getItem(index);
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
 				}
-				i++;
+				throw new IndexOutOfBoundsException("index: " + i);
 			}
-			throw new IndexOutOfBoundsException("index: " + i);
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// elementAtOrDefault
+
+		public static TSource elementAtOrDefault<TSource>(this Iterable<TSource> source, int index) {
+			if (source == null) throw new NullPointerException("source");
+			if (index < 0) throw new IllegalArgumentException("index");
+
+			if (source instanceof List<?>) {
+				var list = (List<TSource>)source;
+				if (index < list.size()) {
+					return list[index];
+				}
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
+				}
+			}
+			return null;
+		}
+
+		public static int elementAtOrDefault(this IntIterable source, int index) {
+			if (source == null) throw new NullPointerException("source");
+			if (index < 0) throw new IllegalArgumentException("index");
+
+			if (source instanceof IntList) {
+				var list = (IntList)source;
+				if (index < list.size()) {
+					return list.getItem(index);
+				}
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
+				}
+			}
+			return 0;
+		}
+
+		public static long elementAtOrDefault(this LongIterable source, int index) {
+			if (source == null) throw new NullPointerException("source");
+			if (index < 0) throw new IllegalArgumentException("index");
+
+			if (source instanceof LongList) {
+				var list = (LongList)source;
+				if (index < list.size()) {
+					return list.getItem(index);
+				}
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
+				}
+			}
+			return 0L;
+		}
+
+		public static float elementAtOrDefault(this FloatIterable source, int index) {
+			if (source == null) throw new NullPointerException("source");
+			if (index < 0) throw new IllegalArgumentException("index");
+
+			if (source instanceof FloatList) {
+				var list = (FloatList)source;
+				if (index < list.size()) {
+					return list.getItem(index);
+				}
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
+				}
+			}
+			return 0f;
+		}
+
+		public static double elementAtOrDefault(this DoubleIterable source, int index) {
+			if (source == null) throw new NullPointerException("source");
+			if (index < 0) throw new IllegalArgumentException("index");
+
+			if (source instanceof DoubleList) {
+				var list = (DoubleList)source;
+				if (index < list.size()) {
+					return list.getItem(index);
+				}
+			} else {
+				int i = 0;
+				foreach (var s in source) {
+					if (i == index) {
+						return s;
+					}
+					i++;
+				}
+			}
+			return 0d;
 		}
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
@@ -1203,9 +1583,16 @@ package stab.query {
 		public static int first(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextInt();
+			if (source instanceof IntList) {
+				var list = (IntList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextInt();
+				}
 			}
 			throw new NoSuchElementException();
 		}
@@ -1213,9 +1600,16 @@ package stab.query {
 		public static long first(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextLong();
+			if (source instanceof LongList) {
+				var list = (LongList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextLong();
+				}
 			}
 			throw new NoSuchElementException();
 		}
@@ -1223,9 +1617,16 @@ package stab.query {
 		public static float first(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextFloat();
+			if (source instanceof FloatList) {
+				var list = (FloatList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextFloat();
+				}
 			}
 			throw new NoSuchElementException();
 		}
@@ -1233,9 +1634,16 @@ package stab.query {
 		public static double first(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextDouble();
+			if (source instanceof DoubleList) {
+				var list = (DoubleList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextDouble();
+				}
 			}
 			throw new NoSuchElementException();
 		}
@@ -1324,9 +1732,16 @@ package stab.query {
 		public static int firstOrDefault(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextInt();
+			if (source instanceof IntList) {
+				var list = (IntList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextInt();
+				}
 			}
 			return 0;
 		}
@@ -1334,31 +1749,52 @@ package stab.query {
 		public static long firstOrDefault(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextLong();
+			if (source instanceof LongList) {
+				var list = (LongList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextLong();
+				}
 			}
-			return 0;
+			return 0L;
 		}
 
 		public static float firstOrDefault(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextFloat();
+			if (source instanceof FloatList) {
+				var list = (FloatList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextFloat();
+				}
 			}
-			return 0;
+			return 0f;
 		}
 
 		public static double firstOrDefault(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				return it.nextDouble();
+			if (source instanceof DoubleList) {
+				var list = (DoubleList)source;
+				if (list.size() > 0) {
+					return list.getItem(0);
+				}
+			} else {
+				var it = source.iterator();
+				if (it.hasNext()) {
+					return it.nextDouble();
+				}
 			}
-			return 0;
+			return 0d;
 		}
 
 		public static TSource firstOrDefault<TSource>(this Iterable<TSource> source, FunctionTBoolean<TSource> predicate) {
@@ -1915,57 +2351,93 @@ package stab.query {
 		public static int last(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (!it.hasNext()) {
+			if (source instanceof IntList) {
+				var list = (IntList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list.getItem(count - 1);
+				}
 				throw new NoSuchElementException();
+			} else {
+				var it = source.iterator();
+				if (!it.hasNext()) {
+					throw new NoSuchElementException();
+				}
+				int result;
+				do {
+					result = it.next();
+				} while (it.hasNext());
+				return result;
 			}
-			int result;
-			do {
-				result = it.next();
-			} while (it.hasNext());
-			return result;
 		}
 
 		public static long last(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (!it.hasNext()) {
+			if (source instanceof LongList) {
+				var list = (LongList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list.getItem(count - 1);
+				}
 				throw new NoSuchElementException();
+			} else {
+				var it = source.iterator();
+				if (!it.hasNext()) {
+					throw new NoSuchElementException();
+				}
+				long result;
+				do {
+					result = it.next();
+				} while (it.hasNext());
+				return result;
 			}
-			long result;
-			do {
-				result = it.next();
-			} while (it.hasNext());
-			return result;
 		}
 
 		public static float last(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (!it.hasNext()) {
+			if (source instanceof FloatList) {
+				var list = (FloatList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list.getItem(count - 1);
+				}
 				throw new NoSuchElementException();
+			} else {
+				var it = source.iterator();
+				if (!it.hasNext()) {
+					throw new NoSuchElementException();
+				}
+				float result;
+				do {
+					result = it.next();
+				} while (it.hasNext());
+				return result;
 			}
-			float result;
-			do {
-				result = it.next();
-			} while (it.hasNext());
-			return result;
 		}
 
 		public static double last(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (!it.hasNext()) {
+			if (source instanceof DoubleList) {
+				var list = (DoubleList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list.getItem(count - 1);
+				}
 				throw new NoSuchElementException();
+			} else {
+				var it = source.iterator();
+				if (!it.hasNext()) {
+					throw new NoSuchElementException();
+				}
+				double result;
+				do {
+					result = it.next();
+				} while (it.hasNext());
+				return result;
 			}
-			double result;
-			do {
-				result = it.next();
-			} while (it.hasNext());
-			return result;
 		}
 		
 		public static TSource last<TSource>(this Iterable<TSource> source, FunctionTBoolean<TSource> predicate) {
@@ -2104,41 +2576,77 @@ package stab.query {
 		public static int lastOrDefault(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var result = 0;
-			foreach (var s in source) {
-				result = s;
+			if (source instanceof IntList) {
+				var list = (IntList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list[count - 1];
+				}
+				return 0;
+			} else {
+				var result = 0;
+				foreach (var s in source) {
+					result = s;
+				}
+				return result;
 			}
-			return result;
 		}
 
 		public static long lastOrDefault(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var result = 0L;
-			foreach (var s in source) {
-				result = s;
+			if (source instanceof LongList) {
+				var list = (LongList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list[count - 1];
+				}
+				return 0L;
+			} else {
+				var result = 0L;
+				foreach (var s in source) {
+					result = s;
+				}
+				return result;
 			}
-			return result;
 		}
 
 		public static float lastOrDefault(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var result = 0f;
-			foreach (var s in source) {
-				result = s;
+			if (source instanceof FloatList) {
+				var list = (FloatList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list[count - 1];
+				}
+				return 0f;
+			} else {
+				var result = 0f;
+				foreach (var s in source) {
+					result = s;
+				}
+				return result;
 			}
-			return result;
 		}
 
 		public static double lastOrDefault(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var result = 0d;
-			foreach (var s in source) {
-				result = s;
+			if (source instanceof DoubleList) {
+				var list = (DoubleList)source;
+				int count = list.size();
+				if (count > 0) {
+					return list[count - 1];
+				}
+				return 0d;
+			} else {
+				var result = 0d;
+				foreach (var s in source) {
+					result = s;
+				}
+				return result;
 			}
-			return result;
 		}
 
 		public static TSource lastOrDefault<TSource>(this Iterable<TSource> source, FunctionTBoolean<TSource> predicate) {
@@ -2202,6 +2710,375 @@ package stab.query {
 			return result;
 		}
 		
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// longCount
+		//
+		
+		public static long longCount<TSource>(this Iterable<TSource> source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = 0L;
+			var it = source.iterator();
+			while (it.hasNext()) {
+				it.next();
+				result++;
+			}
+			return result;
+		}
+		
+		public static long longCount<TSource>(this Iterable<TSource> source, FunctionTBoolean<TSource> predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var result = 0L;
+			foreach (var s in source) {
+				if (predicate.invoke(s)) {
+					result++;
+				}
+			}
+			return result;
+		}
+		
+		public static long longCount(this IntIterable source, FunctionIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var result = 0L;
+			foreach (var s in source) {
+				if (predicate.invoke(s)) {
+					result++;
+				}
+			}
+			return result;
+		}
+		
+		public static long longCount(this LongIterable source, FunctionLongBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var result = 0L;
+			foreach (var s in source) {
+				if (predicate.invoke(s)) {
+					result++;
+				}
+			}
+			return result;
+		}
+		
+		public static long longCount(this FloatIterable source, FunctionFloatBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var result = 0L;
+			foreach (var s in source) {
+				if (predicate.invoke(s)) {
+					result++;
+				}
+			}
+			return result;
+		}
+		
+		public static long longCount(this DoubleIterable source, FunctionDoubleBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var result = 0L;
+			foreach (var s in source) {
+				if (predicate.invoke(s)) {
+					result++;
+				}
+			}
+			return result;
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// max
+		//
+		
+		public static int max(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextInt();
+			while (it.hasNext()) {
+				var s = it.nextInt();
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static int max<TSource>(this Iterable<TSource> source, FunctionTInt<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		public static long max(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextLong();
+			while (it.hasNext()) {
+				var s = it.nextLong();
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static long max<TSource>(this Iterable<TSource> source, FunctionTLong<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		public static float max(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextFloat();
+			while (it.hasNext()) {
+				var s = it.nextFloat();
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static float max<TSource>(this Iterable<TSource> source, FunctionTFloat<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		public static double max(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextDouble();
+			while (it.hasNext()) {
+				var s = it.nextDouble();
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static double max<TSource>(this Iterable<TSource> source, FunctionTDouble<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s > result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// min
+		//
+		
+		public static int min(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextInt();
+			while (it.hasNext()) {
+				var s = it.nextInt();
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static int min<TSource>(this Iterable<TSource> source, FunctionTInt<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		public static long min(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextLong();
+			while (it.hasNext()) {
+				var s = it.nextLong();
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static long min<TSource>(this Iterable<TSource> source, FunctionTLong<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		public static float min(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextFloat();
+			while (it.hasNext()) {
+				var s = it.nextFloat();
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static float min<TSource>(this Iterable<TSource> source, FunctionTFloat<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
+		public static double min(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = it.nextDouble();
+			while (it.hasNext()) {
+				var s = it.nextDouble();
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+		
+		public static double min<TSource>(this Iterable<TSource> source, FunctionTDouble<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var it = source.iterator();
+			if (!it.hasNext()) {
+				throw new NoSuchElementException();
+			}
+			var result = selector.invoke(it.next());
+			while (it.hasNext()) {
+				var s = selector.invoke(it.next());
+				if (s < result) {
+					result = s;
+				}
+			}
+			return result;
+		}
+
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// ofType
 		//
@@ -2344,6 +3221,102 @@ package stab.query {
 			
 			while (count-- > 0) {
 				yield return start++;
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// repeat
+		//
+		
+		public static Iterable<TSource> repeat<TSource>(TSource element, int count) {
+			if (count < 0) throw new IllegalArgumentException("count");
+			
+			while (count-- > 0) {
+				yield return element;
+			}
+		}
+		
+		public static IntIterable repeat(int element, int count) {
+			if (count < 0) throw new IllegalArgumentException("count");
+			
+			while (count-- > 0) {
+				yield return element;
+			}
+		}
+		
+		public static LongIterable repeat(long element, int count) {
+			if (count < 0) throw new IllegalArgumentException("count");
+			
+			while (count-- > 0) {
+				yield return element;
+			}
+		}
+		
+		public static FloatIterable repeat(float element, int count) {
+			if (count < 0) throw new IllegalArgumentException("count");
+			
+			while (count-- > 0) {
+				yield return element;
+			}
+		}
+		
+		public static DoubleIterable repeat(double element, int count) {
+			if (count < 0) throw new IllegalArgumentException("count");
+			
+			while (count-- > 0) {
+				yield return element;
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// reverse
+		//
+		
+		public static Iterable<TSource> reverse<TSource>(this Iterable<TSource> source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var list = new ArrayList<TSource>();
+			foreach (var s in source) {
+				list.add(s);
+			}
+			for (int i = list.size() - 1; i >= 0; --i) {
+				yield return list[i];
+			}
+		}
+		
+		public static IntIterable reverse(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var list = new IntArrayList(source);
+			for (int i = list.size() - 1; i >= 0; --i) {
+				yield return list.getItem(i);
+			}
+		}
+		
+		public static LongIterable reverse(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var list = new LongArrayList(source);
+			for (int i = list.size() - 1; i >= 0; --i) {
+				yield return list.getItem(i);
+			}
+		}
+		
+		public static FloatIterable reverse(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var list = new FloatArrayList(source);
+			for (int i = list.size() - 1; i >= 0; --i) {
+				yield return list.getItem(i);
+			}
+		}
+		
+		public static DoubleIterable reverse(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var list = new DoubleArrayList(source);
+			for (int i = list.size() - 1; i >= 0; --i) {
+				yield return list.getItem(i);
 			}
 		}
 		
@@ -2869,60 +3842,108 @@ package stab.query {
 		public static int single(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextInt();
-				if (it.hasNext()) {
+			if (source instanceof IntList) {
+				var l = (IntList)source;
+				switch (l.size()) {
+				case 0:
+					throw new NoSuchElementException();
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				throw new NoSuchElementException();
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextInt();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					throw new NoSuchElementException();
+				}
 			}
 		}
 
 		public static long single(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextLong();
-				if (it.hasNext()) {
+			if (source instanceof LongList) {
+				var l = (LongList)source;
+				switch (l.size()) {
+				case 0:
+					throw new NoSuchElementException();
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				throw new NoSuchElementException();
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextLong();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					throw new NoSuchElementException();
+				}
 			}
 		}
 
 		public static float single(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextFloat();
-				if (it.hasNext()) {
+			if (source instanceof FloatList) {
+				var l = (FloatList)source;
+				switch (l.size()) {
+				case 0:
+					throw new NoSuchElementException();
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				throw new NoSuchElementException();
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextFloat();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					throw new NoSuchElementException();
+				}
 			}
 		}
 
 		public static double single(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextDouble();
-				if (it.hasNext()) {
+			if (source instanceof DoubleList) {
+				var l = (DoubleList)source;
+				switch (l.size()) {
+				case 0:
+					throw new NoSuchElementException();
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				throw new NoSuchElementException();
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextDouble();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					throw new NoSuchElementException();
+				}
 			}
 		}
 
@@ -2960,60 +3981,108 @@ package stab.query {
 		public static int singleOrDefault(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextInt();
-				if (it.hasNext()) {
+			if (source instanceof IntList) {
+				var l = (IntList)source;
+				switch (l.size()) {
+				case 0:
+					return 0;
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				return 0;
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextInt();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					return 0;
+				}
 			}
 		}
 
 		public static long singleOrDefault(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextLong();
-				if (it.hasNext()) {
+			if (source instanceof LongList) {
+				var l = (LongList)source;
+				switch (l.size()) {
+				case 0:
+					return 0L;
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				return 0;
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextLong();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					return 0L;
+				}
 			}
 		}
 
 		public static float singleOrDefault(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextFloat();
-				if (it.hasNext()) {
+			if (source instanceof FloatList) {
+				var l = (FloatList)source;
+				switch (l.size()) {
+				case 0:
+					return 0f;
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				return 0;
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextFloat();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					return 0f;
+				}
 			}
 		}
 
 		public static double singleOrDefault(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var it = source.iterator();
-			if (it.hasNext()) {
-				var result  = it.nextDouble();
-				if (it.hasNext()) {
+			if (source instanceof DoubleList) {
+				var l = (DoubleList)source;
+				switch (l.size()) {
+				case 0:
+					return 0d;
+				case 1:
+					return l.getItem(0);
+				default:
 					throw new IllegalStateException();
 				}
-				return result;
 			} else {
-				return 0;
+				var it = source.iterator();
+				if (it.hasNext()) {
+					var result  = it.nextDouble();
+					if (it.hasNext()) {
+						throw new IllegalStateException();
+					}
+					return result;
+				} else {
+					return 0d;
+				}
 			}
 		}
 
@@ -3032,6 +4101,143 @@ package stab.query {
 				yield return it.next();
 			}
 		}
+
+		public static IntIterable skip(this IntIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+			
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+				it.nextInt();
+			}
+			while (it.hasNext()) {
+				yield return it.nextInt();
+			}
+		}
+
+		public static LongIterable skip(this LongIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+			
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+				it.nextLong();
+			}
+			while (it.hasNext()) {
+				yield return it.nextLong();
+			}
+		}
+
+		public static FloatIterable skip(this FloatIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+			
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+				it.nextFloat();
+			}
+			while (it.hasNext()) {
+				yield return it.nextFloat();
+			}
+		}
+
+
+		public static DoubleIterable skip(this DoubleIterable source, int count) {
+			if (source == null) throw new NullPointerException("source");
+			
+            var it = source.iterator();
+            while (count-- > 0 && it.hasNext()) {
+				it.nextDouble();
+			}
+			while (it.hasNext()) {
+				yield return it.nextDouble();
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// sum
+		//
+        
+        public static int sum(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = 0;
+			foreach (var s in source) {
+				result += s;
+			}
+			return result;
+        }
+        
+        public static int sum<TSource>(this Iterable<TSource> source, FunctionTInt<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+        
+			var result = 0;
+			foreach (var s in source) {
+				result += selector.invoke(s);
+			}
+			return result;
+        }
+        
+        public static long sum(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = 0L;
+			foreach (var s in source) {
+				result += s;
+			}
+			return result;
+        }
+        
+        public static long sum<TSource>(this Iterable<TSource> source, FunctionTLong<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+        
+			var result = 0L;
+			foreach (var s in source) {
+				result += selector.invoke(s);
+			}
+			return result;
+        }
+        
+        public static float sum(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = 0f;
+			foreach (var s in source) {
+				result += s;
+			}
+			return result;
+        }
+        
+        public static float sum<TSource>(this Iterable<TSource> source, FunctionTFloat<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+        
+			var result = 0f;
+			foreach (var s in source) {
+				result += selector.invoke(s);
+			}
+			return result;
+        }
+        
+        public static double sum(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = 0d;
+			foreach (var s in source) {
+				result += s;
+			}
+			return result;
+        }
+        
+        public static double sum<TSource>(this Iterable<TSource> source, FunctionTDouble<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+        
+			var result = 0d;
+			foreach (var s in source) {
+				result += selector.invoke(s);
+			}
+			return result;
+        }
 
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// take
@@ -3179,6 +4385,24 @@ package stab.query {
 			if (source == null) throw new NullPointerException("source");
 
 			return new IntArrayList(source);
+		}
+
+		public static LongList toList(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			return new LongArrayList(source);
+		}
+
+		public static FloatList toList(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			return new FloatArrayList(source);
+		}
+
+		public static DoubleList toList(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			return new DoubleArrayList(source);
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////////////

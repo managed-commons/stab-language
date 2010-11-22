@@ -20,7 +20,7 @@ using java.util;
 package stab.lang {
 
     /// <summary>
-    /// Provides methods to manipulate a collection of int without boxing / unboxing.
+    /// Provides methods to manipulate a collection of ints without boxing / unboxing.
     /// </summary>
 	public interface IntCollection : Collection<Integer>, IntIterable {
 		boolean add(int i);
@@ -28,9 +28,54 @@ package stab.lang {
 		boolean contains(int i);
 		boolean containsAll(IntCollection c);
 		IntIterator iterator();
-		boolean removeInt(int i);
+		boolean removeItem(int i);
 		boolean removeAll(IntCollection c);
 		boolean retainAll(IntCollection c);
 		int[] toArray(int[] a);
+	}
+
+    /// <summary>
+    /// Provides methods to manipulate a collection of longs without boxing / unboxing.
+    /// </summary>
+	public interface LongCollection : Collection<Long>, LongIterable {
+		boolean add(long l);
+		boolean addAll(LongCollection c);
+		boolean contains(long l);
+		boolean containsAll(LongCollection c);
+		LongIterator iterator();
+		boolean removeItem(long l);
+		boolean removeAll(LongCollection c);
+		boolean retainAll(LongCollection c);
+		long[] toArray(long[] a);
+	}
+
+    /// <summary>
+    /// Provides methods to manipulate a collection of floats without boxing / unboxing.
+    /// </summary>
+	public interface FloatCollection : Collection<Float>, FloatIterable {
+		boolean add(float f);
+		boolean addAll(FloatCollection c);
+		boolean contains(float f);
+		boolean containsAll(FloatCollection c);
+		FloatIterator iterator();
+		boolean removeItem(float f);
+		boolean removeAll(FloatCollection c);
+		boolean retainAll(FloatCollection c);
+		float[] toArray(float[] a);
+	}
+
+    /// <summary>
+    /// Provides methods to manipulate a collection of doubles without boxing / unboxing.
+    /// </summary>
+	public interface DoubleCollection : Collection<Double>, DoubleIterable {
+		boolean add(double d);
+		boolean addAll(DoubleCollection c);
+		boolean contains(double d);
+		boolean containsAll(DoubleCollection c);
+		DoubleIterator iterator();
+		boolean removeItem(double d);
+		boolean removeAll(DoubleCollection c);
+		boolean retainAll(DoubleCollection c);
+		double[] toArray(double[] a);
 	}
 }
