@@ -189,6 +189,8 @@ package stab.tools.compiler {
 		GenericParameterInCatch,
 		UnresolvedStaticName,
 		ArrayInitializerTypeMismatch,
+		CannotApplyInvocation,
+		NoMatchingNumberOfArguments,
     }
 
     class Resources {

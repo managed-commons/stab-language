@@ -1026,15 +1026,40 @@ package stab.tools.compiler {
                         arguments = new ArrayList<ExpressionNode> { target.TargetObject };
                         arguments.addAll(invocation.Arguments);
                         var xmethods = tinfo.ExtensionMethods;
-                        if (!xmethods.any()) {
-                            throw context.error(CompileErrorId.NoInvocationTargetFound, invocation);
-                        }
-                        method = MethodResolver.resolveMethod(xmethods, arguments, targetType, true);
-                        if (method != null) {
-                            isExtension = true;
+                        if (xmethods.any()) {
+	                        method = MethodResolver.resolveMethod(xmethods, arguments, targetType, true);
+	                        if (method != null) {
+	                            isExtension = true;
+	                        }
                         }
                     }
                     if (method == null) {
+                    	method = methods.singleOrDefault();
+                    	if (method != null) {
+                    		int nparams = method.Parameters.count();
+                    		int nargs = invocation.Arguments.size();
+                    		if (nparams == nargs || (method.IsVarargs && nparams < nargs)) {
+                    			var typeList = new StringBuilder();
+                    			typeList.append("(");
+                    			var first = true;
+                    			foreach (var arg in invocation.Arguments) {
+                    				if (first) {
+                    					first = false;
+                    				} else {
+                    					typeList.append(", ");
+                    				}
+                    				var type = ValidationHelper.getType(context, arg);
+                    				typeList.append(BytecodeHelper.getDisplayName(type));
+                    			}
+                    			typeList.append(")");
+		                        throw context.error(CompileErrorId.CannotApplyInvocation, invocation,
+		                        		BytecodeHelper.getDisplayName(method.DeclaringType),
+		                        		BytecodeHelper.getDisplayName(method),
+		                        		typeList.toString());
+	                    	} else {
+		                        throw context.error(CompileErrorId.NoMatchingNumberOfArguments, invocation, method.Name, nargs);
+	                    	}
+                    	}
                         throw context.error(CompileErrorId.NoInvocationTargetFound, invocation);
                     }
                     tinfo.Member = MemberInfo.getInfo(method);

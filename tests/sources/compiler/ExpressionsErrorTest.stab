@@ -110,7 +110,7 @@ package stab.tools.compiler.test {
 		[Test]
 		public void methodAsMember() {
 			doTest("MethodAsMember", new String[]{
-				"MethodAsMember.stab (10, 11) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				"MethodAsMember.stab (10, 12) error 290: Method reference cannot be used here" },
 				new String[] {});
 		}
 		
@@ -175,6 +175,13 @@ package stab.tools.compiler.test {
 		public void arrayInitializer() {
 			doTest("ArrayInitializer", new String[]{
 				"ArrayInitializer.stab (5, 27) error 328: Cannot implicitly convert all the elements of the array initializer to 'java.lang.Class<?>'" },
+				new String[] {});
+		}
+
+		[Test]
+		public void noMethod() {
+			doTest("NoMethod", new String[]{
+				"NoMethod.stab (11, 12) error 329: The method 'C.m(java.lang.String)' is not applicable for the arguments (int)" },
 				new String[] {});
 		}
 	}

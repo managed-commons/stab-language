@@ -261,7 +261,7 @@ package stab.tools.compiler.test {
 		[Test]
 		public void wildcardConstraint() {
 			doTest("WildcardConstraint", new String[]{
-				"WildcardConstraint.stab (7, 22) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				"WildcardConstraint.stab (7, 22) error 329: The method 'WildcardConstraintArgument<T>.method(WildcardConstraintArgument<?>)' is not applicable for the arguments (WildcardConstraintArgument<java.lang.String>)" },
 				new String[] {});
 		}
 		
@@ -275,7 +275,7 @@ package stab.tools.compiler.test {
 		[Test]
 		public void wildcardLowerConstraint() {
 			doTest("WildcardLowerConstraint", new String[]{
-				"WildcardLowerConstraint.stab (7, 22) error 237: Cannot apply invocation to any method, delegate or extension method" },
+				"WildcardLowerConstraint.stab (7, 22) error 329: The method 'WildcardLowerConstraintArgument<T>.method(WildcardLowerConstraintArgument<?>)' is not applicable for the arguments (WildcardLowerConstraintArgument<java.lang.Integer>)" },
 				new String[] {});
 		}
 		
