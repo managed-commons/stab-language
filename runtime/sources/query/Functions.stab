@@ -60,12 +60,38 @@ package stab.query {
 	public interface FunctionFloatIntBoolean         { boolean invoke(float argument1, int argument2); }
 	public interface FunctionDoubleIntBoolean        { boolean invoke(double argument1, int argument2); }
 
-	public interface FunctionIntIntInt            { int invoke(int argument1, int argument2); }
-	public interface FunctionLongLongLong         { long invoke(long argument1, long argument2); }
-	public interface FunctionFloatFloatFloat      { float invoke(float argument1, float argument2); }
-	public interface FunctionDoubleDoubleDouble   { double invoke(double argument1, double argument2); }
+	public interface FunctionTIntInt<TArgument>           { int invoke(TArgument argument1, int argument2); }
+	public interface FunctionBooleanIntInt                { int invoke(boolean argument1, int argument2); }
+	public interface FunctionByteIntInt                   { int invoke(byte argument1, int argument2); }
+	public interface FunctionShortIntInt                  { int invoke(short argument1, int argument2); }
+	public interface FunctionCharIntInt                   { int invoke(char argument1, int argument2); }
+	public interface FunctionIntIntInt                    { int invoke(int argument1, int argument2); }
+	public interface FunctionLongIntInt                   { int invoke(long argument1, int argument2); }
+
+	public interface FunctionIntIntT<TResult>             { TResult invoke(int argument1, int argument2); }
+	public interface FunctionLongIntT<TResult>            { TResult invoke(long argument1, int argument2); }
+	public interface FunctionFloatIntT<TResult>           { TResult invoke(float argument1, int argument2); }
+	public interface FunctionDoubleIntT<TResult>          { TResult invoke(double argument1, int argument2); }
+
+	public interface FunctionIntIntByte                   { byte invoke(int argument1, int argument2); }
+	public interface FunctionIntIntChar                   { char invoke(int argument1, int argument2); }
+	public interface FunctionIntIntDouble                 { double invoke(int argument1, int argument2); }
+	public interface FunctionIntIntFloat                  { float invoke(int argument1, int argument2); }
+	public interface FunctionIntIntLong                   { long invoke(int argument1, int argument2); }
+	public interface FunctionIntIntShort                  { short invoke(int argument1, int argument2); }
+	public interface FunctionLongIntDouble                { double invoke(long argument1, int argument2); }
+	public interface FunctionLongIntFloat                 { float invoke(long argument1, int argument2); }
+	public interface FunctionLongIntLong                  { long invoke(long argument1, int argument2); }
+	public interface FunctionLongLongLong                 { long invoke(long argument1, long argument2); }
+	public interface FunctionFloatFloatFloat              { float invoke(float argument1, float argument2); }
+	public interface FunctionFloatIntDouble               { double invoke(float argument1, int argument2); }
+	public interface FunctionFloatIntFloat                { float invoke(float argument1, int argument2); }
+	public interface FunctionDoubleDoubleDouble           { double invoke(double argument1, double argument2); }
 
 	public interface FunctionIntTInt<TArgument>           { int invoke(int argument1, TArgument argument2); }
+	public interface FunctionTIntLong<TArgument>          { long invoke(TArgument argument1, int argument2); }
+	public interface FunctionTIntFloat<TArgument>         { float invoke(TArgument argument1, int argument2); }
+	public interface FunctionTIntDouble<TArgument>        { double invoke(TArgument argument1, int argument2); }
 	public interface FunctionLongTLong<TArgument>         { long invoke(long argument1, TArgument argument2); }
 	public interface FunctionFloatTFloat<TArgument>       { float invoke(float argument1, TArgument argument2); }
 	public interface FunctionDoubleTDouble<TArgument>     { double invoke(double argument1, TArgument argument2); }

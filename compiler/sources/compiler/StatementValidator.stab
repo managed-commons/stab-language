@@ -139,7 +139,11 @@ package stab.tools.compiler {
                     foreachStatement.addOrReplaceUserData(iterableType);
                     elementType = BytecodeHelper.getIterableOrIteratorElementType(iterableType);
                 }
-                var local = context.MemberResolver.defineLocal(context.getIdentifier(foreachStatement.NameOffset, foreachStatement.NameLength),
+                var localName = context.getIdentifier(foreachStatement.NameOffset, foreachStatement.NameLength);
+                if (context.MemberResolver.hasLocal(localName)) {
+                    context.addError(CompileErrorId.VariableRedefinition, foreachStatement, localName);
+                }
+                var local = context.MemberResolver.defineLocal(localName,
                         ValidationHelper.getVariableType(context, elementType), context.CodeValidationContext.CurrentMethod);
                 foreachStatement.addOrReplaceUserData(local);
                 handleStatement(foreachStatement.Statement, null);

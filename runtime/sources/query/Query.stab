@@ -3568,6 +3568,280 @@ package stab.query {
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////////
+		// select indexed
+		
+		public static Iterable<TResult> select<TSource, TResult>(this Iterable<TSource> source, FunctionTIntT<TSource, TResult> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+
+		public static IntIterable select(this BooleanIterable source, FunctionBooleanIntInt selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static BooleanIterable select(this IntIterable source, FunctionIntIntBoolean selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static IntIterable select(this ByteIterable source, FunctionByteIntInt selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static ByteIterable select(this IntIterable source, FunctionIntIntByte selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static IntIterable select(this CharIterable source, FunctionCharIntInt selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static CharIterable select(this IntIterable source, FunctionIntIntChar selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static IntIterable select(this ShortIterable source, FunctionShortIntInt selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static ShortIterable select(this IntIterable source, FunctionIntIntShort selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		
+		public static IntIterable select(this IntIterable source, FunctionIntIntInt selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static IntIterable select(this LongIterable source, FunctionLongIntInt selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static LongIterable select(this IntIterable source, FunctionIntIntLong selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static LongIterable select(this LongIterable source, FunctionLongIntLong selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static FloatIterable select(this IntIterable source, FunctionIntIntFloat selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static FloatIterable select(this FloatIterable source, FunctionFloatIntFloat selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static FloatIterable select(this LongIterable source, FunctionLongIntFloat selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static DoubleIterable select(this IntIterable source, FunctionIntIntDouble selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static DoubleIterable select(this LongIterable source, FunctionLongIntDouble selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static DoubleIterable select(this FloatIterable source, FunctionFloatIntDouble selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static IntIterable select<TSource>(this Iterable<TSource> source, FunctionTIntInt<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static Iterable<TResult> select<TResult>(this IntIterable source, FunctionIntIntT<TResult> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static LongIterable select<TSource>(this Iterable<TSource> source, FunctionTIntLong<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static Iterable<TResult> select<TResult>(this LongIterable source, FunctionLongIntT<TResult> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static FloatIterable select<TSource>(this Iterable<TSource> source, FunctionTIntFloat<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static Iterable<TResult> select<TResult>(this FloatIterable source, FunctionFloatIntT<TResult> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static DoubleIterable select<TSource>(this Iterable<TSource> source, FunctionTIntDouble<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+		
+		public static Iterable<TResult> select<TResult>(this DoubleIterable source, FunctionDoubleIntT<TResult> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+
+			var index = 0;
+			foreach (var s in source) {
+				yield return selector.invoke(s, index++);
+			}
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
 		// selectMany
 		
 		public static Iterable<TResult> selectMany<TSource, TResult>(this Iterable<TSource> source,
@@ -4150,6 +4424,95 @@ package stab.query {
 				yield return it.nextDouble();
 			}
 		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// skipWhile
+		//
+        
+        public static Iterable<TSource> skipWhile<TSource>(this Iterable<TSource> source, FunctionTBoolean<TSource> predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			while (it.hasNext()) {
+				var s = it.next();
+				 if (!predicate.invoke(s)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.next();
+			}
+        }
+
+        public static IntIterable skipWhile(this IntIterable source, FunctionIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			while (it.hasNext()) {
+				var s = it.nextInt();
+				 if (!predicate.invoke(s)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextInt();
+			}
+        }
+
+        public static LongIterable skipWhile(this LongIterable source, FunctionLongBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			while (it.hasNext()) {
+				var s = it.nextLong();
+				 if (!predicate.invoke(s)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextLong();
+			}
+        }
+
+        public static FloatIterable skipWhile(this FloatIterable source, FunctionFloatBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			while (it.hasNext()) {
+				var s = it.nextFloat();
+				 if (!predicate.invoke(s)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextFloat();
+			}
+        }
+
+        public static DoubleIterable skipWhile(this DoubleIterable source, FunctionDoubleBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			while (it.hasNext()) {
+				var s = it.nextDouble();
+				 if (!predicate.invoke(s)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextDouble();
+			}
+        }
 
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// sum

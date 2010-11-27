@@ -515,6 +515,12 @@ package stab.tools.compiler {
             if (method == null) {
                 return;
             }
+            if (expression.ExpressionKind == ExpressionKind.Lambda) {
+                var lambda = (LambdaExpressionNode)expression;
+                if (lambda.Parameters.size() != method.Parameters.count()) {
+                	return;
+                }
+            }
             var rinfo = typeVariableInfos[method.ReturnType];
             if (rinfo != null) {
                 foreach (var p in method.Parameters) {
@@ -554,10 +560,6 @@ package stab.tools.compiler {
                 expression.removeUserData(typeof(ExpressionInfo));
                 if (!success) {
                     return;
-                }
-                var paramTypes = new ArrayList<JvmTypeInfo>();
-                foreach (var p in method.Parameters) {
-                    paramTypes.add(p.Type);
                 }
                 var mit = method.Parameters.iterator();
                 var fit = fromTypes.iterator();
@@ -617,6 +619,12 @@ package stab.tools.compiler {
                 if (method == null) {
                     return;
                 }
+                if (expression.ExpressionKind == ExpressionKind.Lambda) {
+	                var lambda = (LambdaExpressionNode)expression;
+	                if (lambda.Parameters.size() != method.Parameters.count()) {
+	                	return;
+	                }
+	            }
                 var paramTypes = new ArrayList<JvmTypeInfo>();
                 foreach (var p in method.Parameters) {
                     TypeVariableInfo pinfo = typeVariables[p.Type];

@@ -14,5 +14,3 @@ Issues ================================
 - try/catch and switch support in expression trees
 - check that enum constructors are private
 - check indexers override
-- int i = 0; foreach (var i in s) {} // No error
-- int m() { return 0L; } // Verify error

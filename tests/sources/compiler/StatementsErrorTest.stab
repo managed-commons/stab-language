@@ -124,5 +124,13 @@ package stab.tools.compiler.test {
 				"EnumConstantArgument.stab (2, 5) error 230: Type 'E' does not contain an accessible constructor with the specified arguments" },
 				new String[] {});
 		}
+
+		[Test]
+		public void foreachVarRedefinition() {
+			doTest("ForeachVarRedefinition", new String[]{ 
+				"ForeachVarRedefinition.stab (4, 9) error 282: A variable named 'i' is already defined in this scope" },
+				new String[] {});
+		}
+		
 	}
 }
