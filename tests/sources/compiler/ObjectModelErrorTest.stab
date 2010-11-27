@@ -327,5 +327,12 @@ package stab.tools.compiler.test {
 				"IndexerCovariance.stab (2, 23) error 208: 'B.this[]' has a return type incompatible with the return type of 'A.this[]'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void interfaceMethod() {
+			doTest("InterfaceMethod", new String[]{
+				"InterfaceMethod.stab (5, 22) error 255: 'C.iterator()' reduce the visibility of the method in 'java.lang.Iterable<java.lang.String>'" },
+				new String[] {});
+		}
 	}
 }

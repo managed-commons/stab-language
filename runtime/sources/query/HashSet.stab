@@ -15,23 +15,24 @@
    limitations under the License.
  */
 using java.lang;
+using java.util;
 using stab.lang;
 
 package stab.query {
 
-    class HashSet<T> {
+    class HashSet<T> : Iterable<T> {
         private int count;
         private int usedCount;
-        private EqualityTester<T> comparator;
+        private EqualityTester<T> tester;
         private int[] indexes;
         private int[] hashCodes;
         private T[] elements;
         private int[] nexts;
         private int firstFree;
 
-        HashSet(EqualityTester<T> comparator, int capacity) {
-            if (comparator == null) {
-                comparator = Query.getDefaultEqualityTester();
+        HashSet(EqualityTester<T> tester, int capacity) {
+            if (tester == null) {
+                tester = Query.getDefaultEqualityTester();
             }
             indexes = new int[capacity];
             hashCodes = new int[capacity];
@@ -40,7 +41,7 @@ package stab.query {
             elements = new T[capacity];
             #pragma warning restore
             firstFree = -1;
-            this.comparator = comparator;
+            this.tester = tester;
         }
         
         int count() {
@@ -97,9 +98,35 @@ package stab.query {
             }
         }
         
+        public Iterator<T> iterator() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return elements[index];
+        		}
+        	}
+        }
+        
+        IntIterable slots() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return index;
+        		}
+        	}
+        }
+
+		T elementAt(int i) {
+			return elements[i];
+		}
+        
+        EqualityTester<T> equalityTester() {
+        	return tester;
+        }
+        
         private int find(T item, int hashCode) {
             for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
-                if (hashCodes[i] == hashCode && comparator.equals(item, elements[i])) {
+                if (hashCodes[i] == hashCode && tester.equals(item, elements[i])) {
                     return i;
                 }
             }
@@ -111,7 +138,7 @@ package stab.query {
             int index = hashCode % sizeof(indexes);
             int prev = -1;
             for (int i = indexes[index] - 1; i >= 0; i = nexts[i]) {
-                if (hashCodes[i] == hashCode && comparator.equals(item, elements[i])) {
+                if (hashCodes[i] == hashCode && tester.equals(item, elements[i])) {
                     if (prev < 0) {
                         indexes[index] = nexts[i] + 1;
                     } else {
@@ -130,7 +157,7 @@ package stab.query {
         
         private int getHashCode(T item) {
             if (item != null) {
-                return comparator.getHashCode(item) & 0x7fffffff;
+                return tester.getHashCode(item) & 0x7fffffff;
             }
             return 0;
         }
@@ -158,7 +185,7 @@ package stab.query {
         }
     }
     
-    class IntHashSet {
+    class IntHashSet : IntIterable {
         private int count;
         private int usedCount;
         private int[] indexes;
@@ -229,6 +256,28 @@ package stab.query {
             }
         }
         
+        public IntIterator iterator() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return elements[index];
+        		}
+        	}
+        }
+
+        IntIterable slots() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return index;
+        		}
+        	}
+        }
+
+		int elementAt(int i) {
+			return elements[i];
+		}
+        
         private int find(int item, int hashCode) {
             for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
                 if (hashCodes[i] == hashCode && item == elements[i]) {
@@ -285,7 +334,7 @@ package stab.query {
         }
     }
     
-    class LongHashSet {
+    class LongHashSet : LongIterable {
         private int count;
         private int usedCount;
         private int[] indexes;
@@ -355,6 +404,28 @@ package stab.query {
                 return free;
             }
         }
+
+        public LongIterator iterator() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return elements[index];
+        		}
+        	}
+        }
+
+        IntIterable slots() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return index;
+        		}
+        	}
+        }
+        
+		long elementAt(int i) {
+			return elements[i];
+		}
         
         private int find(long item, int hashCode) {
             for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
@@ -412,7 +483,7 @@ package stab.query {
         }
     }
 
-    class FloatHashSet {
+    class FloatHashSet : FloatIterable {
         private int count;
         private int usedCount;
         private int[] indexes;
@@ -482,6 +553,28 @@ package stab.query {
                 return free;
             }
         }
+
+        public FloatIterator iterator() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return elements[index];
+        		}
+        	}
+        }
+
+        IntIterable slots() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return index;
+        		}
+        	}
+        }
+        
+		float elementAt(int i) {
+			return elements[i];
+		}
         
         private int find(float item, int hashCode) {
             for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
@@ -539,7 +632,7 @@ package stab.query {
         }
     }
     
-    class DoubleHashSet {
+    class DoubleHashSet : DoubleIterable {
         private int count;
         private int usedCount;
         private int[] indexes;
@@ -556,31 +649,31 @@ package stab.query {
             firstFree = -1;
         }
         
-        final int count() {
+        int count() {
             return count;
         }
         
-        final boolean add(double item) {
+        boolean add(double item) {
             int c = count;
             addCore(item);
             return c < count;
         }
 
-        final boolean contains(double item) {
+        boolean contains(double item) {
             return find(item) != -1;
         }
 
-        final boolean remove(double item) {
+        boolean remove(double item) {
             int c = count;
             removeCore(item);
             return c > count;
         }
 
-        final int find(double item) {
+        int find(double item) {
             return find(item, getHashCode(item));
         }
 
-        final int capacity() {
+        int capacity() {
             return sizeof(indexes);
         }
 
@@ -609,6 +702,28 @@ package stab.query {
                 return free;
             }
         }
+
+        public DoubleIterator iterator() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return elements[index];
+        		}
+        	}
+        }
+
+        IntIterable slots() {
+        	int index = -1;
+        	while (++index < usedCount) {
+        		if (hashCodes[index] >= 0) {
+        			yield return index;
+        		}
+        	}
+        }
+        
+		double elementAt(int i) {
+			return elements[i];
+		}
         
         private int find(double item, int hashCode) {
             for (int i = indexes[hashCode % sizeof(indexes)] - 1; i >= 0; i = nexts[i]) {
@@ -619,7 +734,7 @@ package stab.query {
             return -1;
         }
 
-        private final int removeCore(double item) {
+        private int removeCore(double item) {
             int hashCode = getHashCode(item);
             int index = hashCode % sizeof(indexes);
             int prev = -1;

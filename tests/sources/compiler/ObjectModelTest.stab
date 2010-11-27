@@ -810,5 +810,15 @@ package stab.tools.compiler.test {
 		public void genericBridgeBoxing() {
 			doTest("GenericBridgeBoxing", new Class<?>[] {}, new Object[] {}, 1);
 		}
+		
+		[Test]
+		public void privateOuterField() {
+			doTest("p.q.PrivateOuterField", new Class<?>[] {}, new Object[] {}, 2);
+		}
+		
+		[Test]
+		public void wildcardBoundParameter() {
+			doTest("WildcardBoundParameter", new Class<?>[] {}, new Object[] {}, true);
+		}
     }
 }

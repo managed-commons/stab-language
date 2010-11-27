@@ -3059,6 +3059,12 @@ package stab.tools.compiler {
                                 BytecodeHelper.getDisplayName(methodBuilder),
                                 BytecodeHelper.getDisplayName(meth.DeclaringType));
                     }
+                    if ((meth.IsPublic && !methodBuilder.IsPublic) || methodBuilder.IsPrivate) {
+		                context.addError(CompileErrorId.ReduceMethodVisibility, methodDeclaration,
+			                    BytecodeHelper.getDisplayName(methodBuilder.DeclaringType),
+			                    BytecodeHelper.getDisplayName(methodBuilder),
+			                    BytecodeHelper.getDisplayName(meth.DeclaringType));
+                    }
                 }
                 checkAccessibility(methodBuilder, methodDeclaration);
                 checkOverloading(methodBuilder, methodDeclaration.Modifiers, methodDeclaration);
@@ -3090,14 +3096,6 @@ package stab.tools.compiler {
         private void checkOverloading(JvmMethodInfo method, EnumSet<Modifier> modifiers, SyntaxNode node) {
             var superMethod = method.DeclaringType.getBaseClasses().selectMany(p => p.Methods).firstOrDefault(p => method.isOverriding(p));
             if (superMethod != null) {
-                if (superMethod.IsPublic) {
-                    if (modifiers.contains(Modifier.Protected) || modifiers.contains(Modifier.Private) || !modifiers.contains(Modifier.Public)) {
-                        context.addError(CompileErrorId.ReduceMethodVisibility, node,
-                            BytecodeHelper.getDisplayName(method.DeclaringType),
-                            BytecodeHelper.getDisplayName(method),
-                            BytecodeHelper.getDisplayName(superMethod.DeclaringType));
-                    }
-                }
                 if (modifiers.contains(Modifier.Virtual)) {
                     context.addError(CompileErrorId.IllegalVirtualMethod, node, BytecodeHelper.getDisplayName(method.DeclaringType),
                             BytecodeHelper.getDisplayName(method), BytecodeHelper.getDisplayName(superMethod.DeclaringType));

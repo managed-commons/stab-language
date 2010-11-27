@@ -170,8 +170,8 @@ package stab.tools.bytecode {
             if (typeArguments.sequenceEqual(type.GenericArguments)) {
                 return type;
             }
-            if (type.DeclaringType == null && !type.IsGenericTypeDefinition) {
-                return getGenericType(type.OriginalTypeDefinition, typeArguments);
+            if (!type.IsGenericTypeDefinition) {
+                return getGenericType(type.OriginalTypeDefinition, typeArguments, scope);
             }
 			var constructedTypes = constructedGenericTypes[type];
             if (constructedTypes == null) {

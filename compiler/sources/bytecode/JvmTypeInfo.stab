@@ -555,16 +555,16 @@ package stab.tools.bytecode {
         }
         
         public boolean canAccessMembers(JvmTypeInfo declaringType, boolean isPublic, boolean isProtected, boolean isPrivate) {
-            if (this.OriginalTypeDefinition == declaringType.OriginalTypeDefinition) {
+            if (this == declaringType.OriginalTypeDefinition || this == declaringType) {
                 return true;
             }
-            var s = this;
-            if (!declaringType.IsPublic && !declaringType.PackageName.equals(s.PackageName)) {
+            if (!declaringType.IsPublic && !declaringType.PackageName.equals(this.PackageName)) {
                 return false;
             }
-            if (!declaringType.isAssignableFrom(s)) {
+            var s = this;
+            if (!declaringType.isAssignableFrom(s) && !declaringType.OriginalTypeDefinition.isAssignableFrom(s)) {
                 while ((s = s.DeclaringType) != null) {
-                    if (declaringType.isAssignableFrom(s)) {
+                    if (declaringType.isAssignableFrom(s) || declaringType.OriginalTypeDefinition.isAssignableFrom(s)) {
                         break;
                     }
                 }
@@ -576,7 +576,7 @@ package stab.tools.bytecode {
                     }
                 }
             }
-            if (s == declaringType) {
+            if (s == declaringType.OriginalTypeDefinition || s == declaringType) {
                 return true;
             }
             if (isPrivate) {

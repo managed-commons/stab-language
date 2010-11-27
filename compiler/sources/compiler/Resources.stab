@@ -191,6 +191,7 @@ package stab.tools.compiler {
 		ArrayInitializerTypeMismatch,
 		CannotApplyInvocation,
 		NoMatchingNumberOfArguments,
+		InconsistentCollectionInitializerTypes,
     }
 
     class Resources {

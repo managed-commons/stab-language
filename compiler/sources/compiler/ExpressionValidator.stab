@@ -708,9 +708,15 @@ package stab.tools.compiler {
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN, true));
                     binary.addOrReplaceUserData(context.TypeSystem.ObjectType);
                 } else if (lt == null) {
+                    if (rt.IsPrimitive) {
+                        addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
+                    }
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(rt);
                 } else if (rt == null) {
+                    if (lt.IsPrimitive) {
+                        addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
+                    }
                     binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
                     binary.addOrReplaceUserData(lt);
                 } else if (lt.IsNumeric || rt.IsNumeric) {
@@ -1034,8 +1040,8 @@ package stab.tools.compiler {
                         }
                     }
                     if (method == null) {
-                    	method = methods.singleOrDefault();
-                    	if (method != null) {
+                    	if (methods.count() == 1) {
+	                    	method = methods.single();
                     		int nparams = method.Parameters.count();
                     		int nargs = invocation.Arguments.size();
                     		if (nparams == nargs || (method.IsVarargs && nparams < nargs)) {
@@ -1499,25 +1505,30 @@ package stab.tools.compiler {
                         var initializer = (CollectionInitializerExpressionNode)init;
                         var argTypeBounds = new ArrayList<HashSet<JvmTypeInfo>>();
                         int nargs = 0;
-                        int i = 0;
                         foreach (var args in initializer.Values) {
                             if (nargs == 0) {
                                 nargs = args.size();
+                                for (int i = 0; i < nargs; i++) {
+                                	argTypeBounds.add(new HashSet<JvmTypeInfo>());
+                                }
                             } else if (nargs != args.size()) {
                                 throw context.error(CompileErrorId.MalformedCollectionInitializer, initializer);
                             }
-                            var bounds = new HashSet<JvmTypeInfo>();
-                            argTypeBounds.add(bounds);
+                            int i = 0;
                             foreach (var e in args) {
                                 handleExpression(e, null, true);
                                 ExpressionInfo ei = e.getUserData(typeof(ExpressionInfo));
+	                            var bounds = argTypeBounds[i++];
                                 bounds.add((ei == null) ? null : ValidationHelper.getType(context, e));
                             }
-                            i++;
                         }
                         var paramTypes = new ArrayList<JvmTypeInfo>();
                         foreach (var bounds in argTypeBounds) {
-                            paramTypes.add(MethodResolver.getFixedType(context.TypeSystem, bounds));
+                        	var fixedType = MethodResolver.getFixedType(context.TypeSystem, bounds);
+                        	if (fixedType == null) {
+                                throw context.error(CompileErrorId.InconsistentCollectionInitializerTypes, initializer);
+                        	}
+                            paramTypes.add(fixedType);
                         }
                         var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, type, "add");
                         var candidates = new ArrayList<JvmMethodInfo>();
@@ -1527,7 +1538,7 @@ package stab.tools.compiler {
                                 if (meth.Parameters.count() != nargs) {
                                     continue;
                                 }
-                                i = 0;
+                                int i = 0;
                                 var found = true;
                                 foreach (var p in meth.Parameters) {
                                     if (!p.Type.isAssignableFrom(paramTypes[i])) {
@@ -1549,7 +1560,7 @@ package stab.tools.compiler {
                                     if (meth.Parameters.count() != nargs) {
                                         continue;
                                     }
-                                    i = 0;
+                                    int i = 0;
                                     var found = true;
                                     foreach (var p in meth.Parameters) {
                                         if (!p.Type.isAssignableFrom(paramTypes[i])) {

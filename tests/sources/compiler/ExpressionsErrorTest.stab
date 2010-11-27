@@ -184,5 +184,12 @@ package stab.tools.compiler.test {
 				"NoMethod.stab (11, 12) error 329: The method 'C.m(java.lang.String)' is not applicable for the arguments (int)" },
 				new String[] {});
 		}
+
+		[Test]
+		public void longEqualsNull() {
+			doTest("LongEqualsNull", new String[]{
+				"LongEqualsNull.stab (4, 13) error 175: Operator '==' cannot be applied to operand of type 'long' and '<null>'" },
+				new String[] {});
+		}
 	}
 }

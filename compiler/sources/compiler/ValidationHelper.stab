@@ -39,8 +39,6 @@ package stab.tools.compiler {
     
         static JvmTypeInfo getVariableType(CompilerContext context, JvmTypeInfo type) {
             switch (type.TypeKind) {
-            case UpperBoundedWildcard:
-                return type.WildcardBound;
             case LowerBoundedWildcard:
             case UnboundedWildcard:
                 return context.TypeSystem.ObjectType;

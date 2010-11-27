@@ -445,5 +445,250 @@ package stab.tools.compiler.test {
 		public void max() {
 			doTest("Max", new Class<?>[] {}, new Object[] {}, 4d);
 		}
+		
+		[Test]
+		public void intSet1() {
+			doTest("IntSet1", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void intSet2() {
+			doTest("IntSet2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void intSet3() {
+			doTest("IntSet3", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toMap() {
+			doTest("ToMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toMap2() {
+			doTest("ToMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toMap3() {
+			doTest("ToMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toMap4() {
+			doTest("ToMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toMap5() {
+			doTest("ToMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toMap6() {
+			doTest("ToMap6", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toLongTMap() {
+			doTest("ToLongTMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toLongTMap2() {
+			doTest("ToLongTMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toLongTMap3() {
+			doTest("ToLongTMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toLongTMap4() {
+			doTest("ToLongTMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toLongTMap5() {
+			doTest("ToLongTMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTLongMap() {
+			doTest("ToTLongMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTLongMap2() {
+			doTest("ToTLongMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTLongMap3() {
+			doTest("ToTLongMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toTLongMap4() {
+			doTest("ToTLongMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toTLongMap5() {
+			doTest("ToTLongMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTIntMap() {
+			doTest("ToTIntMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toTIntMap2() {
+			doTest("ToTIntMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTIntMap3() {
+			doTest("ToTIntMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toTIntMap4() {
+			doTest("ToTIntMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toTIntMap5() {
+			doTest("ToTIntMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTFloatMap() {
+			doTest("ToTFloatMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toTFloatMap2() {
+			doTest("ToTFloatMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toTFloatMap3() {
+			doTest("ToTFloatMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toTFloatMap4() {
+			doTest("ToTFloatMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toTFloatMap5() {
+			doTest("ToTFloatMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toTDoubleMap() {
+			doTest("ToTDoubleMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toTDoubleMap2() {
+			doTest("ToTDoubleMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toTDoubleMap3() {
+			doTest("ToTDoubleMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toTDoubleMap4() {
+			doTest("ToTDoubleMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toTDoubleMap5() {
+			doTest("ToTDoubleMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toIntTMap() {
+			doTest("ToIntTMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toIntTMap2() {
+			doTest("ToIntTMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toIntTMap3() {
+			doTest("ToIntTMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toIntTMap4() {
+			doTest("ToIntTMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toIntTMap5() {
+			doTest("ToIntTMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toFloatTMap() {
+			doTest("ToFloatTMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toFloatTMap2() {
+			doTest("ToFloatTMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+
+		[Test]
+		public void toFloatTMap3() {
+			doTest("ToFloatTMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toFloatTMap4() {
+			doTest("ToFloatTMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+
+		[Test]
+		public void toFloatTMap5() {
+			doTest("ToFloatTMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toDoubleTMap() {
+			doTest("ToDoubleTMap", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toDoubleTMap2() {
+			doTest("ToDoubleTMap2", new Class<?>[] {}, new Object[] {}, true);
+		}
+		
+		[Test]
+		public void toDoubleTMap3() {
+			doTest("ToDoubleTMap3", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toDoubleTMap4() {
+			doTest("ToDoubleTMap4", new Class<?>[] {}, new Object[] {}, 0);
+		}
+		
+		[Test]
+		public void toDoubleTMap5() {
+			doTest("ToDoubleTMap5", new Class<?>[] {}, new Object[] {}, true);
+		}
 	}
 }

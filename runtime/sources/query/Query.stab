@@ -3287,7 +3287,7 @@ package stab.query {
 		public static IntIterable reverse(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var list = new IntArrayList(source);
+			var list = new InternalIntList(source);
 			for (int i = list.size() - 1; i >= 0; --i) {
 				yield return list.getItem(i);
 			}
@@ -3296,7 +3296,7 @@ package stab.query {
 		public static LongIterable reverse(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var list = new LongArrayList(source);
+			var list = new InternalLongList(source);
 			for (int i = list.size() - 1; i >= 0; --i) {
 				yield return list.getItem(i);
 			}
@@ -3305,7 +3305,7 @@ package stab.query {
 		public static FloatIterable reverse(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var list = new FloatArrayList(source);
+			var list = new InternalFloatList(source);
 			for (int i = list.size() - 1; i >= 0; --i) {
 				yield return list.getItem(i);
 			}
@@ -3314,7 +3314,7 @@ package stab.query {
 		public static DoubleIterable reverse(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			var list = new DoubleArrayList(source);
+			var list = new InternalDoubleList(source);
 			for (int i = list.size() - 1; i >= 0; --i) {
 				yield return list.getItem(i);
 			}
@@ -4384,40 +4384,209 @@ package stab.query {
 		public static IntList toList(this IntIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			return new IntArrayList(source);
+			return new InternalIntList(source);
 		}
 
 		public static LongList toList(this LongIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			return new LongArrayList(source);
+			return new InternalLongList(source);
 		}
 
 		public static FloatList toList(this FloatIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			return new FloatArrayList(source);
+			return new InternalFloatList(source);
 		}
 
 		public static DoubleList toList(this DoubleIterable source) {
 			if (source == null) throw new NullPointerException("source");
 
-			return new DoubleArrayList(source);
+			return new InternalDoubleList(source);
+		}
+
+		///////////////////////////////////////////////////////////////////////////////////////////////
+		// toMap
+		//
+
+		public static Map<TKey, TSource> toMap<TSource, TKey>(this Iterable<TSource> source, FunctionTT<TSource, TKey> selector) {
+			return toMap(source, selector, null);
+		}
+
+		public static Map<TKey, TSource> toMap<TSource, TKey>(this Iterable<TSource> source, FunctionTT<TSource, TKey> selector,
+				EqualityTester<TKey> tester) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalMap<TKey, TSource>(tester);
+			foreach (var s in source) {
+				result[selector.invoke(s)] = s;
+			}
+			return result;
+		}
+
+		public static IntTMap<TSource> toMap<TSource>(this Iterable<TSource> source, FunctionTInt<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalIntTMap<TSource>();
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static TIntMap<TKey> toMap<TKey>(this IntIterable source, FunctionIntT<TKey> selector) {
+			return toMap(source, selector, null);
+		}
+
+		public static TIntMap<TKey> toMap<TKey>(this IntIterable source, FunctionIntT<TKey> selector, EqualityTester<TKey> tester) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalTIntMap<TKey>(tester);
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static LongTMap<TSource> toMap<TSource>(this Iterable<TSource> source, FunctionTLong<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalLongTMap<TSource>();
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static TLongMap<TKey> toMap<TKey>(this LongIterable source, FunctionLongT<TKey> selector) {
+			return toMap(source, selector, null);
+		}
+
+		public static TLongMap<TKey> toMap<TKey>(this LongIterable source, FunctionLongT<TKey> selector, EqualityTester<TKey> tester) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalTLongMap<TKey>(tester);
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static FloatTMap<TSource> toMap<TSource>(this Iterable<TSource> source, FunctionTFloat<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalFloatTMap<TSource>();
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static TFloatMap<TKey> toMap<TKey>(this FloatIterable source, FunctionFloatT<TKey> selector) {
+			return toMap(source, selector, null);
+		}
+
+		public static TFloatMap<TKey> toMap<TKey>(this FloatIterable source, FunctionFloatT<TKey> selector, EqualityTester<TKey> tester) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalTFloatMap<TKey>(tester);
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static DoubleTMap<TSource> toMap<TSource>(this Iterable<TSource> source, FunctionTDouble<TSource> selector) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalDoubleTMap<TSource>();
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
+		}
+
+		public static TDoubleMap<TKey> toMap<TKey>(this DoubleIterable source, FunctionDoubleT<TKey> selector) {
+			return toMap(source, selector, null);
+		}
+
+		public static TDoubleMap<TKey> toMap<TKey>(this DoubleIterable source, FunctionDoubleT<TKey> selector, EqualityTester<TKey> tester) {
+			if (source == null) throw new NullPointerException("source");
+			if (selector == null) throw new NullPointerException("selector");
+		
+			var result = new InternalTDoubleMap<TKey>(tester);
+			foreach (var s in source) {
+				result.put(selector.invoke(s), s);
+			}
+			return result;
 		}
 
 		///////////////////////////////////////////////////////////////////////////////////////////////
 		// toSet
 		//
-		
+
 		public static Set<TSource> toSet<TSource>(this Iterable<TSource> source) {
+			return toSet(source, null);
+		}
+		
+		public static Set<TSource> toSet<TSource>(this Iterable<TSource> source, EqualityTester<TSource> tester) {
 			if (source == null) throw new NullPointerException("source");
 		
-			var result = new java.util.HashSet<TSource>();
+			var result = new InternalSet<TSource>(tester);
 			foreach (var s in source) {
 				result.add(s);
 			}
 			return result;
 		}
+		
+		public static IntSet toSet(this IntIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = new InternalIntSet();
+			foreach (var s in source) {
+				result.add(s);
+			}
+			return result;
+		}
+		
+		public static LongSet toSet(this LongIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = new InternalLongSet();
+			foreach (var s in source) {
+				result.add(s);
+			}
+			return result;
+		}
+		
+		public static FloatSet toSet(this FloatIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = new InternalFloatSet();
+			foreach (var s in source) {
+				result.add(s);
+			}
+			return result;
+		}
+		
+		public static DoubleSet toSet(this DoubleIterable source) {
+			if (source == null) throw new NullPointerException("source");
+
+			var result = new InternalDoubleSet();
+			foreach (var s in source) {
+				result.add(s);
+			}
+			return result;
+		}
+		
 		
 		///////////////////////////////////////////////////////////////////////////////////////////
 		// union
