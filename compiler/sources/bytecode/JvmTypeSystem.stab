@@ -37,29 +37,23 @@ package stab.tools.bytecode {
         private JvmTypeInfo classType;
         private JvmTypeInfo unboundedClassType;
 
-        public JvmTypeSystem(String[] classPath) {
-            this.classFiles = new HashMap<String, File>(128);
-            this.jarClasses = new HashMap<String, ZipFile>(0x5000);
-            this.allClassNames = new ArrayList<String>();
-            this.typeInfos = new HashMap<String, JvmTypeInfo>();
-			this.constructedGenericTypes = new HashMap<JvmTypeInfo, ArrayList<JvmTypeInfo>>();
-			this.constructedGenericMethods = new HashMap<JvmMethodInfo, ArrayList<JvmMethodInfo>>();
-            
-            initializeBootClasses();
-            
-            foreach (var path in classPath) {
-                explorePath(path);
-            }
+        public JvmTypeSystem(String[] classPath)
+        		: this(classPath, null) {
         }
         
         public JvmTypeSystem(String[] classPath, JvmTypeSystem parent) {
             this.classFiles = new HashMap<String, File>(128);
-            this.jarClasses = new HashMap<String, ZipFile>(128);
-            this.allClassNames = new ArrayList<String>();
+            int capacity = (parent == null) ? 0x5000 : 128;
+            this.jarClasses = new HashMap<String, ZipFile>(capacity);
+            this.allClassNames = new ArrayList<String>(capacity);
             this.typeInfos = new HashMap<String, JvmTypeInfo>();
 			this.constructedGenericTypes = new HashMap<JvmTypeInfo, ArrayList<JvmTypeInfo>>();
 			this.constructedGenericMethods = new HashMap<JvmMethodInfo, ArrayList<JvmMethodInfo>>();
             this.parent = parent;
+
+			if (parent == null) {
+	            initializeBootClasses();
+			}
             
             foreach (var path in classPath) {
                 explorePath(path);
@@ -105,17 +99,38 @@ package stab.tools.bytecode {
             if (typeInfo != null) {
                 return typeInfo;
             }
-            var f = classFiles.remove(name);
 			var zf = jarClasses.remove(name);
-            if (f == null && zf == null) {
-				if (parent == null) {
-					throw new JvmTypeLoadException("Class not found: " + name, name);
+			if (zf != null) {
+				var entry = zf.getEntry(name + ".class");
+				typeInfo = new ClassFileType(this, name, getBytes(zf.getInputStream(entry), (int)entry.getSize()));
+			} else {
+	            var f = classFiles.remove(name);
+				if (f != null) {
+					typeInfo = new ClassFileType(this, name, getBytes(new FileInputStream(f), (int)f.length()));
 				} else {
-					return parent.getType(name);
+					if (parent == null) {
+						throw new JvmTypeLoadException("Class not found: " + name, name);
+					} else {
+						return parent.getType(name);
+					}
 				}
 			}
-			typeInfo = new ClassFileType(this, name, f, zf);
             return typeInfos[name] = typeInfo;
+        }
+        
+        private static byte[] getBytes(InputStream stream, int size) {
+        	var result = new byte[size];
+            try {
+                int read;
+                int offset = 0;
+                while (size > 0 && (read = stream.read(result, offset, size)) != -1) {
+                    offset += read;
+                    size -= read;
+                }
+            } finally {
+                stream.close();
+            }
+        	return result;
         }
 
         public JvmTypeInfo getGenericType(JvmTypeInfo type, Iterable<JvmTypeInfo> typeArguments) {

@@ -53,23 +53,20 @@ package stab.tools.bytecode {
         JvmMethodInfo boxingMethod;
         JvmMethodInfo unboxingMethod;
 
-        ClassFileType(JvmTypeSystem typeSystem, String name, File origin, ZipFile jarOrigin)
-            : super(name) {
+        ClassFileType(JvmTypeSystem typeSystem, String name, byte[] bytes)
+            	: super(name) {
             this.typeSystem = typeSystem;
             this.descriptor = "L" + name + ";";
             numericTypeKind = TypeKinds[name];
             if (numericTypeKind == null) {
                 numericTypeKind = NumericTypeKind.None;
             }
-			if (origin != null) {
-				loadClassFile(origin);
-			} else {
-				loadClassFile(jarOrigin);
-			}
+            new ClassReader(bytes).accept(new OutlineVisitor(this), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+            
             this.genericsScope = new Scope<String, JvmTypeInfo>();
             this.genericsScope.enterScope();
         }
-		
+
         public override String Descriptor {
             get {
                 return descriptor;
@@ -126,7 +123,7 @@ package stab.tools.bytecode {
                         baseType = baseType.RawGenericType;
                     }
                     if (classInfo.interfaces != null) {
-                        var ints = new ArrayList<JvmTypeInfo>();
+                        var ints = new ArrayList<JvmTypeInfo>(sizeof(classInfo.interfaces));
                         foreach (var s in classInfo.interfaces) {
                             var t = typeSystem.getType(s);
 							if (hasGenericArguments(t)) {
@@ -165,8 +162,9 @@ package stab.tools.bytecode {
                 if (classInfo.signature.Superclass != null) {
                     baseType = getTypeInfo(classInfo.signature.Superclass);
                 }
-                if (classInfo.signature.Superinterfaces.any()) {
-                    var ints = new ArrayList<JvmTypeInfo>();
+                int n = classInfo.signature.Superinterfaces.count();
+                if (n > 0) {
+                    var ints = new ArrayList<JvmTypeInfo>(n);
                     foreach (var t in classInfo.signature.Superinterfaces) {
                         ints.add(getTypeInfo(t));
                     }
@@ -177,7 +175,7 @@ package stab.tools.bytecode {
                 classInfo.signature = null;
             }
 
-            if (classInfo.annotations.isEmpty()) {
+            if (classInfo.annotations == null) {
                 this.annotations = Collections.emptyList();
             } else {
                 this.annotations = buildAnnotationValues(classInfo.annotations);
@@ -198,7 +196,7 @@ package stab.tools.bytecode {
                 } else {
                     field.type = getTypeInfo(f.signature);
                 }
-                if (f.annotations.isEmpty()) {
+                if (f.annotations == null) {
                     field.annotations = Collections.emptyList();
                 } else {
                     field.annotations = buildAnnotationValues(f.annotations);
@@ -228,7 +226,7 @@ package stab.tools.bytecode {
                     foreach (var p in m.parameters) {
                         var pi = new JvmParameterInfo(i++, getTypeInfo(p.type));
                         method.parameters.add(pi);
-                        if (p.annotations.isEmpty()) {
+                        if (p.annotations == null) {
                             pi.annotations = Collections.emptyList();
                         } else {
                             pi.annotations = buildAnnotationValues(p.annotations);
@@ -272,7 +270,7 @@ package stab.tools.bytecode {
                         var annotations = m.parameters[i].annotations;
                         var pi = new JvmParameterInfo(i++, getTypeInfo(param));
                         method.parameters.add(pi);
-                        if (annotations.isEmpty()) {
+                        if (annotations == null) {
                             pi.annotations = Collections.emptyList();
                         } else {
                             pi.annotations = buildAnnotationValues(annotations);
@@ -288,7 +286,7 @@ package stab.tools.bytecode {
                 if (m.defaultValue != null) {
                     method.defaultValue = buildAnnotationArrayElement(m.defaultValue);
                 }
-                if (m.annotations.isEmpty()) {
+                if (m.annotations == null) {
                     method.annotations = Collections.emptyList();
                 } else {
                     method.annotations = buildAnnotationValues(m.annotations);
@@ -305,35 +303,6 @@ package stab.tools.bytecode {
         protected override void initializeNestedTypes() {
         }
         
-        private void loadClassFile(File origin) {
-			loadClassFile(new FileInputStream(origin), new byte[(int)origin.length()]);
-        }
-
-		private void loadClassFile(ZipFile origin) {
-			var entry = origin.getEntry(this.FullName + ".class");
-			loadClassFile(origin.getInputStream(entry), new byte[(int)entry.getSize()]);
-        }
-
-		private void loadClassFile(InputStream stream, byte[] bytes) {
-            try {
-                int read;
-                int offset = 0;
-                int len = sizeof(bytes);
-                while (len > 0 && (read = stream.read(bytes, offset, len)) != -1) {
-                    offset += read;
-                    len -= read;
-                }
-                new ClassReader(bytes).accept(new OutlineVisitor(this), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-            } finally {
-                if (stream != null) {
-                    try {
-                        stream.close();
-                    } catch (IOException) {
-                    }
-                }
-            }
-        }
-
         private ArrayList<JvmAnnotationValue> buildAnnotationValues(ArrayList<AnnotationValue> annotations) {
             var result = new ArrayList<JvmAnnotationValue>();
             foreach (var av in annotations) {
@@ -650,6 +619,9 @@ package stab.tools.bytecode {
             
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                if (classFileType.classInfo.annotations == null) {
+                	classFileType.classInfo.annotations = new ArrayList<AnnotationValue>();
+                }
                 classFileType.classInfo.annotations.add(annotation);
                 return new AnnotationValueBuilder(annotation);
             }
@@ -720,13 +692,13 @@ package stab.tools.bytecode {
             String superName;
             String[] interfaces;
             ClassSignature signature;
-            ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+            ArrayList<AnnotationValue> annotations;
             ArrayList<FieldInfo> fields = new ArrayList<FieldInfo>();
             ArrayList<MethodInfo> methods = new ArrayList<MethodInfo>();
         }
 
         private class FieldInfo {
-            ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+            ArrayList<AnnotationValue> annotations;
             int modifiers;
             String name;
             Object value;
@@ -735,7 +707,7 @@ package stab.tools.bytecode {
         }
 
         private class MethodInfo {
-            ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+            ArrayList<AnnotationValue> annotations;
             ArrayList<ParameterInfo> parameters = new ArrayList<ParameterInfo>();
             AnnotationArgument defaultValue;
             int modifiers;
@@ -747,7 +719,7 @@ package stab.tools.bytecode {
         }
 
         private class ParameterInfo {
-            ArrayList<AnnotationValue> annotations = new ArrayList<AnnotationValue>();
+            ArrayList<AnnotationValue> annotations;
             AsmType type;
         }
 
@@ -756,6 +728,9 @@ package stab.tools.bytecode {
 
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                if (field.annotations == null) {
+                	field.annotations = new ArrayList<AnnotationValue>();
+                }
                 field.annotations.add(annotation);
                 return new AnnotationValueBuilder(annotation);
             }
@@ -769,6 +744,9 @@ package stab.tools.bytecode {
             
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
                 var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                if (method.annotations == null) {
+                	method.annotations = new ArrayList<AnnotationValue>();
+                }
                 method.annotations.add(annotation);
                 return new AnnotationValueBuilder(annotation);
             }
@@ -779,7 +757,11 @@ package stab.tools.bytecode {
 
             public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
                 var annotation = new AnnotationValue(AsmType.getType(desc), visible);
-                method.parameters.get(parameter).annotations.add(annotation);
+                var par = method.parameters.get(parameter);
+                if (par.annotations == null) {
+                	par.annotations = new ArrayList<AnnotationValue>();
+                }
+                par.annotations.add(annotation);
                 return new AnnotationValueBuilder(annotation);
             }
             

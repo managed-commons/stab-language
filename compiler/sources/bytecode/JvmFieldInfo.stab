@@ -31,7 +31,6 @@ package stab.tools.bytecode {
             this.DeclaringType = declaringType;
             this.modifiers = modifiers;
             this.Name = name;
-            this.annotations = new ArrayList<JvmAnnotationValue>();
             this.value = value;
         }
         
@@ -53,6 +52,9 @@ package stab.tools.bytecode {
         
         public Iterable<JvmAnnotationValue> Annotations {
             get {
+                if (annotations == null) {
+                    annotations = Collections.emptyList();
+                }
                 return annotations;
             }
         }

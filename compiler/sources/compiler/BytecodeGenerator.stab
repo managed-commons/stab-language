@@ -321,8 +321,7 @@ package stab.tools.compiler {
                     generator.beginScope();
                     initializeLambdaScope(methodBuilder);
                     if (get.Body == null) {
-                        int n = typeBuilder.Fields.count(p => p.Name.startsWith("property$field"));
-                        fieldBuilder = typeBuilder.defineField("property$field" + n, methodBuilder.ReturnType);
+                        fieldBuilder = typeBuilder.defineField("property$" + memberInfo.Name, methodBuilder.ReturnType);
                         fieldBuilder.setSynthetic(true);
                         fieldBuilder.setPrivate(true);
                         fieldBuilder.setStatic(methodBuilder.IsStatic);

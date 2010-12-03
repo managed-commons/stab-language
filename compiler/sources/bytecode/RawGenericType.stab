@@ -78,12 +78,7 @@ package stab.tools.bytecode {
             }
             initializeBaseTypes();
             
-            var it = genericTypeDefinition.Fields.iterator();
-            for (int i = fields.size(); i > 0; --i) {
-                it.next();
-            }
-            while (it.hasNext()) {
-                var f = it.next();
+            foreach (var f in genericTypeDefinition.Fields.skip(fields.size())) {
                 var t = BytecodeHelper.getRawType(genericTypeDefinition, f.Type);
                 var newf = new JvmFieldInfo(this, f.modifiers, f.Name, f.Value);
                 newf.type = t;
@@ -97,12 +92,8 @@ package stab.tools.bytecode {
             }
             initializeBaseTypes();
             
-            var it = genericTypeDefinition.Methods.iterator();
-            for (int i = methods.size(); i > 0; --i) {
-                it.next();
-            }
-            while (it.hasNext()) {
-                methods.add(new RawGenericMethod(this, it.next()));
+			foreach (var m in genericTypeDefinition.Methods.skip(methods.size())) {
+                methods.add(new RawGenericMethod(this, m));
             }
         }
         
@@ -112,12 +103,8 @@ package stab.tools.bytecode {
             }
             initializeBaseTypes();
             
-            var it = genericTypeDefinition.NestedTypes.iterator();
-            for (int i = nestedTypes.size(); i > 0; --i) {
-                it.next();
-            }
-            while (it.hasNext()) {
-                nestedTypes.add(it.next());
+            foreach (var nt in genericTypeDefinition.NestedTypes.skip(nestedTypes.size())) {
+                nestedTypes.add(nt);
             }
         }
     }

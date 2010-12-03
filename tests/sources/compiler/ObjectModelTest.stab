@@ -820,5 +820,10 @@ package stab.tools.compiler.test {
 		public void wildcardBoundParameter() {
 			doTest("WildcardBoundParameter", new Class<?>[] {}, new Object[] {}, true);
 		}
+		
+		[Test]
+		public void delegateLambdaAnonymous() {
+			doTest("DelegateLambdaAnonymous", new Class<?>[] {}, new Object[] {}, 7);
+		}
     }
 }

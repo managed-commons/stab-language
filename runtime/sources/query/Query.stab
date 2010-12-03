@@ -4515,6 +4515,100 @@ package stab.query {
         }
 
 		///////////////////////////////////////////////////////////////////////////////////////////
+		// skipWhile indexed
+		//
+        
+        public static Iterable<TSource> skipWhile<TSource>(this Iterable<TSource> source, FunctionTIntBoolean<TSource> predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.next();
+				 if (!predicate.invoke(s, index++)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.next();
+			}
+        }
+
+        public static IntIterable skipWhile(this IntIterable source, FunctionIntIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextInt();
+				 if (!predicate.invoke(s, index++)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextInt();
+			}
+        }
+
+        public static LongIterable skipWhile(this LongIterable source, FunctionLongIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextLong();
+				 if (!predicate.invoke(s, index++)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextLong();
+			}
+        }
+
+        public static FloatIterable skipWhile(this FloatIterable source, FunctionFloatIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextFloat();
+				 if (!predicate.invoke(s, index++)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextFloat();
+			}
+        }
+
+        public static DoubleIterable skipWhile(this DoubleIterable source, FunctionDoubleIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+			
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextDouble();
+				 if (!predicate.invoke(s, index++)) {
+				 	yield return s;
+				 	break;
+				 }
+			}
+			while (it.hasNext()) {
+				yield return it.nextDouble();
+			}
+        }
+
+		///////////////////////////////////////////////////////////////////////////////////////////
 		// sum
 		//
         
@@ -4723,6 +4817,90 @@ package stab.query {
 			while (it.hasNext()) {
 				var s = it.nextDouble();
 				if (predicate.invoke(s)) {
+					yield return s;
+				} else {
+					yield break;
+				}
+			}
+		}
+		
+		///////////////////////////////////////////////////////////////////////////////////////////
+		// takeWhile indexed
+		//
+		
+		public static Iterable<TSource> takeWhile<TSource>(this Iterable<TSource> source, FunctionTIntBoolean<TSource> predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.next();
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				} else {
+					yield break;
+				}
+			}
+		}
+		
+		public static IntIterable takeWhile(this IntIterable source, FunctionIntIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextInt();
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				} else {
+					yield break;
+				}
+			}
+		}
+		
+		public static LongIterable takeWhile(this LongIterable source, FunctionLongIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextLong();
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				} else {
+					yield break;
+				}
+			}
+		}
+		
+		public static FloatIterable takeWhile(this FloatIterable source, FunctionFloatIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextFloat();
+				if (predicate.invoke(s, index++)) {
+					yield return s;
+				} else {
+					yield break;
+				}
+			}
+		}
+		
+		public static DoubleIterable takeWhile(this DoubleIterable source, FunctionDoubleIntBoolean predicate) {
+			if (source == null) throw new NullPointerException("source");
+			if (predicate == null) throw new NullPointerException("predicate");
+
+			var it = source.iterator();
+			var index = 0;
+			while (it.hasNext()) {
+				var s = it.nextDouble();
+				if (predicate.invoke(s, index++)) {
 					yield return s;
 				} else {
 					yield break;

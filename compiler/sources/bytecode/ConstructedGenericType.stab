@@ -120,12 +120,7 @@ package stab.tools.bytecode {
             }
             initializeBaseTypes();
             
-            var it = genericTypeDefinition.Fields.iterator();
-            for (int i = fields.size(); i > 0; --i) {
-                it.next();
-            }
-            while (it.hasNext()) {
-                var f = it.next();
+            foreach (var f in genericTypeDefinition.Fields.skip(fields.size())) {
                 var t = BytecodeHelper.bindGenericParameters(typeSystem, genericsScope, f.Type);
                 var newf = new JvmFieldInfo(this, f.modifiers, f.Name, f.Value);
                 newf.type = t;
@@ -139,27 +134,19 @@ package stab.tools.bytecode {
             }
             initializeBaseTypes();
 
-            var it = genericTypeDefinition.Methods.iterator();
-            for (int i = methods.size(); i > 0; --i) {
-                it.next();
-            }
-            while (it.hasNext()) {
-                methods.add(new ConstructedGenericMethod(typeSystem, this, it.next(), null, genericsScope));
-            }
+			foreach (var m in genericTypeDefinition.Methods.skip(methods.size())) {
+                methods.add(new ConstructedGenericMethod(typeSystem, this, m, null, genericsScope));
+			}
         }
         
         protected override void initializeNestedTypes() {
-            if (genericTypeDefinition.NestedTypes.count() != nestedTypes.size()) {
+            if (genericTypeDefinition.NestedTypes.count() == nestedTypes.size()) {
                 return;
             }
             initializeBaseTypes();
             
-            var it = genericTypeDefinition.NestedTypes.iterator();
-            for (int i = nestedTypes.size(); i > 0; --i) {
-                it.next();
-            }
-            while (it.hasNext()) {
-                nestedTypes.add(new ConstructedGenericType(typeSystem, this, it.next(), null, genericsScope));
+            foreach (var nt in genericTypeDefinition.NestedTypes.skip(nestedTypes.size())) {
+                nestedTypes.add(new ConstructedGenericType(typeSystem, this, nt, null, genericsScope));
             }
         }
     }

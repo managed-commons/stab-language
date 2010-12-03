@@ -15,6 +15,7 @@
    limitations under the License.
  */
 using java.lang;
+using java.util;
 using org.objectweb.asm;
 
 package stab.tools.bytecode {
@@ -22,6 +23,7 @@ package stab.tools.bytecode {
     public class JvmFieldBuilder : JvmFieldInfo {
         public JvmFieldBuilder(JvmTypeInfo declaringType, String name, JvmTypeInfo type)
             : super(declaringType, 0, name, null) {
+            this.annotations = new ArrayList<JvmAnnotationValue>();
             this.type = type;
         }
     

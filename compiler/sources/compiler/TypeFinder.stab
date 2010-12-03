@@ -110,7 +110,7 @@ package stab.tools.compiler {
         }
 
         private void initialize() {
-            foreach (var c in this.TypeSystem.getAllClassNames()) {
+            foreach (var c in this.TypeSystem.AllClassNames) {
                 if (c.lastIndexOf('$') > 0) {
                     continue;
                 }
