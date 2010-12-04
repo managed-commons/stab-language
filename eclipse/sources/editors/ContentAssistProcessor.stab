@@ -254,6 +254,17 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInMethod(MethodDeclarationNode declaration) {
+			var body = declaration.Body;
+			if (body != null) {
+				var it = body.getAllUserData(typeof(Token)).iterator();
+				var startToken = it.next();
+				var endToken = it.next();
+				if (startToken.offset < offset && endToken.offset + endToken.length > offset) {
+					// TODO
+					Environment.trace(this, "method body");
+					return EMPTY_PROPOSALS;
+				}
+			}
 		
 			// TODO
 			Environment.trace(this, "method");

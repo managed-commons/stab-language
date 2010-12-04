@@ -84,8 +84,7 @@ package stab.tools.parser {
                     restore(restorePoint);
                 }
                 usingDirective.TypeOrPackage = parsePackageOrTypeName(true);
-				usingDirective.EndPosition = scanner.EndPosition;
-                parseSemiColon(false, false);
+                usingDirective.EndPosition = parseSemiColon(false, false);
             }
 
             var done = false;
@@ -627,7 +626,8 @@ package stab.tools.parser {
             }
         }
 
-        private ITypeMember parseClassMember(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean partial, int startPosition) {
+        private ITypeMember parseClassMember(List<AnnotationSectionNode> annotations, EnumSet<Modifier> modifiers, boolean partial,
+        		int startPosition) {
             var restorePoint = this.getRestorePoint();
             int sp = scanner.StartPosition;
             int len = getLexicalUnitLength();
@@ -804,8 +804,9 @@ package stab.tools.parser {
                 declaration.Modifiers.addAll(modifiers);
                 declaration.Annotations.addAll(annotations);
                 nextLexicalUnit(true);
-                var decl = new VariableDeclaratorNode { NameOffset = sp, NameLength = len, Value = parseFieldInitializer() };
+                var decl = new VariableDeclaratorNode { NameOffset = sp, NameLength = len };
                 setSavedScannerState(decl);
+                decl.Value = parseFieldInitializer();
                 declaration.getDeclarators().add(decl);
                 while (lexicalUnit == LexicalUnit.Comma) {
                     if (!isIdentifier(nextLexicalUnit(true))) {
@@ -820,8 +821,7 @@ package stab.tools.parser {
                     }
                 }
                 docCommentEndPosition = 0;
-				declaration.EndPosition = scanner.StartPosition;
-                parseSemiColon(false, false);
+                declaration.EndPosition = parseSemiColon(false, false);
                 return declaration;
             }
 
@@ -851,8 +851,7 @@ package stab.tools.parser {
                     }
                 } while (lexicalUnit == LexicalUnit.Comma);
                 docCommentEndPosition = 0;
-				declaration.EndPosition = scanner.StartPosition;
-                parseSemiColon(false, false);
+                declaration.EndPosition = parseSemiColon(false, false);
                 return declaration;
             }
 
@@ -870,7 +869,7 @@ package stab.tools.parser {
                 setSavedScannerState(decl);
                 declaration.getDeclarators().add(decl);
                 docCommentEndPosition = 0;
-				declaration.EndPosition = scanner.StartPosition;
+				declaration.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
                 return declaration;
             }
@@ -882,6 +881,7 @@ package stab.tools.parser {
         
         private ExpressionNode parseFieldInitializer() {
             if (lexicalUnit == LexicalUnit.OpenBrace) {
+            	saveScannerState();
                 nextLexicalUnit(true);
                 return parseArrayInitializer();
             } else {
@@ -899,14 +899,16 @@ package stab.tools.parser {
             }
             setScannerState(result);
             result.Annotations.addAll(annotations);
+            int endPosition = scanner.EndPosition;
             if (nextLexicalUnit(true) == LexicalUnit.OpenParenthesis) {
                 if (nextLexicalUnit(true) != LexicalUnit.CloseParenthesis) {
-                    parseArguments(result.Arguments);
+                    endPosition = parseArguments(result.Arguments);
                 } else {
+                	endPosition = scanner.EndPosition;
                     nextLexicalUnit(true);
                 }
             }
-			result.EndPosition = scanner.StartPosition;
+			result.EndPosition = endPosition;
             return result;
         }
         
@@ -959,7 +961,7 @@ package stab.tools.parser {
                 initializer.IsSuper = isSuper;
                 declaration.Initializer = initializer;
                 nextLexicalUnit(true);
-                parseArguments(initializer.Arguments);
+                initializer.EndPosition = parseArguments(initializer.Arguments);
             }
             parseTypeParameterConstraintsClauses(declaration.ConstraintsClauses);
             switch (lexicalUnit) {
@@ -1003,9 +1005,11 @@ package stab.tools.parser {
             switch (lexicalUnit) {
             case OpenBrace:
                 declaration.Body = parseBlockStatement();
+				declaration.EndPosition = declaration.Body.EndPosition;
                 break;
 
             case SemiColon:
+				declaration.EndPosition = scanner.StartPosition;
                 docCommentEndPosition = 0;
                 nextLexicalUnit(true);
                 break;
@@ -1055,8 +1059,7 @@ package stab.tools.parser {
             }
             parseTypeParameterConstraintsClauses(declaration.ConstraintsClauses);
             docCommentEndPosition = 0;
-			declaration.StartPosition = scanner.EndPosition;
-            parseSemiColon(false, false);
+            declaration.EndPosition = parseSemiColon(false, false);
             return declaration;
         }
 
@@ -1117,8 +1120,7 @@ package stab.tools.parser {
                     parseTypeParameterConstraintsClauses(declaration.ConstraintsClauses);
                 }
                 docCommentEndPosition = 0;
-				declaration.EndPosition = scanner.EndPosition;
-                parseSemiColon(false, false);
+                declaration.EndPosition = parseSemiColon(false, false);
                 return declaration;
             }
         }
@@ -1130,6 +1132,7 @@ package stab.tools.parser {
                 while (lexicalUnit == LexicalUnit.OpenBracket) {
                     param.Annotations.add(parseAnnotationSection());
                 }
+                setScannerState(param);
                 switch (lexicalUnit) {
                 case Keyword:
                     switch (scanner.Keyword) {
@@ -1154,7 +1157,7 @@ package stab.tools.parser {
                 }
                 param.NameOffset = scanner.StartPosition;
                 param.NameLength = getLexicalUnitLength();
-                setScannerState(param);
+                param.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(true);
                 if (param.Modifier == ParameterModifier.Params) {
                     if (param.Type.TypeReferenceKind != TypeReferenceKind.Array) {
@@ -1185,20 +1188,25 @@ package stab.tools.parser {
                 if (lexicalUnit != LexicalUnit.ContextualKeyword || scanner.Keyword != Keyword.Where) {
                     return;
                 }
+                int startPosition = scanner.StartPosition;
                 if (!isIdentifier(nextLexicalUnit(true))) {
                     throw error(ParseErrorId.IdentifierExpected);
                 }
-                var clause = new TypeParameterConstraintsClauseNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+                var clause = new TypeParameterConstraintsClauseNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength(),
+                		StartPosition = startPosition };
                 setScannerState(clause);
                 constraints.add(clause);
                 if (nextLexicalUnit(true) != LexicalUnit.Colon) {
                     throw error(ParseErrorId.ColonExpected);
                 }
+                int endPosition;
                 do {
                     nextLexicalUnit(true);
                     var type = parseInterfaceType(true);
                     clause.Constraints.add(type);
+                    endPosition = scanner.StartPosition;
                 } while (lexicalUnit == LexicalUnit.Comma);
+                clause.EndPosition = endPosition;
             }
         }
         
@@ -1255,6 +1263,7 @@ package stab.tools.parser {
                         return false;
                     }
                 }
+                type.EndPosition = scanner.EndPosition;
                 if (nextLexicalUnit(true) != LexicalUnit.Comma) {
                     break;
                 }
@@ -1276,24 +1285,22 @@ package stab.tools.parser {
             while (lexicalUnit == LexicalUnit.OpenBracket) {
                 accessor.Annotations.add(parseAnnotationSection());
             }
+            setScannerState(accessor);
             switch (lexicalUnit) {
             case Keyword:
                 switch (scanner.Keyword) {
                 case Protected:
                     accessor.Modifiers.add(Modifier.Protected);
-					accessor.StartPosition = scanner.StartPosition;
 					nextLexicalUnit(true);
                     break;
 
                 case Private:
                     accessor.Modifiers.add(Modifier.Private);
-					accessor.StartPosition = scanner.StartPosition;
 					nextLexicalUnit(true);
                     break;
                 }
                 break;
             }
-            setScannerState(accessor);
             switch (lexicalUnit) {
             case ContextualKeyword:
                 switch (scanner.Keyword) {
@@ -1301,9 +1308,6 @@ package stab.tools.parser {
                     if (declaration.GetAccessor != null) {
                         throw error(ParseErrorId.DuplicateAccessor);
                     }
-					if (accessor.StartPosition == 0) {
-						accessor.StartPosition = scanner.StartPosition;
-					}
                     declaration.GetAccessor = accessor;
                     nextLexicalUnit(true);
                     break;
@@ -1312,9 +1316,6 @@ package stab.tools.parser {
                     if (declaration.SetAccessor != null) {
                         throw error(ParseErrorId.DuplicateAccessor);
                     }
-					if (accessor.StartPosition == 0) {
-						accessor.StartPosition = scanner.StartPosition;
-					}
                     declaration.SetAccessor = accessor;
                     nextLexicalUnit(true);
                     break;
@@ -1329,14 +1330,14 @@ package stab.tools.parser {
             }
             switch (lexicalUnit) {
             case SemiColon:
+				accessor.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
-				accessor.EndPosition = scanner.StartPosition;
                 break;
 
             case OpenBrace:
                 if (!inInterface) {
                     accessor.Body = parseBlockStatement();
-					accessor.EndPosition = scanner.StartPosition;
+					accessor.EndPosition = accessor.Body.EndPosition;
                     break;
                 }
                 goto default;
@@ -1353,8 +1354,10 @@ package stab.tools.parser {
                 return parseBlockStatement();
 
             case SemiColon:
+            	var emptyStatement = new EmptyStatementNode { EndPosition = scanner.EndPosition };
+            	setScannerState(emptyStatement);
                 nextLexicalUnit(false);
-                return new EmptyStatementNode();
+                return emptyStatement;
 
             case Keyword:
             case ContextualKeyword:
@@ -1390,7 +1393,7 @@ package stab.tools.parser {
                     default:
                         throw error(ParseErrorId.ReturnOrBreakExpected);
                     }
-                    parseSemiColon(false, false);
+                    yieldStatement.EndPosition = parseSemiColon(false, false);
                     return yieldStatement;
                 }
 
@@ -1401,6 +1404,7 @@ package stab.tools.parser {
                     tryStatement.Block = parseBlockStatement();
                     var hasCatch = false;
                     var done = false;
+                	int endPosition = 0;
                     do {
                         switch (lexicalUnit) {
                         case Keyword:
@@ -1423,12 +1427,15 @@ package stab.tools.parser {
                                 }
                                 catchClause.Block = parseBlockStatement();
                                 tryStatement.CatchClauses.add(catchClause);
+                                endPosition = catchClause.Block.EndPosition;
+                                catchClause.EndPosition = endPosition;
                                 hasCatch = true;
                                 break;
 
                             case Finally:
                                 nextLexicalUnit(true);
                                 tryStatement.Finally = parseBlockStatement();
+                                endPosition = tryStatement.Finally.EndPosition;
                                 done = true;
                                 break;
 
@@ -1449,6 +1456,7 @@ package stab.tools.parser {
                             break;
                         }
                     } while (!done);
+                    tryStatement.EndPosition = endPosition;
                     return tryStatement;
                 }
 
@@ -1493,6 +1501,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     usingStatement.Statement = parseEmbeddedStatement();
+                    usingStatement.EndPosition = usingStatement.Statement.EndPosition;
                     return usingStatement;
                 }
 
@@ -1502,7 +1511,7 @@ package stab.tools.parser {
                     if (nextLexicalUnit(true) != LexicalUnit.SemiColon) {
                         returnStatement.Value = parseExpression();
                     }
-                    parseSemiColon(false, false);
+                    returnStatement.EndPosition = parseSemiColon(false, false);
                     return returnStatement;
                 }
 
@@ -1512,7 +1521,7 @@ package stab.tools.parser {
                     if (nextLexicalUnit(true) != LexicalUnit.SemiColon) {
                         throwStatement.Exception = parseExpression();
                     }
-                    parseSemiColon(false, false);
+                    throwStatement.EndPosition = parseSemiColon(false, false);
                     return throwStatement;
                 }
 
@@ -1532,6 +1541,9 @@ package stab.tools.parser {
                     if (lexicalUnit == LexicalUnit.Keyword && scanner.getKeyword() == Keyword.Else) {
                         nextLexicalUnit(true);
                         ifStatement.IfFalse = parseEmbeddedStatement();
+                        ifStatement.EndPosition = ifStatement.IfFalse.EndPosition;
+                    } else {
+                    	ifStatement.EndPosition = ifStatement.IfTrue.EndPosition;
                     }
                     return ifStatement;
                 }
@@ -1549,6 +1561,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     whileStatement.Statement = parseEmbeddedStatement();
+                    whileStatement.EndPosition = whileStatement.Statement.EndPosition;
                     return whileStatement;
                 }
 
@@ -1568,7 +1581,7 @@ package stab.tools.parser {
                     if (lexicalUnit != LexicalUnit.CloseParenthesis) {
                         throw error(ParseErrorId.CloseParenthesisExpected);
                     }
-                    parseSemiColon(true, false);
+                    doStatement.EndPosition = parseSemiColon(true, false);
                     return doStatement;
                 }
 
@@ -1588,6 +1601,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     var done = false;
+                    int endPosition = 0;
                     do {
                         switch (lexicalUnit) {
                         case Keyword:
@@ -1595,6 +1609,7 @@ package stab.tools.parser {
                             var line = scanner.StartLine;
                             var column = scanner.StartColumn;
                             var disabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
+	                    	int startPosition = scanner.StartPosition;
                             ExpressionNode expr = null;
                             switch (scanner.Keyword) {
                             case Case:
@@ -1613,7 +1628,7 @@ package stab.tools.parser {
                                 throw error(ParseErrorId.ColonExpected);
                             }
                             var switchSection = new SwitchSectionNode { Filename = filename, Line = line, Column = column,
-                                    DisabledWarnings = disabledWarnings };
+                                    DisabledWarnings = disabledWarnings, StartPosition = startPosition };
                             switchSection.CaseExpression = expr;
                             switchStatement.Sections.add(switchSection);
                             nextLexicalUnit(true);
@@ -1628,17 +1643,25 @@ package stab.tools.parser {
                                         break;
 
                                     default:
-                                        switchSection.Statements.add(parseStatement());
+                                    	var statement = parseStatement();
+                                        switchSection.Statements.add(statement);
+	                                    endPosition = statement.EndPosition;
+	                                    switchSection.EndPosition = endPosition;
                                         break;
                                     }
                                     break;
 
                                 case CloseBrace:
+                                	endPosition = scanner.EndPosition;
+                                	switchSection.EndPosition = scanner.StartPosition;
                                     caseDone = true;
                                     break;
 
                                 default:
-                                    switchSection.Statements.add(parseStatement());
+                                	var statement = parseStatement();
+                                    switchSection.Statements.add(statement);
+                                    endPosition = statement.EndPosition;
+                                    switchSection.EndPosition = endPosition;
                                     break;
                                 }
                             } while (!caseDone);
@@ -1646,6 +1669,7 @@ package stab.tools.parser {
 
                         case CloseBrace:
                             done = true;
+                            endPosition = scanner.EndPosition;
                             nextLexicalUnit(false);
                             break;
 
@@ -1653,6 +1677,7 @@ package stab.tools.parser {
                             throw error(ParseErrorId.CloseBraceExpected);
                         }
                     } while (!done);
+                    switchStatement.EndPosition = endPosition;
                     return switchStatement;
                 }
 
@@ -1691,6 +1716,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     foreachStatement.Statement = parseEmbeddedStatement();
+                    foreachStatement.EndPosition = foreachStatement.Statement.EndPosition;
                     return foreachStatement;
                 }
 
@@ -1740,6 +1766,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     forStatement.Statement = parseEmbeddedStatement();
+                    forStatement.EndPosition = forStatement.Statement.EndPosition;
                     return forStatement;
                 }
 
@@ -1756,6 +1783,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     syncStatement.Statement = parseEmbeddedStatement();
+                    syncStatement.EndPosition = syncStatement.Statement.EndPosition;
                     return syncStatement;
                 }
 
@@ -1769,13 +1797,13 @@ package stab.tools.parser {
                             setSavedScannerState(result);
                             nextLexicalUnit(true);
                             result.Expression = parseExpression();
-                            parseSemiColon(false, false);
+                            result.EndPosition = parseSemiColon(false, false);
                             return result;
                         }
                         case Default: {
                             var result = new GotoCaseStatementNode();
                             setSavedScannerState(result);
-                            parseSemiColon(true, false);
+                            result.EndPosition = parseSemiColon(true, false);
                             return result;
                         }
                         default:
@@ -1788,7 +1816,7 @@ package stab.tools.parser {
                         setSavedScannerState(gotoStatement);
                         gotoStatement.LabelOffset = scanner.getStartPosition();
                         gotoStatement.LabelLength = getLexicalUnitLength();
-                        parseSemiColon(true, false);
+                        gotoStatement.EndPosition = parseSemiColon(true, false);
                         return gotoStatement;
 
                     default:
@@ -1799,14 +1827,14 @@ package stab.tools.parser {
                 case Continue: {
                     var continueStatement = new ContinueStatementNode();
                     setScannerState(continueStatement);
-                    parseSemiColon(true, false);
+                    continueStatement.EndPosition = parseSemiColon(true, false);
                     return continueStatement;
                 }
 
                 case Break: {
                     var breakStatement = new BreakStatementNode();
                     setScannerState(breakStatement);
-                    parseSemiColon(true, false);
+                    breakStatement.EndPosition = parseSemiColon(true, false);
                     return breakStatement;
                 }
 
@@ -1834,8 +1862,9 @@ package stab.tools.parser {
             var result = parseStatement();
             switch (result.StatementKind) {
             case LocalDeclaration:
+                throw error(ParseErrorId.UnexpectedVariableDeclaration);
             case Labeled:
-                throw error(ParseErrorId.UnexpectedLexicalUnit);
+                throw error(ParseErrorId.UnexpectedLabeledStatement);
             }
             return result;
         }
@@ -1863,6 +1892,7 @@ package stab.tools.parser {
                     var labeled = new LabeledStatementNode { NameOffset = sp, NameLength = len };
                     setSavedScannerState(labeled);
                     labeled.Statement = parseStatement();
+                    labeled.EndPosition = labeled.Statement.EndPosition;
                     return labeled;
                 }
                 this.restore(restorePoint);
@@ -1881,7 +1911,7 @@ package stab.tools.parser {
             setSavedScannerState(declaration);
             declaration.Type = type;
             var declarator = new VariableDeclaratorNode();
-            setSavedScannerState(declarator);
+            setScannerState(declarator);
             declarator.NameOffset = scanner.StartPosition;
             declarator.NameLength = getLexicalUnitLength();
             declaration.Declarators.add(declarator);
@@ -1889,7 +1919,11 @@ package stab.tools.parser {
             if (lexicalUnit == LexicalUnit.Assign) {
                 nextLexicalUnit(true);
                 declarator.Value = parseLocalVariableInitializer();
+                declarator.EndPosition = declarator.Value.EndPosition;
+            } else {
+            	declarator.EndPosition = declarator.NameOffset + declarator.NameLength;
             }
+            int endPosition = declarator.EndPosition;
             while (lexicalUnit == LexicalUnit.Comma) {
                 if (!isIdentifier(nextLexicalUnit(true))) {
                     throw error(ParseErrorId.IdentifierExpected);
@@ -1903,17 +1937,23 @@ package stab.tools.parser {
                 if (lexicalUnit == LexicalUnit.Assign) {
                     nextLexicalUnit(true);
                     declarator.Value = parseLocalVariableInitializer();
+	                declarator.EndPosition = declarator.Value.EndPosition;
+	            } else {
+	            	declarator.EndPosition = declarator.NameOffset + declarator.NameLength;
                 }
+                endPosition = declarator.EndPosition;
             }
             if (eatSemiColon) {
-                parseSemiColon(false, false);
+                declaration.EndPosition = parseSemiColon(false, false);
+            } else {
+            	declaration.EndPosition = endPosition;
             }
-			declaration.EndPosition = scanner.StartPosition;
             return declaration;
         }
         
         private ExpressionNode parseLocalVariableInitializer() {
             if (lexicalUnit == LexicalUnit.OpenBrace) {
+            	saveScannerState();
                 nextLexicalUnit(true);
                 return parseArrayInitializer();
             } else {
@@ -1949,7 +1989,9 @@ package stab.tools.parser {
                 throw error(ParseErrorId.UnexpectedLexicalUnit);
             }
             if (eatSemiColon) {
-                parseSemiColon(false, false);
+                result.EndPosition = parseSemiColon(false, false);
+            } else {
+            	result.EndPosition = scanner.EndPosition;
             }
             return result;
         }
@@ -2076,6 +2118,7 @@ package stab.tools.parser {
                 assign.Left = result;
                 assign.Operator = op;
                 assign.Right = parseExpression();
+                assign.EndPosition = assign.Right.EndPosition;
                 result = assign;
             }
             return result;
@@ -2096,12 +2139,16 @@ package stab.tools.parser {
                     if (nextLexicalUnit(true) == LexicalUnit.OpenBrace) {
                         lambda.Body = parseBlockStatement();
                     } else {
-                        lambda.Body = new ExpressionStatementNode { Expression = parseExpression() };
+                    	var expression = parseExpression();
+                    	var expressionStatement = new ExpressionStatementNode { Expression = expression };
+                    	copyScannerState(expression, expressionStatement);
+                        lambda.Body = expressionStatement;
                     }
+                    lambda.EndPosition = lambda.Body.EndPosition;
                     return lambda;
                 }
+	            break;
             }
-            break;
 
             default: {
                 var implicitSignature = true;
@@ -2175,8 +2222,12 @@ package stab.tools.parser {
                 if (nextLexicalUnit(true) == LexicalUnit.OpenBrace) {
                     lambda.Body = parseBlockStatement();
                 } else {
-                    lambda.Body = new ExpressionStatementNode { Expression = parseExpression() };
+                	var expression = parseExpression();
+                	var expressionStatement = new ExpressionStatementNode { Expression = expression };
+                	copyScannerState(expression, expressionStatement);
+                    lambda.Body = expressionStatement;
                 }
+                lambda.EndPosition = lambda.Body.EndPosition;
                 return lambda;
             }
             }
@@ -2188,6 +2239,7 @@ package stab.tools.parser {
                 var param = new ParameterNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
                 setScannerState(param);
                 parameters.add(param);
+                param.EndPosition = scanner.EndPosition;
                 if (nextLexicalUnit(true) == LexicalUnit.Comma) {
                     nextLexicalUnit(true);
                 }
@@ -2274,11 +2326,12 @@ package stab.tools.parser {
             }
             nextLexicalUnit(true);
             result.From.Origin = parseExpression();
-            parseQueryBody(result.Body);
+            parseQueryBody(result.Body, result.From.Origin.EndPosition);
+            result.EndPosition = result.Body.EndPosition;
             return result;
         }
         
-        private void parseQueryBody(QueryBodyNode body) {
+        private void parseQueryBody(QueryBodyNode body, int endPosition) {
             var done = false;
             do {
                 switch (lexicalUnit) {
@@ -2289,30 +2342,35 @@ package stab.tools.parser {
                         var from = new FromQueryBodyClauseNode();
                         parseFromClause(from);
                         body.Clauses.add(from);
+                        endPosition = from.EndPosition;
                         break;
 
                     case Join:
                         var join = new JoinQueryBodyClauseNode();
                         parseJoinClause(join);
                         body.Clauses.add(join);
+                        endPosition = join.EndPosition;
                         break;
 
                     case Let:
                         var let = new LetQueryBodyClauseNode();
                         parseLetClause(let);
                         body.Clauses.add(let);
+                        endPosition = let.EndPosition;
                         break;
 
                     case Orderby:
                         var orderby = new OrderbyQueryBodyClauseNode();
                         parseOrderbyClause(orderby);
                         body.Clauses.add(orderby);
+                        endPosition = orderby.EndPosition;
                         break;
 
                     case Where:
                         var where = new WhereQueryBodyClauseNode();
                         parseWhereClause(where);
                         body.Clauses.add(where);
+                        endPosition = where.EndPosition;
                         break;
 
                     default:
@@ -2333,6 +2391,7 @@ package stab.tools.parser {
                 case Select:
                     nextLexicalUnit(true);
                     body.SelectOrGroup = parseExpression();
+                    endPosition = body.SelectOrGroup.EndPosition;
                     break;
 
                 case Group:
@@ -2343,6 +2402,7 @@ package stab.tools.parser {
                     }
                     nextLexicalUnit(true);
                     body.By = parseExpression();
+                    endPosition = body.By.EndPosition;
                     break;
                 default:
                     throw error(ParseErrorId.SelectOrGroupExpected);
@@ -2356,9 +2416,12 @@ package stab.tools.parser {
                     throw error(ParseErrorId.IdentifierExpected);
                 }
                 body.Continuation = new QueryContinuationNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
+                endPosition = scanner.EndPosition;
                 nextLexicalUnit(true);
-                parseQueryBody(body.Continuation.Body);
+                parseQueryBody(body.Continuation.Body, endPosition);
+                endPosition = body.Continuation.Body.EndPosition;
             }
+            body.EndPosition = endPosition;
         }
         
         private void parseFromClause(FromQueryBodyClauseNode from) {
@@ -2390,6 +2453,7 @@ package stab.tools.parser {
             }
             nextLexicalUnit(true);
             from.Origin = parseExpression();
+            from.EndPosition = from.Origin.EndPosition;
         }
         
         private void parseJoinClause(JoinQueryBodyClauseNode join) {
@@ -2437,7 +2501,10 @@ package stab.tools.parser {
                 }
                 join.ResultOffset = scanner.StartPosition;
                 join.ResultLength = getLexicalUnitLength();
+                join.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
+            } else {
+            	join.EndPosition = join.EqualsRightOperand.EndPosition;
             }
         }
 
@@ -2453,34 +2520,42 @@ package stab.tools.parser {
             }
             nextLexicalUnit(true);
             let.Value = parseExpression();
+            let.EndPosition = let.Value.EndPosition;
         }
 
         private void parseOrderbyClause(OrderbyQueryBodyClauseNode orderby) {
             setScannerState(orderby);
+            int endPosition;
             do {
                 nextLexicalUnit(true);
                 var ordering = new OrderingNode();
                 setScannerState(ordering);
                 ordering.KeySelector = parseExpression();
+            	endPosition = ordering.KeySelector.EndPosition;
                 if (lexicalUnit == LexicalUnit.ContextualKeyword) {
                     switch (scanner.getKeyword()) {
                     case Ascending:
+                    	endPosition = scanner.EndPosition;
                         nextLexicalUnit(true);
                         break;
                     case Descending:
+                    	endPosition = scanner.EndPosition;
                         nextLexicalUnit(true);
                         ordering.Descending = true;
                         break;
                     }
                 }
+                ordering.EndPosition = endPosition;
                 orderby.Orderings.add(ordering);
             } while (lexicalUnit == LexicalUnit.Comma);
+            orderby.EndPosition = endPosition;
         }
 
         private void parseWhereClause(WhereQueryBodyClauseNode where) {
             setScannerState(where);
             nextLexicalUnit(true);
             where.Predicat = parseExpression();
+            where.EndPosition = where.Predicat.EndPosition;
         }
 
         private ExpressionNode parseConditionalExpression() {
@@ -2488,6 +2563,7 @@ package stab.tools.parser {
             var line = scanner.StartLine;
             var column = scanner.StartColumn;
             var disabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
+            var startPosition = scanner.StartPosition;
             
             var result = parseBinaryExpression();
             if (lexicalUnit == LexicalUnit.QuestionMark) {
@@ -2497,8 +2573,10 @@ package stab.tools.parser {
                     throw error(ParseErrorId.ColonExpected);
                 }
                 nextLexicalUnit(true);
-                result = new ConditionalExpressionNode { Filename = filename, Line = line, Column = column, DisabledWarnings = disabledWarnings,
-                        Condition = result, IfTrue = ifTrue, IfFalse = parseExpression() };
+                var expr = new ConditionalExpressionNode { Filename = filename, Line = line, Column = column, DisabledWarnings = disabledWarnings,
+                        StartPosition = startPosition, Condition = result, IfTrue = ifTrue, IfFalse = parseExpression() };
+                expr.EndPosition = expr.IfFalse.EndPosition;
+                result = expr;
             }
             return result;
         }
@@ -2667,6 +2745,7 @@ package stab.tools.parser {
                 } else {
                     binary.RightOperand = parseBinaryExpression(prec - 1, parseUnaryExpression());
                 }
+                binary.EndPosition = binary.RightOperand.EndPosition;
                 leftExpression = binary;
             }
         }
@@ -2718,6 +2797,7 @@ package stab.tools.parser {
         private UnaryExpressionNode createUnaryExpression(UnaryOperator operator, ExpressionNode operand) {
             var result = new UnaryExpressionNode { Operator = operator, Operand = operand };
             setSavedScannerState(result);
+            result.EndPosition = operand.EndPosition;
             return result;
         }
 
@@ -2766,6 +2846,7 @@ package stab.tools.parser {
                     var result = new CastExpressionNode { TargetType = type };
                     setSavedScannerState(result);
                     result.Expression = parseQueryExpression();
+                    result.EndPosition = result.Expression.EndPosition;
                     return result;
                 }
                 break;
@@ -2780,6 +2861,7 @@ package stab.tools.parser {
             var result = new CastExpressionNode { TargetType = type };
             setSavedScannerState(result);
             result.Expression = parseUnaryExpression();
+            result.EndPosition = result.Expression.EndPosition;
             return result;
         }
         
@@ -2842,8 +2924,9 @@ package stab.tools.parser {
                 var name = new SimpleNameExpressionNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
                 result = name;
                 setScannerState(result);
+                int endPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
-                parseTypeArguments(name.TypeArguments, true);
+                result.EndPosition = parseTypeArguments(name.TypeArguments, true, endPosition);
             }
             break;
 
@@ -2854,6 +2937,7 @@ package stab.tools.parser {
                 if (lexicalUnit != LexicalUnit.CloseParenthesis) {
                     throw error(ParseErrorId.CloseParenthesisExpected);
                 }
+                result.EndPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
             }
             break;
@@ -2928,6 +3012,7 @@ package stab.tools.parser {
                     if (lexicalUnit != LexicalUnit.CloseParenthesis) {
                         throw error(ParseErrorId.CloseParenthesisExpected);
                     }
+                    result.EndPosition = scanner.EndPosition;
                     nextLexicalUnit(false);
                     break;
                     
@@ -2948,14 +3033,15 @@ package stab.tools.parser {
                     if (lexicalUnit != LexicalUnit.CloseParenthesis) {
                         throw error(ParseErrorId.CloseParenthesisExpected);
                     }
+                    result.EndPosition = scanner.EndPosition;
                     nextLexicalUnit(false);
                     break;
                 }
                 case This: {
-                    saveScannerState();
-                    nextLexicalUnit(false);
                     result = new ThisAccessExpressionNode();
-                    setSavedScannerState(result);
+                    result.EndPosition = scanner.EndPosition;
+                    setScannerState(result);
+                    nextLexicalUnit(false);
                     break;
                 }
                 case Super: {
@@ -2987,8 +3073,9 @@ package stab.tools.parser {
                     copyScannerState(result, memberAccess);
                     setScannerState(memberAccess.Member);
                     result = memberAccess;
+                    int endPosition = scanner.EndPosition;
                     nextLexicalUnit(false);
-                    parseTypeArguments(memberAccess.Member.TypeArguments, true);
+                    memberAccess.EndPosition = parseTypeArguments(memberAccess.Member.TypeArguments, true, endPosition);
                 }
                 break;
 
@@ -3000,7 +3087,7 @@ package stab.tools.parser {
                     setScannerState(invocation);
                     result = invocation;
                     nextLexicalUnit(true);
-                    parseArguments(invocation.Arguments);
+                    result.EndPosition = parseArguments(invocation.Arguments);
                 }
                 break;
 
@@ -3056,8 +3143,9 @@ package stab.tools.parser {
                 };
                 copyScannerState(superAccess, memberAccess);
                 result = memberAccess;
+                int endPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
-                parseTypeArguments(memberAccess.Member.TypeArguments, true);
+                memberAccess.EndPosition = parseTypeArguments(memberAccess.Member.TypeArguments, true, endPosition);
                 break;
 
             case OpenBracket:
@@ -3138,21 +3226,22 @@ package stab.tools.parser {
                     switch (lexicalUnit) {
                     case OpenBrace:
                         nextLexicalUnit(true);
-                        result = new ObjectCreationExpressionNode { Filename = filename, Line = line, Column = column,
-                            DisabledWarnings = disabledWarnings, Type = type, Initializer = parseObjectOrCollectionInitializer()
-                        };
+                        var objectCreation = new ObjectCreationExpressionNode { Filename = filename, Line = line, Column = column,
+                            DisabledWarnings = disabledWarnings,  Type = type, Initializer = parseObjectOrCollectionInitializer() };
+                        result = objectCreation;
+                        result.EndPosition = objectCreation.Initializer.EndPosition;
                         break;
 
                     case OpenParenthesis:
-                        var objectCreation = new ObjectCreationExpressionNode { Filename = filename, Line = line, Column = column,
-                            DisabledWarnings = disabledWarnings, Type = type
-                        };
+                        objectCreation = new ObjectCreationExpressionNode { Filename = filename, Line = line, Column = column,
+                            DisabledWarnings = disabledWarnings, Type = type };
                         result = objectCreation;
                         nextLexicalUnit(true);
-                        parseArguments(objectCreation.Arguments);
+                        result.EndPosition = parseArguments(objectCreation.Arguments);
                         if (lexicalUnit == LexicalUnit.OpenBrace) {
                             nextLexicalUnit(true);
                             objectCreation.Initializer = parseObjectOrCollectionInitializer();
+                            objectCreation.EndPosition = objectCreation.Initializer.EndPosition;
                         }
                         break;
 
@@ -3162,19 +3251,23 @@ package stab.tools.parser {
                         };
                         result = arrayCreation;
                         boolean noOpenBracket = false;
+                        int endPosition = scanner.EndPosition;
                         while (nextLexicalUnit(true) != LexicalUnit.CloseBracket) {
                             arrayCreation.DimensionExpressions.add(parseExpression());
                             if (lexicalUnit != LexicalUnit.CloseBracket) {
                                 throw error(ParseErrorId.CloseBracketExpected);
                             }
+	                        endPosition = scanner.EndPosition;
                             if (nextLexicalUnit(false) != LexicalUnit.OpenBracket) {
                                 noOpenBracket = true;
                                 break;
                             }
                         }
                         if (!noOpenBracket && lexicalUnit == LexicalUnit.CloseBracket) {
+	                        endPosition = scanner.EndPosition;
                             if (nextLexicalUnit(false) == LexicalUnit.OpenBracket) {
                                 arrayCreation.Dimensions = parseDimensions() + 1;
+	                        	endPosition = scanner.EndPosition;
                             } else {
                                 arrayCreation.Dimensions = 1;
                             }
@@ -3182,6 +3275,9 @@ package stab.tools.parser {
                         if (lexicalUnit == LexicalUnit.OpenBrace) {
                             nextLexicalUnit(true);
                             arrayCreation.Initializer = parseArrayInitializer();
+                            result.EndPosition = arrayCreation.Initializer.EndPosition;
+                        } else {
+                        	result.EndPosition = endPosition;
                         }
                         break;
                     }
@@ -3191,9 +3287,10 @@ package stab.tools.parser {
                     setSavedScannerState(arrayCreation);
                     arrayCreation.Initializer = parseArrayInitializer();
                     result = arrayCreation;
+                    result.EndPosition = arrayCreation.Initializer.EndPosition;
                 }
+	            break;
             }
-            break;
             }
             return result;
         }
@@ -3278,11 +3375,12 @@ package stab.tools.parser {
                 }
                 parseCommaOrCloseBrace();
             }
+            collectionInitializer.EndPosition = scanner.EndPosition;
             nextLexicalUnit(false);
             return collectionInitializer;
         }
 
-        private void parseArguments(List<ExpressionNode> arguments) {
+        private int parseArguments(List<ExpressionNode> arguments) {
             var first = true;
             while (lexicalUnit != LexicalUnit.CloseParenthesis) {
                 if (first) {
@@ -3295,7 +3393,9 @@ package stab.tools.parser {
                 }
                 arguments.add(parseExpression());
             }
+            int result = scanner.EndPosition;
             nextLexicalUnit(false);
+            return result;
         }
 
         private void parseExpressionList(List<ExpressionNode> expressions) {
@@ -3442,14 +3542,15 @@ package stab.tools.parser {
             throw error(ParseErrorId.CloseBracketExpected);
         }
 
-        private void parseTypeArguments(List<TypeReferenceNode> typeArguments, boolean primaryExpression) {
+        private int parseTypeArguments(List<TypeReferenceNode> typeArguments, boolean primaryExpression, int endPosition) {
             if (lexicalUnit != LexicalUnit.LessThan) {
-                return;
+                return endPosition;
             }
             var restorePoint = this.getRestorePoint();
             var hasComma = false;
             nextLexicalUnit(true);
             while (true) {
+            	int result;
                 switch (lexicalUnit) {
                 case QuestionMark:
                     saveScannerState();
@@ -3474,19 +3575,21 @@ package stab.tools.parser {
                     if (typeArguments.size() == 0) {
                         throw error(ParseErrorId.IdentifierExpected);
                     }
+                    result = scanner.EndPosition;
                     nextLexicalUnit(false);
-                    return;
+                    return result;
 
                 default:
                     TypeReferenceNode type = parseType(hasComma);
                     if (type == null) {
                         this.restore(restorePoint);
                         typeArguments.clear();
-                        return;
+                        return endPosition;
                     }
                     typeArguments.add(type);
                     switch (lexicalUnit) {
                     case GreaterThan:
+                    	result = scanner.EndPosition;
                         if (primaryExpression) {
                             switch (nextLexicalUnit(false)) {
                             case OpenParenthesis:
@@ -3500,16 +3603,16 @@ package stab.tools.parser {
                             case Equal:
                             case NotEqual:
                             case EndOfStream:
-                                return;
+                                return result;
 
                             default:
                                 this.restore(restorePoint);
                                 typeArguments.clear();
-                                return;
+                                return endPosition;
                             }
                         } else {
                             nextLexicalUnit(false);
-                            return;
+                            return result;
                         }
 
                     case Colon:
@@ -3538,7 +3641,7 @@ package stab.tools.parser {
                         } else {
                             this.restore(restorePoint);
                             typeArguments.clear();
-                            return;
+                            return endPosition;
                         }
                     }
                     break;
@@ -3562,9 +3665,9 @@ package stab.tools.parser {
             name.NameOffset = sp;
             name.NameLength = len;
             result = name;
-            
+            int endPosition = scanner.EndPosition;
             nextLexicalUnit(false);
-            parseTypeArguments(name.TypeArguments, false);
+            endPosition = parseTypeArguments(name.TypeArguments, false, endPosition);
             while (lexicalUnit == LexicalUnit.Dot) {
 				result.EndPosition = scanner.StartPosition;
                 nextLexicalUnit(fail);
@@ -3579,13 +3682,15 @@ package stab.tools.parser {
                 setScannerState(name);
                 name.NameOffset = scanner.StartPosition;
                 name.NameLength = getLexicalUnitLength();
-                var qualifiedType = new QualifiedTypeReferenceNode { EnclosingType = result, SimpleName = name, StartPosition = result.StartPosition };
+                var qualifiedType = new QualifiedTypeReferenceNode { EnclosingType = result, SimpleName = name,
+                		StartPosition = result.StartPosition };
                 copyScannerState(result, qualifiedType);
                 result = qualifiedType;
+                endPosition = scanner.EndPosition;
                 nextLexicalUnit(false);
-                parseTypeArguments(name.TypeArguments,false);
+                endPosition = parseTypeArguments(name.TypeArguments,false, endPosition);
             }
-			result.EndPosition = scanner.StartPosition;
+			result.EndPosition = endPosition;
             return result;
         }
 
@@ -3604,64 +3709,55 @@ package stab.tools.parser {
             case Keyword:
                 switch (scanner.Keyword) {
                 case Byte:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Byte) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Byte) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Char:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Char) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Char) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Short:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Short) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Short) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Int:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Int) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Int) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Long:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Long) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Long) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Boolean:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Boolean) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Boolean) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Double:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Double) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Double) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Float:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Float) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Float) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
 
                 case Void:
-                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Void) {
-							StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+                    result = new PrimitiveTypeReferenceNode(TypeReferenceKind.Void) { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
@@ -3704,7 +3800,7 @@ package stab.tools.parser {
         }
 
         private LiteralExpressionNode createLiteralExpression(LiteralKind literalKind) {
-            var result = new LiteralExpressionNode { StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+            var result = new LiteralExpressionNode { EndPosition = scanner.EndPosition };
             setScannerState(result);
             result.setLiteralKind(literalKind);
             result.ValueOffset = scanner.StartPosition;
@@ -3713,10 +3809,11 @@ package stab.tools.parser {
         }
 
         private TypeExpressionNode createTypeExpression(TypeReferenceKind typeReferenceKind) {
-            var result = new TypeExpressionNode  { StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition };
+            var result = new TypeExpressionNode { EndPosition = scanner.EndPosition };
             setScannerState(result);
-            result.setTypeReference(new PrimitiveTypeReferenceNode(typeReferenceKind)  {
-					StartPosition = scanner.StartPosition, EndPosition = scanner.EndPosition });
+            var typeReference = new PrimitiveTypeReferenceNode(typeReferenceKind) { EndPosition = scanner.EndPosition };
+            setScannerState(typeReference);
+            result.setTypeReference(typeReference);
             return result;
         }
         
@@ -3734,10 +3831,11 @@ package stab.tools.parser {
             }
         }
 
-        private void parseSemiColon(boolean nextBefore, boolean failAfter) {
+        private int parseSemiColon(boolean nextBefore, boolean failAfter) {
             if (nextBefore) {
                 nextLexicalUnit(true);
             }
+        	int result = scanner.EndPosition;
             if (lexicalUnit != LexicalUnit.SemiColon) {
                 if (newLineOccured) {
                     addError(ParseErrorId.SemiColonExpected);
@@ -3747,6 +3845,7 @@ package stab.tools.parser {
             } else {
                 nextLexicalUnit(failAfter);
             }
+            return result;
         }
         
         private RestorePoint getRestorePoint() {
@@ -3791,6 +3890,8 @@ package stab.tools.parser {
             node2.Line = node1.Line;
             node2.Column = node1.Column;
             node2.DisabledWarnings = node1.DisabledWarnings;
+            node2.StartPosition = node1.StartPosition;
+            node2.EndPosition = node1.EndPosition;
         }
         
         private void addError(ParseErrorId id, params Object[] arguments) {

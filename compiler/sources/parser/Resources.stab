@@ -82,8 +82,8 @@ package stab.tools.parser {
         ArrayTypeExpected,
         DuplicateAccessor,
         AccessorExpected,
-        
-        LastId
+        UnexpectedVariableDeclaration,
+        UnexpectedLabeledStatement,
     }
     
     class Resources {
