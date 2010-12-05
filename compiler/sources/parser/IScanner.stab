@@ -70,7 +70,7 @@ package stab.tools.parser {
             get;
         }
 
-        RestorePoint getRestorePoint();
+        RestorePoint createRestorePoint();
         void restore(RestorePoint restorePoint);
         void addError(ParseErrorId errorId, int level, String message);
         LexicalUnit nextLexicalUnit();

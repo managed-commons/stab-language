@@ -24,15 +24,7 @@ package stab.tools.eclipse.editors {
 			
 		}
 
-		public void leavePackage() {
-		
-		}
-		
 		public void enterClass(ClassDeclarationNode declaration) {
-		
-		}
-		
-		public void leaveClass() {
 		
 		}
 		
@@ -40,7 +32,31 @@ package stab.tools.eclipse.editors {
 		
 		}
 		
-		public void leaveInterface() {
+		public void enterMethod(MethodDeclarationNode declaration) {
+		
+		}
+		
+		public void enterConstructor(ConstructorDeclarationNode declaration) {
+		
+		}
+		
+		public void enterPropertyGetter(PropertyDeclarationNode declaration) {
+		
+		}
+		
+		public void enterPropertySetter(PropertyDeclarationNode declaration) {
+		
+		}
+		
+		public void enterIndexerGetter(IndexerDeclarationNode declaration) {
+		
+		}
+		
+		public void enterIndexerSetter(IndexerDeclarationNode declaration) {
+		
+		}
+		
+		public void declareLocals(LocalDeclarationStatementNode statement) {
 		
 		}
 	}

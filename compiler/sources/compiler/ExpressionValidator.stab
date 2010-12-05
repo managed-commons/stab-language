@@ -1255,19 +1255,24 @@ package stab.tools.compiler {
                         methodBuilder.setReturnType(returnType);
                     } else {
                         var block = new BlockStatementNode();
-                        block.Filename = lambda.Body.Filename;
-                        block.Line = lambda.Body.Line;
-                        block.Column = lambda.Body.Column;
-                        block.DisabledWarnings = lambda.Body.DisabledWarnings;
+                        var body = lambda.Body;
+                        block.Filename = body.Filename;
+                        block.Line = body.Line;
+                        block.Column = body.Column;
+                        block.DisabledWarnings = body.DisabledWarnings;
+                        block.StartPosition = body.StartPosition;
+                        block.EndPosition = body.EndPosition;
                         if (returnType == JvmTypeInfo.VOID || methodBuilder.ReturnType == JvmTypeInfo.VOID) {
-                            block.Statements.add(lambda.Body);
+                            block.Statements.add(body);
                         } else {
                             var returnNode = new ReturnStatementNode();
                             block.Statements.add(returnNode);
-                            returnNode.Filename = lambda.Body.Filename;
-                            returnNode.Line = lambda.Body.Line;
-                            returnNode.Column = lambda.Body.Column;
-                            returnNode.DisabledWarnings = lambda.Body.DisabledWarnings;
+                            returnNode.Filename = body.Filename;
+                            returnNode.Line = body.Line;
+                            returnNode.Column = body.Column;
+                            returnNode.DisabledWarnings = body.DisabledWarnings;
+                            returnNode.StartPosition = body.StartPosition;
+                            returnNode.EndPosition = body.EndPosition;
                             returnNode.Value = expr;
                         }
                         lambda.Body = block;

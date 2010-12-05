@@ -121,7 +121,7 @@ package stab.tools.parser {
             private set;
         }
         
-        public RestorePoint getRestorePoint() {
+        public RestorePoint createRestorePoint() {
             return new RestorePoint(StartPosition, Scanner.EndOffset - StartPosition + 1, Part, StartLine, StartColumn,
                 Scanner.CodeErrorManager.ErrorCount, Scanner.CodeErrorManager.DisabledWarnings);
         }

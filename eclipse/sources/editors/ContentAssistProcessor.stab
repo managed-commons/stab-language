@@ -37,10 +37,14 @@ package stab.tools.eclipse.editors {
 		private Token token;
 		private List<Token> tokens;
 		private ContentAssistContext context;
+		private StatementProcessor statementProcessor;
+		private ExpressionProcessor expressionProcessor;
 
 		public ContentAssistProcessor(SourceEditor editor, ISourceViewer sourceViewer) {
 			this.editor = editor;
 			this.sourceViewer = sourceViewer;
+			this.statementProcessor = new StatementProcessor(this);
+			this.expressionProcessor = new ExpressionProcessor(this);
 		}
 		
 		public IContextInformation[] computeContextInformation(ITextViewer viewer, int offset) {
@@ -60,7 +64,7 @@ package stab.tools.eclipse.editors {
 		}
 		
 		public char[] getCompletionProposalAutoActivationCharacters() {
-			return new[] { '.' };
+			return null;
 		}
 		
 		public ICompletionProposal[] computeCompletionProposals(ITextViewer viewer, int offset) {
@@ -139,11 +143,34 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInPackage(PackageBodyNode body) {
+			var beforeMembers = true;
 			if (body != null) {
-				try {
+				foreach (var m in body.Members) {
+					var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= offset) {
+						break;
+					}
+					beforeMembers = false;
+					if (endToken.offset + endToken.length <= offset) {
+						continue;
+					}
 					context.enterPackage(body);
-					foreach (var m in body.Members) {
-						var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+					switch (m.PackageMemberKind) {
+					case Package:
+						return computeCompletionProposalsInPackage(((PackageDeclarationNode)m).Body);
+					case Class:
+						return computeCompletionProposalsInClass((ClassDeclarationNode)m);
+					case Interface:
+						return computeCompletionProposalsInInterface((InterfaceDeclarationNode)m);
+					case Delegate:
+						return computeCompletionProposalsInDelegate((DelegateDeclarationNode)m);
+					}
+				}
+				if (beforeMembers) {
+					foreach (var u in body.UsingDirectives) {
+						var it = u.getAllUserData(typeof(Token)).iterator();
 						var startToken = it.next();
 						var endToken = it.next();
 						if (startToken.offset >= offset) {
@@ -152,97 +179,88 @@ package stab.tools.eclipse.editors {
 						if (endToken.offset + endToken.length <= offset) {
 							continue;
 						}
-						switch (m.PackageMemberKind) {
-						case Package:
-							return computeCompletionProposalsInPackage(((PackageDeclarationNode)m).Body);
-						case Class:
-							return computeCompletionProposalsInClass((ClassDeclarationNode)m);
-						case Interface:
-							return computeCompletionProposalsInInterface((InterfaceDeclarationNode)m);
-						case Delegate:
-							return computeCompletionProposalsInDelegate((DelegateDeclarationNode)m);
-						}
+			
+						// TODO
+						Environment.trace(this, "using");
+						return EMPTY_PROPOSALS;
 					}
-				} finally {
-					context.leavePackage();
 				}
 			}
+			
 			// TODO
-			Environment.trace(this, "package");
+			Environment.trace(this, "package " + beforeMembers);
 			return EMPTY_PROPOSALS;
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInClass(ClassDeclarationNode declaration) {
-			try {
-				context.enterClass(declaration);
-				foreach (var m in declaration.Members) {
-					var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
-					var startToken = it.next();
-					var endToken = it.next();
-					if (startToken.offset >= offset) {
-						break;
-					}
-					if (endToken.offset + endToken.length <= offset) {
-						continue;
-					}
-					switch (m.TypeMemberKind) {
-					case Class:
-						return computeCompletionProposalsInClass((ClassDeclarationNode)m);
-					case Interface:
-						return computeCompletionProposalsInInterface((InterfaceDeclarationNode)m);
-					case Delegate:
-						return computeCompletionProposalsInDelegate((DelegateDeclarationNode)m);
-					case Method:
-						return computeCompletionProposalsInMethod((MethodDeclarationNode)m);
-					case Property:
-						return computeCompletionProposalsInProperty((PropertyDeclarationNode)m);
-					case Indexer:
-						return computeCompletionProposalsInIndexer((IndexerDeclarationNode)m);
-					case Constructor:
-						return computeCompletionProposalsInConstructor((ConstructorDeclarationNode)m);
-					case Destructor:
-						return computeCompletionProposalsInDestructor((DestructorDeclarationNode)m);
-					case Field:
-						return computeCompletionProposalsInField((FieldDeclarationNode)m);
-					case EnumConstant:
-						return computeCompletionProposalsInEnumConstant((EnumConstantDeclarationNode)m);
-					}
+			var beforeMembers = true;
+			foreach (var m in declaration.Members) {
+				var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+				var startToken = it.next();
+				var endToken = it.next();
+				if (startToken.offset >= offset) {
+					break;
 				}
-			} finally {
-				context.leaveClass();
+				beforeMembers = false;
+				if (endToken.offset + endToken.length <= offset) {
+					continue;
+				}
+				context.enterClass(declaration);
+				switch (m.TypeMemberKind) {
+				case Class:
+					return computeCompletionProposalsInClass((ClassDeclarationNode)m);
+				case Interface:
+					return computeCompletionProposalsInInterface((InterfaceDeclarationNode)m);
+				case Delegate:
+					return computeCompletionProposalsInDelegate((DelegateDeclarationNode)m);
+				case Method:
+					return computeCompletionProposalsInMethod((MethodDeclarationNode)m);
+				case Property:
+					return computeCompletionProposalsInProperty((PropertyDeclarationNode)m);
+				case Indexer:
+					return computeCompletionProposalsInIndexer((IndexerDeclarationNode)m);
+				case Constructor:
+					return computeCompletionProposalsInConstructor((ConstructorDeclarationNode)m);
+				case Destructor:
+					return computeCompletionProposalsInDestructor((DestructorDeclarationNode)m);
+				case Field:
+					return computeCompletionProposalsInField((FieldDeclarationNode)m);
+				case EnumConstant:
+					return computeCompletionProposalsInEnumConstant((EnumConstantDeclarationNode)m);
+				}
 			}
+			
 			// TODO
-			Environment.trace(this, "class");
+			Environment.trace(this, "class " + beforeMembers);
 			return EMPTY_PROPOSALS;
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInInterface(InterfaceDeclarationNode declaration) {
-			try {
-				context.enterInterface(declaration);
-				foreach (var m in declaration.Members) {
-					var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
-					var startToken = it.next();
-					var endToken = it.next();
-					if (startToken.offset >= offset) {
-						break;
-					}
-					if (endToken.offset + endToken.length <= offset) {
-						continue;
-					}
-					switch (m.TypeMemberKind) {
-					case Method:
-						return computeCompletionProposalsInMethod((MethodDeclarationNode)m);
-					case Property:
-						return computeCompletionProposalsInProperty((PropertyDeclarationNode)m);
-					case Indexer:
-						return computeCompletionProposalsInIndexer((IndexerDeclarationNode)m);
-					}
+			var beforeMembers = true;
+			foreach (var m in declaration.Members) {
+				var it = ((UserDataContainer)m).getAllUserData(typeof(Token)).iterator();
+				var startToken = it.next();
+				var endToken = it.next();
+				if (startToken.offset >= offset) {
+					break;
 				}
-			} finally {
-				context.leaveInterface();
+				beforeMembers = false;
+				if (endToken.offset + endToken.length <= offset) {
+					continue;
+				}
+				context.enterInterface(declaration);
+				switch (m.TypeMemberKind) {
+				case Method:
+					return computeCompletionProposalsInMethod((MethodDeclarationNode)m);
+				case Property:
+					return computeCompletionProposalsInProperty((PropertyDeclarationNode)m);
+				case Indexer:
+					return computeCompletionProposalsInIndexer((IndexerDeclarationNode)m);
+				}
 			}
+				
 			// TODO
-			Environment.trace(this, "interface");
+			Environment.trace(this, "interface " + beforeMembers);
 			return EMPTY_PROPOSALS;
 		}
 		
@@ -255,15 +273,9 @@ package stab.tools.eclipse.editors {
 		
 		private ICompletionProposal[] computeCompletionProposalsInMethod(MethodDeclarationNode declaration) {
 			var body = declaration.Body;
-			if (body != null) {
-				var it = body.getAllUserData(typeof(Token)).iterator();
-				var startToken = it.next();
-				var endToken = it.next();
-				if (startToken.offset < offset && endToken.offset + endToken.length > offset) {
-					// TODO
-					Environment.trace(this, "method body");
-					return EMPTY_PROPOSALS;
-				}
+			if (body != null && containsOffset(body)) {
+				context.enterMethod(declaration);
+				return statementProcessor.handleStatement(body, null);
 			}
 		
 			// TODO
@@ -272,13 +284,61 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInProperty(PropertyDeclarationNode declaration) {
+			var accessor = declaration.GetAccessor;
+			if (accessor != null && containsOffset(accessor)) {
+				var body = accessor.Body;
+				if (body != null && containsOffset(body)) {
+					context.enterPropertyGetter(declaration);
+					return statementProcessor.handleStatement(body, null);
+				}
 		
+				// TODO
+				Environment.trace(this, "property getter");
+				return EMPTY_PROPOSALS;
+			}
+			accessor = declaration.SetAccessor;
+			if (accessor != null && containsOffset(accessor)) {
+				var body = accessor.Body;
+				if (body != null && containsOffset(body)) {
+					context.enterPropertySetter(declaration);
+					return statementProcessor.handleStatement(body, null);
+				}
+		
+				// TODO
+				Environment.trace(this, "property setter");
+				return EMPTY_PROPOSALS;
+			}
+			
 			// TODO
 			Environment.trace(this, "property");
 			return EMPTY_PROPOSALS;
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInIndexer(IndexerDeclarationNode declaration) {
+			var accessor = declaration.GetAccessor;
+			if (accessor != null && containsOffset(accessor)) {
+				var body = accessor.Body;
+				if (body != null && containsOffset(body)) {
+					context.enterIndexerGetter(declaration);
+					return statementProcessor.handleStatement(body, null);
+				}
+		
+				// TODO
+				Environment.trace(this, "indexer getter");
+				return EMPTY_PROPOSALS;
+			}
+			accessor = declaration.SetAccessor;
+			if (accessor != null && containsOffset(accessor)) {
+				var body = accessor.Body;
+				if (body != null && containsOffset(body)) {
+					context.enterIndexerSetter(declaration);
+					return statementProcessor.handleStatement(body, null);
+				}
+		
+				// TODO
+				Environment.trace(this, "indexer setter");
+				return EMPTY_PROPOSALS;
+			}
 		
 			// TODO
 			Environment.trace(this, "indexer");
@@ -286,6 +346,11 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInConstructor(ConstructorDeclarationNode declaration) {
+			var body = declaration.Body;
+			if (body != null && containsOffset(body)) {
+				context.enterConstructor(declaration);
+				return statementProcessor.handleStatement(body, null);
+			}
 		
 			// TODO
 			Environment.trace(this, "constructor");
@@ -293,6 +358,10 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInDestructor(DestructorDeclarationNode declaration) {
+			var body = declaration.Body;
+			if (body != null && containsOffset(body)) {
+				return statementProcessor.handleStatement(body, null);
+			}
 		
 			// TODO
 			Environment.trace(this, "destructor");
@@ -311,6 +380,313 @@ package stab.tools.eclipse.editors {
 			// TODO
 			Environment.trace(this, "enum constant");
 			return EMPTY_PROPOSALS;
+		}
+		
+		private ICompletionProposal[] computeCompletionProposalsInType(TypeReferenceNode type) {
+		
+			// TODO
+			Environment.trace(this, "type");
+			return EMPTY_PROPOSALS;
+		}
+		
+		private boolean containsOffset(SyntaxNode syntaxNode) {
+			var it = syntaxNode.getAllUserData(typeof(Token)).iterator();
+			if (!it.hasNext()) {
+				return false;
+			}
+			var startToken = it.next();
+			var endToken = it.next();
+			return startToken.offset < offset && endToken.offset + endToken.length > offset;
+		}
+		
+		private class StatementProcessor : StatementHandler<Void, ICompletionProposal[]> {
+			private ContentAssistProcessor processor;
+		
+			StatementProcessor(ContentAssistProcessor processor)
+					: super(false) {
+				this.processor = processor;
+			}
+			
+			protected override ICompletionProposal[] handleBlock(BlockStatementNode block, Void source) {
+				foreach (var s in block.Statements) {
+					var it = s.getAllUserData(typeof(Token)).iterator();
+					if (!it.hasNext()) {
+						break;
+					}
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= processor.offset) {
+						break;
+					}
+					if (endToken.offset + endToken.length <= processor.offset) {
+						if (s.StatementKind == StatementKind.LocalDeclaration) {
+							processor.context.declareLocals((LocalDeclarationStatementNode)s);
+						}
+					} else {
+						return handleStatement(s, null);
+					}
+				}
+		
+				// TODO
+				Environment.trace(this, "block");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleDo(DoStatementNode doStatement, Void source) {
+				if (processor.containsOffset(doStatement.Statement)) {
+					return handleStatement(doStatement.Statement, null);
+				}
+				if (processor.containsOffset(doStatement.Condition)) {
+					return processor.expressionProcessor.handleExpression(doStatement.Condition, null, true);
+				}
+		
+				Environment.trace(this, "do");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleExpression(ExpressionStatementNode expression, Void source) {
+				return processor.expressionProcessor.handleExpression(expression.Expression, null, false);
+			}
+			
+			protected override ICompletionProposal[] handleFor(ForStatementNode forStatement, Void source) {
+				foreach (var s in forStatement.Initializer) {
+					var it = s.getAllUserData(typeof(Token)).iterator();
+					if (!it.hasNext()) {
+						break;
+					}
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= processor.offset) {
+						break;
+					}
+					if (endToken.offset + endToken.length <= processor.offset) {
+						if (s.StatementKind == StatementKind.LocalDeclaration) {
+							processor.context.declareLocals((LocalDeclarationStatementNode)s);
+						}
+					} else {
+						return handleStatement(s, null);
+					}
+				}
+				if (forStatement.Condition != null && processor.containsOffset(forStatement.Condition)) {
+					return processor.expressionProcessor.handleExpression(forStatement.Condition, null, true);
+				}
+				foreach (var s in forStatement.Iterator) {
+					var it = s.getAllUserData(typeof(Token)).iterator();
+					if (!it.hasNext()) {
+						break;
+					}
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= processor.offset) {
+						break;
+					}
+					if (endToken.offset + endToken.length <= processor.offset) {
+						continue;
+					}
+					return handleStatement(s, null);
+				}
+				if (processor.containsOffset(forStatement.Statement)) {
+					return handleStatement(forStatement.Statement, null);
+				}
+		
+				Environment.trace(this, "for");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleForeach(ForeachStatementNode foreachStatement, Void source) {
+				if (foreachStatement.Type != null && processor.containsOffset(foreachStatement.Type)) {
+					return processor.computeCompletionProposalsInType(foreachStatement.Type);
+				}
+				if (processor.containsOffset(foreachStatement.Source)) {
+					processor.expressionProcessor.handleExpression(foreachStatement.Source, null, true);
+				}
+				if (processor.containsOffset(foreachStatement.Statement)) {
+					return handleStatement(foreachStatement.Statement, null);
+				}
+		
+				Environment.trace(this, "foreach");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleGoto(GotoStatementNode gotoStatement, Void source) {
+				Environment.trace(this, "goto");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleGotoCase(GotoCaseStatementNode gotoCase, Void source) {
+				// TODO
+				Environment.trace(this, "goto case");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleIf(IfStatementNode ifStatement, Void source) {
+				if (processor.containsOffset(ifStatement.Condition)) {
+					return processor.expressionProcessor.handleExpression(ifStatement.Condition, null, true);
+				}
+				if (processor.containsOffset(ifStatement.IfTrue)) {
+					return handleStatement(ifStatement.IfTrue, null);
+				}
+				if (ifStatement.IfFalse != null && processor.containsOffset(ifStatement.IfFalse)) {
+					return handleStatement(ifStatement.IfFalse, null);
+				}
+		
+				Environment.trace(this, "if");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleLabeled(LabeledStatementNode labeled, Void source) {
+				if (processor.containsOffset(labeled.Statement)) {
+					return handleStatement(labeled.Statement, null);
+				}
+		
+				Environment.trace(this, "labeled");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleLocalDeclaration(LocalDeclarationStatementNode localDeclaration, Void source) {
+				if (localDeclaration.Type != null && processor.containsOffset(localDeclaration.Type)) {
+					return processor.computeCompletionProposalsInType(localDeclaration.Type);
+				}
+				foreach (var decl in localDeclaration.Declarators) {
+					if (decl.Value != null && processor.containsOffset(decl.Value)) {
+						return processor.expressionProcessor.handleExpression(decl.Value, null, true);
+					}
+				}
+		
+				Environment.trace(this, "local declaration");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleReturn(ReturnStatementNode returnStatement, Void source) {
+				if (returnStatement.Value != null && processor.containsOffset(returnStatement.Value)) {
+					return processor.expressionProcessor.handleExpression(returnStatement.Value, null, false);
+				}
+		
+				Environment.trace(this, "return");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleSwitch(SwitchStatementNode switchStatement, Void source) {
+				if (processor.containsOffset(switchStatement.Selector)) {
+					return processor.expressionProcessor.handleExpression(switchStatement.Selector, null, true);
+				}
+				foreach (var section in switchStatement.Sections) {
+					var it = section.getAllUserData(typeof(Token)).iterator();
+					if (!it.hasNext()) {
+						break;
+					}
+					var startToken = it.next();
+					if (startToken.offset >= processor.offset) {
+						break;
+					}
+					foreach (var s in section.Statements) {
+						if (processor.containsOffset(s)) {
+							return handleStatement(s, null);
+						}
+						if (s.StatementKind == StatementKind.LocalDeclaration) {
+							processor.context.declareLocals((LocalDeclarationStatementNode)s);
+						}
+					}
+				}
+		
+				Environment.trace(this, "switch");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleSynchronized(SynchronizedStatementNode synchronizedStatement, Void source) {
+				if (processor.containsOffset(synchronizedStatement.Lock)) {
+					return processor.expressionProcessor.handleExpression(synchronizedStatement.Lock, null, true);
+				}
+				if (processor.containsOffset(synchronizedStatement.Statement)) {
+					return handleStatement(synchronizedStatement.Statement, null);
+				}
+		
+				Environment.trace(this, "synchronized");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleThrow(ThrowStatementNode throwStatement, Void source) {
+				if (throwStatement.Exception != null && processor.containsOffset(throwStatement.Exception)) {
+					return processor.expressionProcessor.handleExpression(throwStatement.Exception, null, false);
+				}
+		
+				Environment.trace(this, "throw");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleTry(TryStatementNode tryStatement, Void source) {
+				if (processor.containsOffset(tryStatement.Block)) {
+					return handleBlock(tryStatement.Block, null);
+				}
+				foreach (var cc in tryStatement.CatchClauses) {
+					var it = cc.getAllUserData(typeof(Token)).iterator();
+					if (!it.hasNext()) {
+						break;
+					}
+					var startToken = it.next();
+					var endToken = it.next();
+					if (startToken.offset >= processor.offset) {
+						break;
+					}
+					if (endToken.offset + endToken.length <= processor.offset) {
+						continue;
+					}
+					if (cc.ExceptionType != null && processor.containsOffset(cc.ExceptionType)) {
+						return processor.computeCompletionProposalsInType(cc.ExceptionType);
+					}
+					if (processor.containsOffset(cc.Block)) {
+						return handleBlock(cc.Block, null);
+					}
+				}
+				if (tryStatement.Finally != null && processor.containsOffset(tryStatement.Finally)) {
+					return handleBlock(tryStatement.Finally, null);
+				}
+		
+				Environment.trace(this, "try");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleUsing(UsingStatementNode usingStatement, Void source) {
+				if (processor.containsOffset(usingStatement.ResourceAcquisition)) {
+					return handleStatement(usingStatement.ResourceAcquisition, null);
+				}
+				if (processor.containsOffset(usingStatement.Statement)) {
+					return handleStatement(usingStatement.Statement, null);
+				}
+		
+				Environment.trace(this, "using");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleWhile(WhileStatementNode whileStatement, Void source) {
+				if (processor.containsOffset(whileStatement.Condition)) {
+					return processor.expressionProcessor.handleExpression(whileStatement.Condition, null, true);
+				}
+				if (processor.containsOffset(whileStatement.Statement)) {
+					return handleStatement(whileStatement.Statement, null);
+				}
+		
+				Environment.trace(this, "while");
+				return EMPTY_PROPOSALS;
+			}
+			
+			protected override ICompletionProposal[] handleYield(YieldStatementNode yield, Void source) {
+				if (yield.Value != null && processor.containsOffset(yield.Value)) {
+					return processor.expressionProcessor.handleExpression(yield.Value, null, false);
+				}
+		
+				Environment.trace(this, "yield");
+				return EMPTY_PROPOSALS;
+			}
+		}
+		
+		private class ExpressionProcessor : ExpressionHandler<Void, ICompletionProposal[]> {
+			private ContentAssistProcessor processor;
+			
+			ExpressionProcessor(ContentAssistProcessor processor)
+					: super(false) {
+			}
+			
 		}
 	}
 }

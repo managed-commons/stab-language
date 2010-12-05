@@ -50,12 +50,14 @@ package stab.tools.eclipse.editors {
 		
 		private void highlightPackage(PackageBodyNode packageBody) {
 			if (packageBody != null) {
+				foreach (var u in packageBody.UsingDirectives) {
+					setStartAndEndTokens(u);
+				}
 				foreach (var m in packageBody.Members) {
 					switch (m.getPackageMemberKind()) {
 					case Package:
 						PackageDeclarationNode pd = (PackageDeclarationNode)m;
-						pd.addUserData(getToken(pd.StartPosition));
-						pd.addUserData(getToken(pd.EndPosition - 1));
+						setStartAndEndTokens(pd);
 						highlightPackage(pd.Body);
 						break;
 					case Class:
@@ -214,6 +216,7 @@ package stab.tools.eclipse.editors {
 
 		private void highlightAccessor(AccessorDeclarationNode accessor, Keyword getOrSet) {
 			if (accessor != null) {
+				setStartAndEndTokens(accessor);
 				int i = Highlighter.getPositionIndex(tokens, accessor.getStartPosition());
 				if (i != -1) {
 					Token token;
@@ -285,8 +288,9 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private void highlightParameters(List<ParameterNode> parameters, JvmMethodInfo m) {
-			var pit = m.getParameters().iterator();
+			var pit = m.Parameters.iterator();
 			foreach (var p in parameters) {
+				setStartAndEndTokens(p);
 				highlightType(p.Type, pit.next().Type);
 				getToken(p.NameOffset).SemanticStyle = SemanticStyle.Parameter;
 			}
@@ -294,11 +298,13 @@ package stab.tools.eclipse.editors {
 
 		private void highlightAnnotations(List<AnnotationSectionNode> annotations) {
 			foreach (var a in annotations.selectMany(p => p.Annotations)) {
+				setStartAndEndTokens(a);
 				highlightType(a.Type, a.getUserData(typeof(JvmTypeInfo)));
 			}
 		}
 	
 		private void highlightType(TypeReferenceNode type, JvmTypeInfo t) {
+			setStartAndEndTokens(type);
 			switch (type.TypeReferenceKind) {
 			case SimpleName:
 				var name = (SimpleNameTypeReferenceNode)type;
@@ -478,6 +484,7 @@ package stab.tools.eclipse.editors {
 				highlighter.expressionHighlighter.handleExpression(switchStatement.Selector, null, true);
 				var sinfo = switchStatement.Selector.getUserData(typeof(ExpressionInfo));
 				foreach (var section in switchStatement.Sections) {
+					highlighter.setStartAndEndTokens(section);
 					if (section.CaseExpression != null) {
 						if (sinfo.Type.IsEnum) {
 							var name = (SimpleNameExpressionNode)section.CaseExpression;
@@ -512,6 +519,7 @@ package stab.tools.eclipse.editors {
 				highlighter.setStartAndEndTokens(tryStatement);
 				handleBlock(tryStatement.Block, null);
 				foreach (var cc in tryStatement.CatchClauses) {
+					highlighter.setStartAndEndTokens(cc);
 					if (cc.ExceptionType != null) {
 						var t = cc.getUserData(typeof(JvmTypeInfo));
 						highlighter.highlightType(cc.ExceptionType, t);
@@ -519,6 +527,7 @@ package stab.tools.eclipse.editors {
 					handleBlock(cc.Block, null);
 				}
 				if (tryStatement.Finally != null) {
+					highlighter.setStartAndEndTokens(tryStatement.Finally);
 					handleBlock(tryStatement.Finally, null);
 				}
 				return null;
@@ -559,6 +568,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleAnonymousObjectCreation(AnonymousObjectCreationExpressionNode anonymousObject, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(anonymousObject);
 				foreach (var mi in anonymousObject.MemberDeclarators) {
 					highlighter.getToken(mi.NameOffset).SemanticStyle = SemanticStyle.Property;
 					handleExpression(mi.Value, null, true);
@@ -567,6 +577,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleArrayCreation(ArrayCreationExpressionNode arrayCreation, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(arrayCreation);
 				if (arrayCreation.Type != null) {
 					var info = arrayCreation.getUserData(typeof(ExpressionInfo));
 					highlighter.highlightType(arrayCreation.Type, info.Type);
@@ -581,6 +592,7 @@ package stab.tools.eclipse.editors {
 			}
 	
 			protected override Void handleArrayInitializer(ArrayInitializerExpressionNode arrayInitializer, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(arrayInitializer);
 				foreach (var e in arrayInitializer.Values) {
 					handleExpression(e, null, true);
 				}
@@ -588,18 +600,21 @@ package stab.tools.eclipse.editors {
 			}
 	
 			protected override Void handleAssign(AssignExpressionNode assign, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(assign);
 				handleExpression(assign.Left, null, true);
 				handleExpression(assign.Right, null, true);
 				return null;
 			}
 			
 			protected override Void handleBinary(BinaryExpressionNode binary, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(binary);
 				handleExpression(binary.LeftOperand, null, true);
 				handleExpression(binary.RightOperand, null, true);
 				return null;
 			}
 	
 			protected override Void handleCast(CastExpressionNode cast, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(cast);
 				var info = cast.getUserData(typeof(ExpressionInfo));
 				highlighter.highlightType(cast.TargetType, info.Type);
 				handleExpression(cast.Expression, null, true);
@@ -607,6 +622,7 @@ package stab.tools.eclipse.editors {
 			}
 	
 			protected override Void handleConditional(ConditionalExpressionNode conditional, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(conditional);
 				handleExpression(conditional.Condition, null, true);
 				handleExpression(conditional.IfTrue, null, true);
 				handleExpression(conditional.IfFalse, null, true);
@@ -614,6 +630,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(elementAccess);
 				handleExpression(elementAccess.TargetObject, null, true);
 				foreach (var e in elementAccess.Indexes) {
 					handleExpression(e, null, true);
@@ -622,6 +639,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleInvocation(InvocationExpressionNode invocation, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(invocation);
 				handleExpression(invocation.TargetObject, null, nested);
 				foreach (var e in invocation.Arguments) {
 					handleExpression(e, null, true);
@@ -630,11 +648,13 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(lambda);
 				var m = lambda.getUserData(typeof(JvmMethodInfo));
 				var pit = m.Parameters.iterator();
 				foreach (var p in lambda.Parameters) {
+					highlighter.setStartAndEndTokens(p);
 					var t = pit.next().Type;
-					if (p.getType() != null) {
+					if (p.Type != null) {
 						highlighter.highlightType(p.Type, t);
 					}
 					highlighter.getToken(p.NameOffset).SemanticStyle = SemanticStyle.Parameter;
@@ -644,6 +664,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(memberAccess);
 				var info = memberAccess.getUserData(typeof(ExpressionInfo));
 				var member = info.Member;
 				handleExpression(memberAccess.TargetObject, null, nested);
@@ -680,7 +701,7 @@ package stab.tools.eclipse.editors {
 					case Method:
 						style = (member.IsStatic) ? SemanticStyle.StaticMethod : SemanticStyle.Method;
 						highlighter.getToken(simpleName.NameOffset).SemanticStyle = style;
-						if (!simpleName.getTypeArguments().isEmpty()) {
+						if (!simpleName.TypeArguments.isEmpty()) {
 							var it1 = simpleName.TypeArguments.iterator();
 							var it2 = member.Method.GenericArguments.iterator();
 							while (it1.hasNext()) {
@@ -702,6 +723,7 @@ package stab.tools.eclipse.editors {
 			}
 	
 			protected override Void handleObjectCreation(ObjectCreationExpressionNode objectCreation, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(objectCreation);
 				var info = objectCreation.getUserData(typeof(ExpressionInfo));
 				highlighter.highlightType(objectCreation.Type, info.Type);
 				foreach (var e in objectCreation.Arguments) {
@@ -714,6 +736,7 @@ package stab.tools.eclipse.editors {
 			}
 	
 			protected override Void handleCollectionInitializer(CollectionInitializerExpressionNode initializer, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(initializer);
 				foreach (var e in initializer.Values.selectMany(p => p)) {
 					handleExpression(e, null, true);
 				}
@@ -723,6 +746,7 @@ package stab.tools.eclipse.editors {
 			// TODO: handleQuery
 			
 			protected override Void handleObjectInitializer(ObjectInitializerExpressionNode initializer, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(initializer);
 				foreach (MemberInitializerNode init in initializer.getMemberInitializers()) {
 					MemberInfo member = init.getUserData(typeof(MemberInfo));
 					SemanticStyle style;
@@ -738,6 +762,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(simpleName);
 				var info = simpleName.getUserData(typeof(ExpressionInfo));
 				if (info == null) {
 					highlighter.getToken(simpleName.NameOffset).SemanticStyle = SemanticStyle.ConstantField;
@@ -790,22 +815,26 @@ package stab.tools.eclipse.editors {
 			}
 	
 			protected override Void handleSizeof(SizeofExpressionNode sizeofExpression, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(sizeofExpression);
 				handleExpression(sizeofExpression.Expression, null, true);
 				return null;
 			}
 	
 			protected override Void handleType(TypeExpressionNode type, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(type);
 				var info = type.getUserData(typeof(ExpressionInfo));
 				highlighter.highlightType(type.TypeReference, info.Type);
 				return null;
 			}
 			
 			protected override Void handleTypeof(TypeofExpressionNode typeofExpression, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(typeofExpression);
 				highlighter.highlightType(typeofExpression.Type, typeofExpression.getUserData(typeof(JvmTypeInfo)));
 				return null;
 			}
 			
 			protected override Void handleUnary(UnaryExpressionNode unary, Void source, boolean nested) {
+				highlighter.setStartAndEndTokens(unary);
 				handleExpression(unary.Operand, null, true);
 				return null;
 			}

@@ -54,7 +54,7 @@ class C {
 			var scanner = new PreprocessedTextScanner(codeErrorManager, preprocessor.preprocess());
 			Assert.assertEquals(LexicalUnit.NewLine, scanner.nextLexicalUnit());
 			Assert.assertEquals(LexicalUnit.Keyword, scanner.nextLexicalUnit());
-			RestorePoint rp = scanner.getRestorePoint();
+			RestorePoint rp = scanner.createRestorePoint();
 			Assert.assertEquals(LexicalUnit.Whitespace, scanner.nextLexicalUnit());
 			Assert.assertEquals(LexicalUnit.Identifier, scanner.nextLexicalUnit());
 			Assert.assertEquals(LexicalUnit.Whitespace, scanner.nextLexicalUnit());
@@ -87,7 +87,7 @@ C {
 			var preprocessor = new Preprocessor(codeErrorManager, source.toCharArray());
 			var scanner = new PreprocessedTextScanner(codeErrorManager, preprocessor.preprocess());
 			Assert.assertEquals(LexicalUnit.Keyword, scanner.nextLexicalUnit());
-			RestorePoint rp = scanner.getRestorePoint();
+			RestorePoint rp = scanner.createRestorePoint();
 			Assert.assertEquals(LexicalUnit.NewLine, scanner.nextLexicalUnit());
 			Assert.assertEquals(LexicalUnit.Identifier, scanner.nextLexicalUnit());
 			Assert.assertEquals(LexicalUnit.Whitespace, scanner.nextLexicalUnit());

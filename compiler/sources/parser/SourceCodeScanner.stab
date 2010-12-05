@@ -73,7 +73,7 @@ package stab.tools.parser {
             private set;
         }
         
-        public RestorePoint getRestorePoint() {
+        public RestorePoint createRestorePoint() {
             return new RestorePoint(StartPosition, EndOffset - StartPosition + 1, Part, StartLine, StartColumn,
                 CodeErrorManager.ErrorCount, CodeErrorManager.DisabledWarnings);
         }
