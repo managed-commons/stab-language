@@ -180,6 +180,12 @@ package stab.tools.bytecode {
             return method;
         }
         
+        public void defineMethod(JvmMethodBuilder method) {
+            checkCreated();
+            method.declaringType = this;
+        	methods.add(method);
+        }
+        
         public void undefineMethod(JvmMethodBuilder method) {
             checkCreated();
             methods.remove(method);
@@ -197,6 +203,11 @@ package stab.tools.bytecode {
             nestedTypes.add(nestedType);
             return nestedType;
         }
+
+		public void undefineNestedType(JvmTypeBuilder nestedType) {
+            checkCreated();
+			nestedTypes.remove(nestedType);
+		}
 
         public boolean IsCreated {
             get {

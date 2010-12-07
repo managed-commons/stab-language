@@ -1788,10 +1788,17 @@ package stab.tools.compiler {
         
         static JvmFieldInfo getLambdaScopeField(CompilerContext context, LocalInfo local) {
             var mcontext = context.MethodGenerationContext;
-            var result = mcontext.getLocalField(getLambdaScope(context, local.Method), local);
-            if (mcontext.ParametersUsedInLambda.contains(local)) {
-                // local is a parameter used for the first time: force the initialization now
-                getLambdaScope(context, local.Method);
+            var result = mcontext.LocalFields[local];
+            if (result == null) {
+            	result = context.localFields[local];
+            	if (result == null) {
+            		throw new IllegalStateException(local.Name);
+            	}
+            	mcontext.LocalFields[local] = result;
+            	if (local.IsParameter) {
+	            	mcontext.ParametersUsedInLambda.add(local);
+	                getLambdaScope(context, local.Method);
+                }
             }
             mcontext.IsLambdaScopeUsed = true;
             return result;
@@ -1831,7 +1838,7 @@ package stab.tools.compiler {
                             generator.emit(JvmOpcode.Aload, generator.getLocal("lambda$scope"));
                         }
                         generator.emit(BytecodeHelper.getLoadOpcode(param.Type), generator.getLocal(param.Name));
-                        generator.emit(JvmOpcode.Putfield, mcontext.getLocalField(mcontext.LambdaScope, param));
+                        generator.emit(JvmOpcode.Putfield, context.getLocalField(mcontext.LambdaScope, param));
                         allParams.add(param);
                         lparams.remove(param);
                     }
@@ -1844,9 +1851,6 @@ package stab.tools.compiler {
         static void emitThisAccess(CompilerContext context, JvmCodeGenerator generator) {
             if (context.MethodGenerationContext.IsInLambda) {
                 var field = context.MethodGenerationContext.LambdaScope.getField("this$0");
-                if (field == null) {
-                    field = context.MethodGenerationContext.LambdaScope.defineField("this$0", context.CurrentType);
-                }
                 context.MethodGenerationContext.IsLambdaScopeUsed = true;
                 generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
                 generator.emit(JvmOpcode.Getfield, field);
@@ -2509,10 +2513,11 @@ package stab.tools.compiler {
         }
 
         private void initializeLambdaScope(JvmMethodInfo method) {
-            if (context.MethodGenerationContext.LambdaScope != null) {
+        	var lambdaScope = context.MethodGenerationContext.LambdaScope;
+            if (lambdaScope != null && lambdaScope.Fields.any()) {
                 getLambdaScope(context, method);
                 foreach (var p in method.Parameters) {
-                    LocalInfo pi = (LocalInfo)MemberInfo.getInfo(p, method);
+                    var pi = (LocalInfo)MemberInfo.getInfo(p, method);
                     if (pi.IsUsedFromLambda) {
                         getLambdaScopeField(context, pi);
                     }

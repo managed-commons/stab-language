@@ -3190,6 +3190,7 @@ package stab.tools.compiler {
                     generateBytecode((PackageDeclarationNode)member);
                     break;
                 case Class:
+                	context.CodeValidationContext.LambdaCount = 0;
                     generateClassBytecode((ClassDeclarationNode)member);
                     break;
                 case Delegate:

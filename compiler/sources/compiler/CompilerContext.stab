@@ -25,6 +25,8 @@ using stab.tools.syntaxtree;
 package stab.tools.compiler {
 
     class CompilerContext {
+        HashMap<LocalInfo, JvmFieldInfo> localFields;
+    
         #region Reflection cache
         private JvmTypeInfo stringBuilderType;
         private JvmMethodInfo stringBuilderConstructor;
@@ -85,6 +87,7 @@ package stab.tools.compiler {
             this.ConstantBuilder = new ConstantBuilder(this);
             this.PrivateAccessors = new HashMap<Object, JvmMethodInfo>();
             this.PrivateMutators = new HashMap<Object, JvmMethodInfo>();
+            this.localFields = new HashMap<LocalInfo, JvmFieldInfo>();
         }
         
         CompilerParameters Parameters {
@@ -208,6 +211,16 @@ package stab.tools.compiler {
             ParserHelper.unescapeIdentifier(sb, this.Text, offset, length);
         }
         
+        JvmFieldInfo getLocalField(JvmTypeBuilder lambdaScope, LocalInfo local) {
+            var result = localFields[local];
+            if (result == null) {
+            	int n = lambdaScope.Fields.count(p => p.Name.startsWith("local"));
+                result = lambdaScope.defineField("local" + n + '$' + local.Name, local.Type);
+                localFields[local] = result;
+            }
+            return result;
+        }
+        
         void disableErrors() {
             this.Results.codeErrorManager.disable();
         }
@@ -296,6 +309,12 @@ package stab.tools.compiler {
             }
         }
         
+        boolean IsInLambda {
+            get {
+                return returnTypes.size() > 0;
+            }
+        }
+        
         JvmMethodBuilder RootMethod {
             get {
                 return methods[0];
@@ -309,6 +328,11 @@ package stab.tools.compiler {
         }
 
         int YieldCount {
+            get;
+            set;
+        }
+        
+        int LambdaCount {
             get;
             set;
         }
@@ -341,7 +365,6 @@ package stab.tools.compiler {
     
     class MethodGenerationContext {
         private ArrayList<JvmMethodBuilder> methods;
-        private HashMap<LocalInfo, JvmFieldInfo> localFields;
         private boolean destructor;
         private int foreachStatement;
         private int stringSwitch;
@@ -349,23 +372,23 @@ package stab.tools.compiler {
     
         MethodGenerationContext() {
             this.methods = new ArrayList<JvmMethodBuilder>();
-            this.localFields = new HashMap<LocalInfo, JvmFieldInfo>();
             this.YieldLabels = new ArrayList<JvmLabelMarker>();
             this.ParametersUsedInLambdas = new HashSet<LocalInfo>();
             this.ParametersUsedInLambda = new ArrayList<LocalInfo>();
             this.CatchVariables = new ArrayList<JvmLocalInfo>();
             this.TreeLocals = new HashMap<LocalInfo, JvmLocalInfo>();
             this.TreeLabels = new HashMap<StatementNode, JvmLocalInfo>();
+            this.LocalFields = new HashMap<LocalInfo, JvmFieldInfo>();
         }
         
         void initialize(JvmMethodBuilder methodBuilder, JvmTypeBuilder lambdaScope) {
             this.methods.clear();
-            this.localFields.clear();
             this.ParametersUsedInLambdas.clear();
             this.ParametersUsedInLambda.clear();
             this.CatchVariables.clear();
             this.TreeLocals.clear();
             this.TreeLabels.clear();
+            this.LocalFields.clear();
             
             this.methods.add(methodBuilder);
             this.LambdaScope = lambdaScope;
@@ -408,6 +431,12 @@ package stab.tools.compiler {
         boolean IsInIterable {
             get {
                 return this.Iterable != null;
+            }
+        }
+        
+        JvmMethodBuilder RootMethod {
+            get {
+                return methods[0];
             }
         }
         
@@ -472,18 +501,6 @@ package stab.tools.compiler {
             private set;
         }
         
-        JvmFieldInfo getLocalField(JvmTypeBuilder lambdaScope, LocalInfo local) {
-            var result = localFields[local];
-            if (result == null) {
-                if (local.IsParameter) {
-                    ParametersUsedInLambda.add(local);
-                }
-                result = lambdaScope.defineField("local" + localFields.size() + '$' + local.Name, local.Type);
-                localFields[local] = result;
-            }
-            return result;
-        }
-        
         boolean IsBuildingString {
             get;
             set;
@@ -515,5 +532,11 @@ package stab.tools.compiler {
             get;
             private set;
         }
+        
+        HashMap<LocalInfo, JvmFieldInfo> LocalFields {
+        	get;
+        	private set;
+        }
+        
     }
 }

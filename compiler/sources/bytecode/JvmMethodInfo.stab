@@ -60,15 +60,17 @@ package stab.tools.bytecode {
 
     public abstract class JvmMethodInfo : UserDataContainer {
         protected String signature;
+        JvmTypeInfo declaringType;
         
         protected JvmMethodInfo(JvmTypeInfo declaringType, String name) {
-            this.DeclaringType = declaringType;
+            this.declaringType = declaringType;
             this.Name = name;
         }
         
         public JvmTypeInfo DeclaringType {
-            get;
-            private set;
+            get {
+            	return declaringType;
+            }
         }
 
         public String Name {

@@ -121,6 +121,12 @@ package stab.tools.compiler {
 										BytecodeHelper.getDisplayName(field.DeclaringType), field.Name);
 							}
                         }
+                    	if (context.CodeValidationContext.IsInLambda && !member.IsStatic && expression.ExpressionKind == ExpressionKind.SimpleName) {
+			                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+			                if (typeBuilder.getField("this$0") == null) {
+			                    typeBuilder.defineField("this$0", context.CurrentType);
+			                }
+                    	}
                         return member.Type;
                         
                     case Type:
@@ -159,12 +165,31 @@ package stab.tools.compiler {
 								}
 							}
 						}
+						if (context.CodeValidationContext.IsInMethod) {
+		                    var currentMethod = context.CodeValidationContext.CurrentMethod;
+		                  	var currentType = (JvmTypeBuilder)currentMethod.DeclaringType;
+		                    if (currentType.FullName.indexOf('#') == -1 && context.CodeValidationContext.IsInLambda) {
+		                    	if (!member.IsStatic && expression.ExpressionKind == ExpressionKind.SimpleName) {
+					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+					                if (typeBuilder.getField("this$0") == null) {
+					                    typeBuilder.defineField("this$0", context.CurrentType);
+					                }
+		                    	}
+	                    	}
+                    	}
                         return member.Type;
                         
                     case Local:
-                        var currentMethod = context.CodeValidationContext.CurrentMethod;
-                        if (!member.IsUsedFromLambda && currentMethod != member.Method && currentMethod.DeclaringType.FullName.indexOf('#') == -1) {
-                            member.IsUsedFromLambda = true;
+						if (context.CodeValidationContext.IsInMethod) {
+	                        var currentMethod = context.CodeValidationContext.CurrentMethod;
+	                      	var currentType = (JvmTypeBuilder)currentMethod.DeclaringType;
+	                        if (currentType.FullName.indexOf('#') == -1 && context.CodeValidationContext.IsInLambda) {
+		                        if (currentMethod != member.Method) {
+		                            member.IsUsedFromLambda = true;
+					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+					                context.getLocalField(typeBuilder, (LocalInfo)member);
+		                        }
+	                        }
                         }
                         info.Member = member;
                         info.Type = member.Type;

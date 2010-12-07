@@ -823,6 +823,13 @@ package stab.tools.compiler {
             if (!isLambdaScopeUsed) {
                 gen.removeThis();
                 methodBuilder.setStatic(true);
+                typeBuilder.undefineMethod(methodBuilder);
+                var currentType = (JvmTypeBuilder)context.MethodGenerationContext.RootMethod.DeclaringType;
+                currentType.defineMethod(methodBuilder);
+                if (typeBuilder.Methods.count() == 1) {
+                	context.TypeBuilders.remove(typeBuilder);
+                	currentType.undefineNestedType(typeBuilder);
+                }
             }
             context.MethodGenerationContext.leaveLambda();
             context.MethodGenerationContext.IsLambdaScopeUsed = oldIsLambdaScopeUsed;
