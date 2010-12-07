@@ -291,11 +291,11 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Swap);
                 }
                 BytecodeGenerator.emitStringBuilderAppend(context, null);
-                var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
-                    && rightInfo != null && rightInfo.Type == stringType;
+                var isString = rightInfo != null && rightInfo.Type == stringType;
+                var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary && isString;
                 context.MethodGenerationContext.IsBuildingString = isStringAdd;
                 expressionGenerator.handleExpression(rightExpression, null, true);
-                if (!isStringAdd) {
+                if (!isStringAdd || (isString && rightInfo.IsConstant)) {
                     BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                 }
                 context.MethodGenerationContext.IsBuildingString = false;
@@ -566,11 +566,11 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Swap);
                 }
                 BytecodeGenerator.emitStringBuilderAppend(context, null);
-                var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
-                    && rightInfo != null && rightInfo.Type == stringType;
+                var isString = rightInfo != null && rightInfo.Type == stringType;
+                var isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary && isString;
                 context.MethodGenerationContext.IsBuildingString = isStringAdd;
                 expressionGenerator.handleExpression(rightExpression, null, true);
-                if (!isStringAdd) {
+                if (!isStringAdd || (isString && rightInfo.IsConstant)) {
                     BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                 }
                 context.MethodGenerationContext.IsBuildingString = false;
@@ -911,11 +911,11 @@ package stab.tools.compiler {
                         generator.emit(JvmOpcode.Swap);
                     }
                     BytecodeGenerator.emitStringBuilderAppend(context, null);
-                    boolean isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary
-                        && rightInfo != null && rightInfo.Type == stringType;
+                    var isString = rightInfo != null && rightInfo.Type == stringType;
+                    boolean isStringAdd = rightExpression.ExpressionKind == ExpressionKind.Binary && isString;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     expressionGenerator.handleExpression(rightExpression, null, true);
-                    if (!isStringAdd) {
+                    if (!isStringAdd || (isString && rightInfo.IsConstant)) {
                         BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                     }
                     context.MethodGenerationContext.IsBuildingString = false;
@@ -1147,11 +1147,11 @@ package stab.tools.compiler {
                         generator.emit(JvmOpcode.Swap);
                     }
                     BytecodeGenerator.emitStringBuilderAppend(context, null);
-                    var isStringAdd = rightExpression.getExpressionKind() == ExpressionKind.Binary
-                        && rightInfo != null && rightInfo.getType() == stringType;
+                    var isString = rightInfo != null && rightInfo.getType() == stringType;
+                    var isStringAdd = rightExpression.getExpressionKind() == ExpressionKind.Binary && isString;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     expressionGenerator.handleExpression(rightExpression, null, true);
-                    if (!isStringAdd) {
+                    if (!isStringAdd || (isString && rightInfo.IsConstant)) {
                         BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                     }
                     context.MethodGenerationContext.IsBuildingString = false;

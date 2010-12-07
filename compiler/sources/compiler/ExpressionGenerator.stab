@@ -169,16 +169,18 @@ package stab.tools.compiler {
                         generator.emit(JvmOpcode.Dup);
                         generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
                     }
-                    var isStringAdd = left.ExpressionKind == ExpressionKind.Binary && li != null && li.Type == stringType;
+                    var isString = li != null && li.Type == stringType;
+                    var isStringAdd = left.ExpressionKind == ExpressionKind.Binary && isString;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     handleExpression(left, null, true);
-                    if (!isStringAdd) {
+                    if (!isStringAdd || (isString && li.IsConstant)) {
                         BytecodeGenerator.emitStringBuilderAppend(context, li);
                     }
-                    isStringAdd = right.ExpressionKind == ExpressionKind.Binary && ri != null && ri.Type == stringType;
+                    isString = ri != null && ri.Type == stringType;
+                    isStringAdd = right.ExpressionKind == ExpressionKind.Binary && isString;
                     context.MethodGenerationContext.IsBuildingString = isStringAdd;
                     handleExpression(right, null, true);
-                    if (!isStringAdd) {
+                    if (!isStringAdd || (isString && li.IsConstant)) {
                         BytecodeGenerator.emitStringBuilderAppend(context, ri);
                     }
                     if (!isBuildingString) {

@@ -1456,5 +1456,10 @@ package stab.tools.compiler.test {
 		public void objectArrayBoxing3() {
 			doTest("ObjectArrayBoxing3", new Class<?>[] {}, new Object[] {}, 3d);
 		}
+		
+		[Test]
+		public void stringAdd4() {
+			doTest("StringAdd4", new Class<?>[] {}, new Object[] {}, "abc");
+		}
 	}
 }
