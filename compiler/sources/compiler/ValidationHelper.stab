@@ -121,11 +121,15 @@ package stab.tools.compiler {
 										BytecodeHelper.getDisplayName(field.DeclaringType), field.Name);
 							}
                         }
-                    	if (context.CodeValidationContext.IsInLambda && !member.IsStatic && expression.ExpressionKind == ExpressionKind.SimpleName) {
-			                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-			                if (typeBuilder.getField("this$0") == null) {
-			                    typeBuilder.defineField("this$0", context.CurrentType);
-			                }
+						if (context.CodeValidationContext.IsInMethod) {
+                            if (context.CodeValidationContext.IsInLambda) {
+		                    	if (!member.IsStatic && expression.ExpressionKind == ExpressionKind.SimpleName) {
+					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+					                if (typeBuilder.getField("this$0") == null) {
+					                    typeBuilder.defineField("this$0", context.CurrentType);
+					                }
+		                    	}
+	                    	}
                     	}
                         return member.Type;
                         

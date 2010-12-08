@@ -303,6 +303,12 @@ package stab.tools.compiler {
             }
         }
         
+        boolean IsInExpressionTree {
+        	get {
+	            return this.CurrentMethod != this.RootMethod && this.CurrentMethod.DeclaringType.FullName.indexOf('#') != -1;
+        	}
+        }
+        
         boolean IsInNestedMethod {
             get {
                 return methods.size() > 1;
@@ -311,7 +317,7 @@ package stab.tools.compiler {
         
         boolean IsInLambda {
             get {
-                return returnTypes.size() > 0;
+                return returnTypes.size() > 0 && !this.IsInExpressionTree;
             }
         }
         

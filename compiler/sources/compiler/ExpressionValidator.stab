@@ -1009,9 +1009,8 @@ package stab.tools.compiler {
                         method = MethodResolver.resolveMethod(Collections.singletonList(method), invocation.Arguments, targetType);
                         if (method != null) {
 							if (context.CodeValidationContext.IsInMethod) {
-	                            var currentMethod = context.CodeValidationContext.CurrentMethod;
-	                          	var currentType = (JvmTypeBuilder)currentMethod.DeclaringType;
-	                            if (currentType.FullName.indexOf('#') == -1 && context.CodeValidationContext.IsInLambda) {
+	                            if (context.CodeValidationContext.IsInLambda) {
+		                            var currentMethod = context.CodeValidationContext.CurrentMethod;
 	                            	if (member.MemberKind == MemberKind.Local && member.Method != currentMethod) {
 		                                member.IsUsedFromLambda = true;
 						                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
@@ -1108,15 +1107,10 @@ package stab.tools.compiler {
             }
             return null;
         }
-
-        private boolean isInExpressionTree() {
-            return context.CodeValidationContext.CurrentMethod != context.CodeValidationContext.RootMethod
-                && context.CodeValidationContext.CurrentMethod.DeclaringType.FullName.indexOf('#') != -1;
-        }
         
         protected override Void handleLambda(LambdaExpressionNode lambda, JvmTypeInfo targetType, boolean nested) {
             JvmTypeBuilder typeBuilder;
-            var inExpressionTree = isInExpressionTree();
+            var inExpressionTree = context.CodeValidationContext.IsInExpressionTree;
             if (!inExpressionTree && targetType != null && !targetType.FullName.equals("stab/tree/ExpressionTree")) {
                 typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
                 if (typeBuilder == null) {
@@ -1908,7 +1902,7 @@ package stab.tools.compiler {
                     }
                     break;
                 case Local:
-                    if (isInExpressionTree() && context.CodeValidationContext.CurrentMethod != member.Method) {
+                    if (context.CodeValidationContext.IsInExpressionTree && context.CodeValidationContext.CurrentMethod != member.Method) {
                         context.addError(CompileErrorId.ExternalLocalAssignment, left);
                     }
                     break;

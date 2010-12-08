@@ -16,6 +16,13 @@
  */
 package stab.query {
 
+	public interface FunctionT<TResult>           { TResult invoke(); }
+	public interface FunctionBoolean              { boolean invoke(); }
+	public interface FunctionInt                  { int invoke(); }
+	public interface FunctionLong                 { long invoke(); }
+	public interface FunctionFloat                { float invoke(); }
+	public interface FunctionDouble               { double invoke(); }
+
 	public interface FunctionTBoolean<TArgument>  { boolean invoke(TArgument argument); }
 	public interface FunctionIntBoolean           { boolean invoke(int argument); }
 	public interface FunctionLongBoolean          { boolean invoke(long argument); }
@@ -47,6 +54,7 @@ package stab.query {
 
 	public interface FunctionTDouble<TArgument>   { double invoke(TArgument argument); }
 	public interface FunctionIntDouble            { double invoke(int argument); }
+	public interface FunctionDoubleInt            { int invoke(double argument); }
 	public interface FunctionLongDouble           { double invoke(long argument); }
 	public interface FunctionFloatDouble          { double invoke(float argument); }
 	public interface FunctionDoubleDouble         { double invoke(double argument); }

@@ -18,33 +18,19 @@ using java.lang;
 
 package stab.tree {
 
-    public enum UnaryOperator {
-		As,
-        Cast,
-        Complement,
-        Minus,
-        Not,
-        Plus,
-        PostDecrement,
-        PostIncrement,
-        PreDecrement,
-        PreIncrement,
-        Sizeof
-    }
-
-    public class UnaryExpression : Expression {
-        UnaryExpression(Class<?> type, UnaryOperator operator, Expression operand)
-            : super(ExpressionKind.Unary, type) {
-            this.Operator = operator;
+    public class InstanceofExpression : Expression {
+        InstanceofExpression(Expression operand, Class<?> typeOperand)
+            : super(ExpressionKind.Instanceof, typeof(boolean)) {
             this.Operand = operand;
+            this.TypeOperand = typeOperand;
         }
         
-        public UnaryOperator Operator {
+        public Expression Operand {
             get;
             private set;
         }
         
-        public Expression Operand {
+        public Class<?> TypeOperand {
             get;
             private set;
         }

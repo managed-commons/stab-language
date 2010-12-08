@@ -60,6 +60,7 @@ package stab.tools.compiler {
         private JvmMethodInfo getDeclaredConstructorMethod;
         private JvmMethodInfo callMethod;
         private JvmMethodInfo invokeMethod;
+        private JvmMethodInfo makeInstanceofMethod;
         private JvmMethodInfo localMethod;
         private JvmMethodInfo parameterMethod;
         private JvmMethodInfo lambdaMethod;
@@ -406,6 +407,16 @@ package stab.tools.compiler {
                     invokeMethod = this.ExpressionType.getMethod("invoke", parameters);
                 }
                 return invokeMethod;
+            }
+        }
+        
+        JvmMethodInfo MakeInstanceofMethod {
+            get {
+                if (makeInstanceofMethod == null) {
+                    var parameters = Query.pair(this.ExpressionType, context.TypeSystem.UnboundedClassType.ArrayType);
+                    makeInstanceofMethod = this.ExpressionType.getMethod("makeInstanceof", parameters);
+                }
+                return makeInstanceofMethod;
             }
         }
         
@@ -1149,11 +1160,23 @@ package stab.tools.compiler {
             protected override Void handleBinary(BinaryExpressionNode binary, Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 var info = binary.getUserData(typeof(ExpressionInfo));
-                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
-                handleExpression(binary.LeftOperand, null, true);
-                generator.emit(JvmOpcode.Getstatic, statementGenerator.BinaryOperatorType.getField(binary.Operator.toString()));
-                handleExpression(binary.RightOperand, null, true);
-                generator.emit(JvmOpcode.Invokestatic, statementGenerator.BinaryMethod);
+              	if (binary.Operator == BinaryOperator.As) {
+	                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+	                generator.emit(JvmOpcode.Getstatic, statementGenerator.UnaryOperatorType.getField("As"));
+	                handleExpression(binary.LeftOperand, null, true);
+	                generator.emit(JvmOpcode.Invokestatic, statementGenerator.UnaryMethod);
+	            } else if (binary.Operator == BinaryOperator.Instanceof) {
+	                var rinfo = binary.RightOperand.getUserData(typeof(ExpressionInfo));
+	                handleExpression(binary.LeftOperand, null, true);
+	                BytecodeHelper.emitTypeof(generator, context.TypeSystem, rinfo.Type);
+	                generator.emit(JvmOpcode.Invokestatic, statementGenerator.MakeInstanceofMethod);
+	            } else {
+	                BytecodeHelper.emitTypeof(generator, context.TypeSystem, info.Type);
+	                handleExpression(binary.LeftOperand, null, true);
+	                generator.emit(JvmOpcode.Getstatic, statementGenerator.BinaryOperatorType.getField(binary.Operator.toString()));
+	                handleExpression(binary.RightOperand, null, true);
+	                generator.emit(JvmOpcode.Invokestatic, statementGenerator.BinaryMethod);
+                }
                 return null;
             }
 

@@ -32,6 +32,7 @@ package stab.tools.tests {
 				case "ObjectModel":
 				case "ObjectModelError":
 				case "Library":
+				case "ExpressionTrees":
 				{
 					JUnitCore core = new JUnitCore();
 					core.addListener(new TestListener());
@@ -64,6 +65,7 @@ package stab.tools.tests {
 				Class.forName("stab.tools.compiler.test.ObjectModelTest"),
 				Class.forName("stab.tools.compiler.test.StatementsTest"),
 				Class.forName("stab.tools.compiler.test.LibraryTest"),
+				Class.forName("stab.tools.compiler.test.ExpressionTreesTest"),
 				Class.forName("stab.tools.compiler.test.SyntaxErrorTest"),
 				Class.forName("stab.tools.compiler.test.ObjectModelErrorTest"),
 				Class.forName("stab.tools.compiler.test.StatementsErrorTest"),

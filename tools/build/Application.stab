@@ -40,6 +40,8 @@ package stab.tools.build {
 					return buildEclipse();
 				case "build":
 					return buildBuild();
+				case "tests":
+					return buildTests();
 				}
 			}
 		
@@ -243,6 +245,7 @@ package stab.tools.build {
 			deleteDir("tests/resources/TypeBuilderTest/stab");
 			deleteDir("tests/resources/TypeSystemTest/generated");
 			deleteDir("tests/resources/QueryTranslatorTest/generated");
+			deleteDir("tests/resources/ExpressionTreesTest/generated");
 		}
 
 		private static void deleteFile(String path) {
