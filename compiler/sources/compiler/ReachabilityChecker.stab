@@ -365,7 +365,7 @@ package stab.tools.compiler {
                                             }
                                         }
                                     } else if (cinfo != null) {
-                                        if (sinfo.getType().IsNumeric) {
+                                        if (sinfo.Type.IsNumeric) {
                                             int svalue;
                                             if (sinfo.Value instanceof Character) {
                                                 svalue = ((Character)sinfo.Value).charValue();

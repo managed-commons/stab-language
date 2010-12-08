@@ -379,6 +379,7 @@ package stab.tools.compiler {
             this.TreeLocals = new HashMap<LocalInfo, JvmLocalInfo>();
             this.TreeLabels = new HashMap<StatementNode, JvmLocalInfo>();
             this.LocalFields = new HashMap<LocalInfo, JvmFieldInfo>();
+            this.Labels = new ArrayList<HashMap<Object, JvmLocalInfo>>();
         }
         
         void initialize(JvmMethodBuilder methodBuilder, JvmTypeBuilder lambdaScope) {
@@ -389,6 +390,7 @@ package stab.tools.compiler {
             this.TreeLocals.clear();
             this.TreeLabels.clear();
             this.LocalFields.clear();
+            this.Labels.clear();
             
             this.methods.add(methodBuilder);
             this.LambdaScope = lambdaScope;
@@ -534,6 +536,11 @@ package stab.tools.compiler {
         }
         
         HashMap<LocalInfo, JvmFieldInfo> LocalFields {
+        	get;
+        	private set;
+        }
+
+        List<HashMap<Object, JvmLocalInfo>> Labels {
         	get;
         	private set;
         }

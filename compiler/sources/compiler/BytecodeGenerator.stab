@@ -1113,7 +1113,7 @@ package stab.tools.compiler {
             emitBeginLabel(info);
             var generator = context.MethodGenerationContext.Generator;
             info.EndLabel = generator.defineLabel();
-            var sinfo = switchStatement.getSelector().getUserData(typeof(ExpressionInfo));
+            var sinfo = switchStatement.Selector.getUserData(typeof(ExpressionInfo));
             if (sinfo.Type.IsNumeric || sinfo.Type.IsEnum) {
                 var cases = new ArrayList<Integer>();
                 int minValue = 0;
@@ -1133,7 +1133,14 @@ package stab.tools.compiler {
                     if (sinfo.Type.IsEnum) {
                         value = (Integer)section.CaseExpression.getUserData(typeof(Integer));
                     } else {
-                        value = (Integer)section.CaseExpression.getUserData(typeof(ExpressionInfo)).Value;
+	                    int cvalue;
+                        var cinfo = section.CaseExpression.getUserData(typeof(ExpressionInfo));
+	                    if (cinfo.Value instanceof Character) {
+	                        cvalue = ((Character)cinfo.Value).charValue();
+	                    } else {
+	                        cvalue = ((Number)cinfo.Value).intValue();
+	                    }
+                        value = Integer.valueOf(cvalue);
                     }
 
                     if (cases.isEmpty()) {
