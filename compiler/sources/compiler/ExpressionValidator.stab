@@ -1008,20 +1008,18 @@ package stab.tools.compiler {
                         method = type.Methods.where(p => p.Name.equals("invoke")).single();
                         method = MethodResolver.resolveMethod(Collections.singletonList(method), invocation.Arguments, targetType);
                         if (method != null) {
-							if (context.CodeValidationContext.IsInMethod) {
-	                            if (context.CodeValidationContext.IsInLambda) {
-		                            var currentMethod = context.CodeValidationContext.CurrentMethod;
-	                            	if (member.MemberKind == MemberKind.Local && member.Method != currentMethod) {
-		                                member.IsUsedFromLambda = true;
-						                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-						                context.getLocalField(typeBuilder, (LocalInfo)member);
-	                            	} else if (!member.IsStatic && invocation.TargetObject.ExpressionKind == ExpressionKind.SimpleName) {
-						                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-						                if (typeBuilder.getField("this$0") == null) {
-						                    typeBuilder.defineField("this$0", context.CurrentType);
-						                }
-	                            	}
-	                            }
+							if (context.CodeValidationContext.IsInMethod && context.CodeValidationContext.IsInLambda) {
+	                            var currentMethod = context.CodeValidationContext.CurrentMethod;
+                            	if (member.MemberKind == MemberKind.Local && member.Method != currentMethod) {
+	                                member.IsUsedFromLambda = true;
+					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+					                context.getLocalField(typeBuilder, (LocalInfo)member);
+                            	} else if (!member.IsStatic && invocation.TargetObject.ExpressionKind == ExpressionKind.SimpleName) {
+					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+					                if (typeBuilder.getField("this$0") == null) {
+					                    typeBuilder.defineField("this$0", context.CurrentType);
+					                }
+                            	}
                             }
                             tinfo.Member = member;
                             goto memberSelectionDone; 
@@ -1078,16 +1076,12 @@ package stab.tools.compiler {
                     	}
                         throw context.error(CompileErrorId.NoInvocationTargetFound, invocation);
                     }
-					if (context.CodeValidationContext.IsInMethod) {
-	                    var currentMethod = context.CodeValidationContext.CurrentMethod;
-	                  	var currentType = (JvmTypeBuilder)currentMethod.DeclaringType;
-	                    if (currentType.FullName.indexOf('#') == -1 && context.CodeValidationContext.IsInLambda) {
-				        	if ((isExtension || !method.IsStatic) && invocation.TargetObject.ExpressionKind == ExpressionKind.SimpleName) {
-				                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-				                if (typeBuilder.getField("this$0") == null) {
-				                    typeBuilder.defineField("this$0", context.CurrentType);
-				                }
-				        	}
+					if (context.CodeValidationContext.IsInMethod && context.CodeValidationContext.IsInLambda) {
+			        	if ((isExtension || !method.IsStatic) && invocation.TargetObject.ExpressionKind == ExpressionKind.SimpleName) {
+			                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
+			                if (typeBuilder.getField("this$0") == null) {
+			                    typeBuilder.defineField("this$0", context.CurrentType);
+			                }
 			        	}
 		        	}
                     tinfo.Member = MemberInfo.getInfo(method);
@@ -1672,7 +1666,7 @@ package stab.tools.compiler {
             if (context.CodeValidationContext.IsStatic) {
                 context.addError(CompileErrorId.StaticThisAccess, thisAccess);
             }
-            if (context.CodeValidationContext.IsInLambda) {
+            if (context.CodeValidationContext.IsInMethod && context.CodeValidationContext.IsInLambda) {
                 var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
                 if (typeBuilder.getField("this$0") == null) {
                     typeBuilder.defineField("this$0", context.CurrentType);
