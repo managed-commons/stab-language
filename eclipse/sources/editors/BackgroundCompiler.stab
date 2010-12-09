@@ -257,6 +257,7 @@ package stab.tools.eclipse.editors {
 		
 			CompileJob(BackgroundCompiler compiler)
 					: super("Compile") {
+				setPriority(Job.DECORATE);
 				this.compiler = compiler;
 			}
 			

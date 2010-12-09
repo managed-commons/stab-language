@@ -1519,10 +1519,17 @@ package stab.tools.compiler {
                     JvmLocalInfo local;
                     if (node.NameLength == 0) {
                         local = generator.declareLocal(etype, "anonymous$exception");
+	                    generator.emit(JvmOpcode.Astore, local);
                     } else {
                         local = generator.declareLocal(etype, context.getIdentifier(node.NameOffset, node.NameLength));
+	                    generator.emit(JvmOpcode.Astore, local);
+                    	var linfo = node.getUserData(typeof(LocalInfo));
+	                    if (linfo.IsUsedFromLambda) {
+	                        emitLoadLambdaScope(context, generator, linfo.Method);
+		                    generator.emit(JvmOpcode.Aload, local);
+	                        generator.emit(JvmOpcode.Putfield, getLambdaScopeField(context, linfo));
+	                    }
                     }
-                    generator.emit(JvmOpcode.Astore, local);
                     catchVars.add(local);
                 }
                 var stmts = node.Block.Statements;
@@ -1582,12 +1589,10 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             generator.beginScope();
             var resource = usingStatement.ResourceAcquisition;
-            var isExpression = resource.StatementKind == StatementKind.Expression;
-            JvmLocalInfo local = null;
-            if (isExpression) {
+            if (resource.StatementKind == StatementKind.Expression) {
                 var expr = ((ExpressionStatementNode)resource).Expression;
                 expressionGenerator.handleExpression(expr, null, true);
-                local = generator.declareLocal(expr.getUserData(typeof(ExpressionInfo)).Type, "using$local0");
+                var local = generator.declareLocal(expr.getUserData(typeof(ExpressionInfo)).Type, "using$local0");
                 resource.addOrReplaceUserData(local);
                 generator.emit(JvmOpcode.Dup);
                 generator.emit(JvmOpcode.Astore, local);

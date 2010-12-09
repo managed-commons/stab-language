@@ -825,5 +825,15 @@ package stab.tools.compiler.test {
 		public void delegateLambdaAnonymous() {
 			doTest("DelegateLambdaAnonymous", new Class<?>[] {}, new Object[] {}, 7);
 		}
+		
+		[Test]
+		public void lambdaCatchVariable() {
+			doTest("LambdaCatchVariable", new Class<?>[] {}, new Object[] {}, "Message");
+		}
+		
+		[Test]
+		public void lambdaForeachVariable() {
+			doTest("LambdaForeachVariable", new Class<?>[] {}, new Object[] {}, "abc");
+		}
     }
 }

@@ -207,6 +207,17 @@ package stab.tools.compiler.test {
 			};
 			doTest("switchStatement2", tree);
 		}
+
+		[Test]
+		public void synchronizedStatement() {
+			var obj = "STR";
+			ExpressionTree<FunctionInt> tree = () => {
+				synchronized (obj) {
+					return obj.hashCode();
+				}
+			};
+			doTest("synchronizedStatement", tree);
+		}
 		
 		private void doTest(String test, LambdaExpression lambda) {
 			variables = new ArrayList<VariableExpression>();
@@ -392,6 +403,14 @@ package stab.tools.compiler.test {
 					}
 				}
 				sb.append(indent).append("}");
+				break;
+				
+			case Synchronized:
+				var synchronizedStatement = (SynchronizedStatement)statement;
+				sb.append(indent).append("synchronized (");
+				expressionToString(synchronizedStatement.Lock, sb, "");
+				sb.append(")\n");
+				statementToString(synchronizedStatement.Body, sb, indent + "    ");
 				break;
 				
 			case Throw:

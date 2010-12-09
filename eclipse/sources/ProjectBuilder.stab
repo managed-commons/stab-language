@@ -19,6 +19,7 @@ using java.io;
 using java.util;
 using org.eclipse.core.resources;
 using org.eclipse.core.runtime;
+using org.eclipse.jface.dialogs;
 using stab.query;
 using stab.tools.bytecode;
 using stab.tools.helpers;
@@ -125,6 +126,10 @@ package stab.tools.eclipse {
 
 				monitor.worked(1);
 			} catch (InterruptedException) {
+			} catch (Exception e) {
+				org.eclipse.ui.PlatformUI.getWorkbench().getDisplay().syncExec(
+						() => MessageDialog.openError(org.eclipse.ui.PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell(),
+						"Build error", e.getMessage()));
 			} finally {
 				monitor.done();
 			}
