@@ -334,5 +334,12 @@ package stab.tools.compiler.test {
 				"InterfaceMethod.stab (5, 22) error 255: 'C.iterator()' reduce the visibility of the method in 'java.lang.Iterable<java.lang.String>'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void fieldInitializerLambda() {
+			doTest("FieldInitializerLambda", new String[]{
+				"FieldInitializerLambda.stab (4, 24) error 332: Lambda expressions cannot be used inside field initializers" },
+				new String[] {});
+		}
 	}
 }

@@ -1103,6 +1103,9 @@ package stab.tools.compiler {
         }
         
         protected override Void handleLambda(LambdaExpressionNode lambda, JvmTypeInfo targetType, boolean nested) {
+        	if (!context.CodeValidationContext.IsInMethod) {
+                throw context.error(CompileErrorId.LambdaOutsideMethod, lambda);
+        	}
             JvmTypeBuilder typeBuilder;
             var inExpressionTree = context.CodeValidationContext.IsInExpressionTree;
             if (!inExpressionTree && targetType != null && !targetType.FullName.equals("stab/tree/ExpressionTree")) {

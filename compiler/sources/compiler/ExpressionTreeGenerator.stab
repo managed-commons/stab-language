@@ -828,7 +828,7 @@ package stab.tools.compiler {
                     int ordinal = section.CaseExpression.getUserData(typeof(Integer)).intValue();
                     value = sinfo.Type.Fields.where(p => p.IsEnum).elementAt(ordinal).Name;
                 } else {
-					value = (String)section.CaseExpression.getUserData(typeof(ExpressionInfo)).Value;
+					value = section.CaseExpression.getUserData(typeof(ExpressionInfo)).Value;
             	}
             	
 	            var local = generator.declareLocal(this.SwitchLabelMethod.ReturnType,
@@ -956,7 +956,10 @@ package stab.tools.compiler {
 			            generator.emit(JvmOpcode.Dup);
 			            generator.emit(JvmOpcode.Astore, local);
                     }
-		            handleStatement(clause.Block, null);
+                    if (clause.Block.getUserData(typeof(StatementInfo)) == null) {
+                    	clause.Block.addUserData(new StatementInfo());
+		            }
+	            	handleStatement(clause.Block, null);
 		            generator.emit(JvmOpcode.Invokestatic, this.MakeCatchMethod);
                     generator.emit(JvmOpcode.Aastore);
                 }

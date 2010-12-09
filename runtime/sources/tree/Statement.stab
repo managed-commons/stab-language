@@ -90,8 +90,8 @@ package stab.tree {
             return new Label(name);
         }
         
-        public static LabeledStatement labeled(Label label, Statement target) {
-            return new LabeledStatement(label, target);
+        public static LabeledStatement labeled(Label label, Statement statement) {
+            return new LabeledStatement(label, statement);
         }
         
         public static IfStatement makeIf(Expression condition, Statement ifTrue, Statement ifFalse) {

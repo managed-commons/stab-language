@@ -30,10 +30,10 @@ package stab.tree {
     }
 
     public class LabeledStatement : Statement {
-        LabeledStatement(Label label, Statement target)
+        LabeledStatement(Label label, Statement statement)
             : super(StatementKind.Labeled) {
             this.Label = label;
-            this.Target = target;
+            this.Statement = statement;
         }
         
         public Label Label {
@@ -41,7 +41,7 @@ package stab.tree {
             private set;
         }
         
-        public Statement Target {
+        public Statement Statement {
             get;
             private set;
         }
