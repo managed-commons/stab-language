@@ -785,6 +785,7 @@ package stab.tools.compiler {
                     generator.emit(JvmOpcode.Getstatic, this.BinaryOperatorType.getField("Assign"));
                     expressionGenerator.handleExpression(decl.Value, null, true);
                     generator.emit(JvmOpcode.Invokestatic, this.BinaryMethod);
+                    generator.emit(JvmOpcode.Invokestatic, this.ExpressionMethod);
                 }
             }
             return null;

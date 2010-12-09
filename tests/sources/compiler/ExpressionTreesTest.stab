@@ -63,6 +63,39 @@ package stab.tools.compiler.test {
 			doTest("field", tree);
 		}
 		
+		int testMethod(int i) {
+			return i;
+		}
+
+		[Test]
+		public void method() {
+			ExpressionTree<FunctionIntInt> tree = p => testMethod(p);
+			doTest("method", tree);
+		}
+
+		[Test]
+		public void returnStatement() {
+			ExpressionTree<FunctionInt> tree = () => { return 1; };
+			doTest("returnStatement", tree);
+		}
+
+		[Test]
+		public void local() {
+			ExpressionTree<FunctionIntInt> tree = p => { int i = p; return i; };
+			doTest("local", tree);
+		}
+
+		[Test]
+		public void ifStatement() {
+			ExpressionTree<FunctionIntInt> tree = p => {
+				if (p >= 0) {
+					return p;
+				} else
+					return -p;
+			};
+			doTest("ifStatement", tree);
+		}
+		
 		private void doTest(String test, LambdaExpression lambda) {
 			variables = new ArrayList<VariableExpression>();
 			var result = lambdaToString(lambda);
@@ -122,9 +155,35 @@ package stab.tools.compiler.test {
 		
 		private void statementToString(Statement statement, StringBuilder sb, String indent) {
 			switch (statement.StatementKind) {
+			case Block:
+				sb.append(indent).append("{\n");
+				foreach (var s in ((BlockStatement)statement).Statements) {
+					statementToString(s, sb, indent + "    ");
+				}
+				sb.append(indent).append("}");
+				break;
+			
 			case Expression:
 				var expression = (ExpressionStatement)statement;
 				expressionToString(expression.Expression, sb, indent);
+				sb.append(";");
+				break;
+				
+			case If:
+				var ifStatement = (IfStatement)statement;
+				sb.append(indent).append("if (");
+				expressionToString(ifStatement.Condition, sb, "");
+				sb.append(")\n");
+				statementToString(ifStatement.IfTrue, sb, indent + "    ");
+				if (ifStatement.IfFalse != null) {
+					sb.append(indent).append("else\n");
+					statementToString(ifStatement.IfFalse, sb, indent + "    ");
+				}
+				break;
+				
+			case Return:
+				sb.append(indent).append("return ");
+				expressionToString(((ReturnStatement)statement).Value, sb, "");
 				sb.append(";");
 				break;
 				
@@ -146,6 +205,12 @@ package stab.tools.compiler.test {
 				fieldToString((FieldExpression)expression, sb);
 				break;
 				
+			case MethodCall:
+				sb.append(indent);
+				methodCallToString((MethodCallExpression)expression, sb);
+				break;
+				
+			case Local:
 			case Parameter:
 				sb.append(indent);
 				variableToString((VariableExpression)expression, sb);
@@ -280,6 +345,21 @@ package stab.tools.compiler.test {
 		private void fieldToString(FieldExpression field, StringBuilder sb) {
 			expressionToString(field.Target, sb, "");
 			sb.append(".").append(field.Field.getName());
+		}
+
+		private void methodCallToString(MethodCallExpression methodCall, StringBuilder sb) {
+			expressionToString(methodCall.Target, sb, "");
+			sb.append(".").append(methodCall.Method.getName()).append("(");
+			var first = true;
+			foreach (var a in methodCall.Arguments) {
+				if (first) {
+					first = false;
+				} else {
+					sb.append(", ");
+				}
+				expressionToString(a, sb, "");
+			}
+			sb.append(")");
 		}
 		
 		private void unaryToString(UnaryExpression unary, StringBuilder sb) {

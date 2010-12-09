@@ -18,7 +18,7 @@ package stab.tree {
 
     public class ReturnStatement : Statement {
         ReturnStatement(Expression value)
-            : super(StatementKind.Expression) {
+            : super(StatementKind.Return) {
             this.Value = value;
         }
         
