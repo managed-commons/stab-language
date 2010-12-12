@@ -14,50 +14,192 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
+using java.lang;
+using java.util;
+using stab.query;
+using stab.tools.bytecode;
+using stab.tools.compiler;
 using stab.tools.syntaxtree;
 
 package stab.tools.eclipse.editors {
 
 	public class ContentAssistContext {
+		private JvmTypeSystem typeSystem;
+		private Iterable<String> packageNames;
+		private List<PackageInfo> packageInfos;
+		private List<JvmTypeInfo> typeInfos;
+		private List<JvmMethodInfo> methodInfos;
+		private List<MemberInfo> localInfos;
 		
-		public void enterPackage(PackageBodyNode body) {
-			
+		public ContentAssistContext(JvmTypeSystem typeSystem) {
+			this.typeSystem = typeSystem;
+			this.packageNames = Query.empty();
+			this.packageInfos = new ArrayList<PackageInfo>();
+			this.typeInfos = new ArrayList<JvmTypeInfo>();
+			this.methodInfos = new ArrayList<JvmMethodInfo>();
+			this.localInfos = new ArrayList<MemberInfo>();
 		}
-
-		public void enterClass(ClassDeclarationNode declaration) {
 		
+		public void enterPackage(Iterable<String> names, PackageBodyNode body) {
+			packageNames = packageNames.concat(names);
+			packageInfos.add(body.getUserData(typeof(PackageInfo)));
+		}
+		
+		public void enterClass(ClassDeclarationNode declaration) {
+			typeInfos.add(declaration.getUserData(typeof(JvmTypeInfo)));
 		}
 		
 		public void enterInterface(InterfaceDeclarationNode declaration) {
-		
+			typeInfos.add(declaration.getUserData(typeof(JvmTypeInfo)));
 		}
 		
 		public void enterMethod(MethodDeclarationNode declaration) {
-		
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterConstructor(ConstructorDeclarationNode declaration) {
-		
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterPropertyGetter(PropertyDeclarationNode declaration) {
-		
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterPropertySetter(PropertyDeclarationNode declaration) {
-		
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterIndexerGetter(IndexerDeclarationNode declaration) {
-		
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterIndexerSetter(IndexerDeclarationNode declaration) {
-		
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void declareLocals(LocalDeclarationStatementNode statement) {
-		
+            foreach (var decl in statement.Declarators) {
+				localInfos.add(decl.getUserData(typeof(MemberInfo)));
+			}
 		}
+		
+		public Iterable<String> getRootPackages() {
+			var result = new HashSet<String>();
+			foreach (var c in typeSystem.AllClassNames) {
+				int idx = c.indexOf('/');
+				if (idx != -1) {
+					result.add(c.substring(0, idx));
+				}
+			}
+			foreach (var pinfo in packageInfos) {
+				foreach (var e in pinfo.PackageAliases.entrySet()) {
+					result.add(e.Key);
+				}
+			}
+			return result;
+		}
+		
+		public Iterable<MemberInfo> getMembers() {
+			var members = new HashMap<String, MemberInfo>();
+			putTypeMembers(members);
+			var type = typeInfos[typeInfos.size() - 1];
+			foreach (var t in type.getBaseTypes().reverse()) {
+				putMembers(t, members);
+			}
+			putMembers(type, members);
+			return filterMembers(type, false, members.values());
+		}
+
+		public Iterable<MemberInfo> getTypeMembers() {
+			var members = new HashMap<String, MemberInfo>();
+			putTypeMembers(members);
+			return members.values();
+		}
+		
+		public Iterable<MemberInfo> getMembers(JvmTypeInfo declaringType, boolean staticOnly) {
+			var members = new HashMap<String, MemberInfo>();
+			foreach (var t in declaringType.getBaseTypes().reverse()) {
+				putMembers(t, members);
+			}
+			putMembers(declaringType, members);
+			return filterMembers(typeInfos[typeInfos.size() - 1], staticOnly, members.values());
+		}
+		
+		private void putTypeMembers(Map<String, MemberInfo> members) {
+			var currentPackage = packageNames.aggregate("", (p, q) => p + q + "/");
+			
+			// Top level types
+			foreach (var type in typeSystem.AllClassNames.where(p => p.indexOf('/') == -1)) {
+				var info = MemberInfo.getInfo(typeSystem.getType(type));
+				if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
+					members[info.Type.Name] = info;
+				}
+			}
+			
+			// Types from enclosing packages
+			var pkg = "";
+			var classNames = typeSystem.AllClassNames;
+			foreach (var name in packageNames) {
+				pkg += name + "/";
+				classNames = classNames.where(p => p.startsWith(pkg));
+				foreach (var type in classNames.where(p => p.indexOf('/', pkg.length()) == -1)) {
+					var info = MemberInfo.getInfo(typeSystem.getType(type));
+					if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
+						members[info.Type.Name] = info;
+					}
+				}
+			}
+			
+			// Types from using directives
+			foreach (var pinfo in packageInfos) {
+				foreach (var e in pinfo.UsedTypes.entrySet()) {
+					members[e.Key] = MemberInfo.getInfo(e.Value.Type);
+				}
+				foreach (var name in pinfo.UsedPackages) {
+					pkg = name + "/";
+					foreach (var type in typeSystem.AllClassNames.where(p => p.startsWith(pkg) && p.indexOf('/', pkg.length()) == -1)) {
+						var info = MemberInfo.getInfo(typeSystem.getType(type));
+						if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
+							members[info.Type.Name] = info;
+						}
+					}
+				}
+			}
+		}
+		
+		private Map<String, MemberInfo> putMembers(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
+			foreach (var field in declaringType.Fields.where(p => !p.IsSynthetic)) {
+				var member = MemberInfo.getInfo(field);
+				members[field.Name] = member;
+			}
+			
+			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
+				var member = MemberInfo.getInfo(method);
+				members[method.Name] = member;
+			}
+			
+			foreach (var nt in declaringType.NestedTypes.where(p => !p.IsSynthetic)) {
+				var member = MemberInfo.getInfo(nt);
+				members[nt.Name] = member;
+			}
+			
+			return members;
+		}
+		
+        private Iterable<MemberInfo> filterMembers(JvmTypeInfo scope, boolean staticOnly, Iterable<MemberInfo> members) {
+            foreach (var mi in members) {
+            	if (mi.DeclaringType == null) {
+            		yield return mi;
+            	} else {
+	                if (staticOnly && !mi.IsStatic) {
+	                	continue;
+	                }
+	                if (!scope.canAccessMembers(mi.DeclaringType, mi.IsPublic, mi.IsProtected, mi.IsPrivate)) {
+	                    continue;
+	                }
+	                yield return mi;
+                }
+            }
+        }
 	}
 }

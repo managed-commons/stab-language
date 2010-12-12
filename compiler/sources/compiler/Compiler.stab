@@ -121,6 +121,30 @@ package stab.tools.compiler {
             }
         }
     }
+
+    public class PackageInfo {
+        HashSet<String> packages = new HashSet<String>();
+        HashMap<String, MemberInfo> memberInfos = new HashMap<String, MemberInfo>();
+        HashMap<String, Iterable<String>> packageAliases = new HashMap<String, Iterable<String>>();
+        
+        public Set<String> UsedPackages {
+        	get {
+        		return packages;
+        	}
+        }
+        
+        public Map<String, MemberInfo> UsedTypes {
+        	get {
+        		return memberInfos;
+        	}
+        }
+        
+        public Map<String, Iterable<String>> PackageAliases {
+        	get {
+        		return packageAliases;
+        	}
+        }
+    }
     
     public class Compiler {
         private CompilerContext context;
@@ -387,13 +411,15 @@ package stab.tools.compiler {
                 sb.append(outerPackage);
                 first = false;
             }
-            foreach (var identifier in packageDeclaration.getIdentifiers()) {
+            foreach (var identifier in packageDeclaration.Identifiers) {
                 if (first) {
                     first = false;
                 } else {
                     sb.append(separator);
                 }
-                context.appendIdentifier(sb, identifier.Offset, identifier.Length);
+                var id = context.getIdentifier(identifier.Offset, identifier.Length);
+                sb.append(id);
+                identifier.addUserData(id);
             }
             return sb.toString();
         }
@@ -3478,12 +3504,6 @@ package stab.tools.compiler {
         }
         
         ///////////////////////////////////////////////////////////////////////////////////////////
-        
-        private class PackageInfo {
-            HashSet<String> packages = new HashSet<String>();
-            HashMap<String, MemberInfo> memberInfos = new HashMap<String, MemberInfo>();
-            HashMap<String, Iterable<String>> packageAliases = new HashMap<String, Iterable<String>>();
-        }
         
         private class PartialTypeInfo {
             JvmTypeBuilder typeBuilder;

@@ -37,7 +37,16 @@ package stab.tools.eclipse {
 		Jar("jar.gif"),
 		Library("library.gif"),
 		Package("package.gif"),
-		Project("project.gif");
+		PublicField("field_public.gif"),
+		PublicMethod("method_public.gif"),
+		ProtectedField("field_protected.gif"),
+		ProtectedMethod("method_protected.gif"),
+		PrivateField("field_private.gif"),
+		PrivateMethod("method_private.gif"),
+		DefaultField("field_default.gif"),
+		DefaultMethod("method_default.gif"),
+		Project("project.gif"),
+		Source("source.gif");
 		
 		Icon(String filename) {
 			this.Filename = filename;

@@ -15,15 +15,151 @@
    limitations under the License.
  */
 using java.lang;
+using java.util;
 using org.eclipse.jface.text;
 using org.eclipse.jface.text.contentassist;
 using org.eclipse.swt.graphics;
+using stab.query;
+using stab.tools.bytecode;
+using stab.tools.compiler;
 
 package stab.tools.eclipse.editors {
 
 	public class CompletionProposalHelper {
+		private static CompletionProposalComparator completionProposalComparator = new CompletionProposalComparator();
+		private class CompletionProposalComparator : Comparator<ICompletionProposal> {
+			public int compare(ICompletionProposal cp1, ICompletionProposal cp2) {
+				return cp1.getDisplayString().toLowerCase().compareTo(cp2.getDisplayString().toLowerCase());
+			}
+		}
+	
 		public static ICompletionProposal[] createEmpty() {
 			return new[] { new EmptyCompletionProposal() };
+		}
+		
+		public static ICompletionProposal[] createCompletionProposals(int offset, int length, String prefix, Iterable<String> packages,
+				Iterable<MemberInfo> members, Iterable<String> texts) {
+			var proposals = new ArrayList<ICompletionProposal>();
+			
+			foreach (var pkg in packages.where(p => p.startsWith(prefix))) {
+				proposals.add(createPackage(offset, length, pkg.substring(prefix.length()), pkg));
+			}
+			
+			foreach (var member in members) {
+				switch (member.MemberKind) {
+				case Type:
+					var jvmType = member.Type;
+					if (jvmType.Name.startsWith(prefix)) {
+						proposals.add(createType(offset, length, jvmType.Name.substring(prefix.length()), jvmType));
+					}
+					break;
+				case Field:
+					var jvmField = member.Field;
+					if (jvmField.Name.startsWith(prefix)) {
+						proposals.add(createField(offset, length, jvmField.Name.substring(prefix.length()), jvmField));
+					}
+					break;
+				case Method:
+					var jvmMethod = member.Method;
+					if (jvmMethod.Name.startsWith(prefix)) {
+						proposals.add(createMethod(offset, length, jvmMethod.Name.substring(prefix.length()), jvmMethod));
+					}
+					break;
+				}
+			}
+			
+			foreach (var text in texts.where(p => p.startsWith(prefix))) {
+				proposals.add(createText(offset, length, text.substring(prefix.length()), text));
+			}
+
+			Collections.sort(proposals, completionProposalComparator);
+			return proposals.toArray(new ICompletionProposal[proposals.size()]);
+		}
+		
+		private static String getDisplayName(JvmTypeInfo type) {
+			var plen = type.PackageName.length();
+			if (plen == 0) {
+				return type.Name;
+			} else {
+				return type.Name + " - " + type.PackageName.substring(0, plen - 1).replace('/', '.');
+			}
+		}
+
+		private static String getDisplayName(JvmFieldInfo field) {
+			return field.Name + " - " + getName(field.DeclaringType);
+		}
+
+		private static String getDisplayName(JvmMethodInfo method) {
+			return method.Name + getParameters(method) + " - " + getName(method.DeclaringType);
+		}
+		
+		private static String getParameters(JvmMethodInfo method) {
+			var sb = new StringBuilder();
+			sb.append('(');
+			var first = true;
+			foreach (var p in method.Parameters) {
+				if (first) {
+					first = false;
+				} else {
+					sb.append(", ");
+				}
+				sb.append(getName(p.Type));
+			}
+			sb.append(')');
+			return sb.toString();
+		}
+		
+		private static String getName(JvmTypeInfo type) {
+			// TODO: type parameters
+			return type.FullName.replace('/', '.').replace('$', '.');
+		}
+		
+		private static ICompletionProposal createPackage(int offset, int length, String text, String displayName) {
+			return new CompletionProposal(text, offset, length, text.length(), Environment.getIcon(Icon.Package), displayName, null, null);
+		}
+		
+		private static ICompletionProposal createType(int offset, int length, String text, JvmTypeInfo type) {
+			Image image;
+			if (type.IsEnum) {
+				image = Environment.getIcon(Icon.Enum);
+			} else if (type.IsInterface) {
+				image = Environment.getIcon(Icon.Interface);
+			} else {
+				image = Environment.getIcon(Icon.Class);
+			}
+			return new CompletionProposal(text, offset, length, text.length(), image, getDisplayName(type), null, null);
+		}
+		
+		private static ICompletionProposal createText(int offset, int length, String text, String displayName) {
+			return new CompletionProposal(text, offset, length, text.length(), Environment.getIcon(Icon.Source), displayName, null, null);
+		}
+		
+		private static ICompletionProposal createField(int offset, int length, String text, JvmFieldInfo field) {
+			Image image;
+			if (field.IsPublic) {
+				image = Environment.getIcon(Icon.PublicField);
+			} else if (field.IsProtected) {
+				image = Environment.getIcon(Icon.ProtectedField);
+			} else if (field.IsPrivate) {
+				image = Environment.getIcon(Icon.PrivateField);
+			} else {
+				image = Environment.getIcon(Icon.DefaultField);
+			}
+			return new CompletionProposal(text, offset, length, text.length(), image, getDisplayName(field), null, null);
+		}
+
+		private static ICompletionProposal createMethod(int offset, int length, String text, JvmMethodInfo method) {
+			Image image;
+			if (method.IsPublic) {
+				image = Environment.getIcon(Icon.PublicMethod);
+			} else if (method.IsProtected) {
+				image = Environment.getIcon(Icon.ProtectedMethod);
+			} else if (method.IsPrivate) {
+				image = Environment.getIcon(Icon.PrivateMethod);
+			} else {
+				image = Environment.getIcon(Icon.DefaultMethod);
+			}
+			return new CompletionProposal(text, offset, length, text.length(), image, getDisplayName(method), null, null);
 		}
 		
 		private class EmptyCompletionProposal : ICompletionProposal {

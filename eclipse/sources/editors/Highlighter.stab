@@ -91,9 +91,21 @@ package stab.tools.eclipse.editors {
 			get;
 			private set;
 		}
+		
+		public boolean IsUpdated {
+			get;
+			set;
+		}
 	}
 
 	public class Highlighter {
+		private final static Comparator<Token> tokenPositionComparator = new TokenPositionComparator();
+		private class TokenPositionComparator : Comparator<Token> {
+			public int compare(Token t1, Token t2) {
+				return t1.offset - t2.offset;
+			}
+		}
+	
 		private IDocument document;
 		private IFile file;
 		private ISourceViewer sourceViewer;
@@ -103,6 +115,7 @@ package stab.tools.eclipse.editors {
 
 		private List<StyledPosition> preprocessorPositions;
 		private List<Token> tokens;
+		private List<Token> removedTokens;
 	
 		public Highlighter(ISourceViewer sourceViewer, IDocument document, IFile file, ISharedTextColors sharedTextColors) {
 			this.sourceViewer = sourceViewer;
@@ -206,6 +219,7 @@ package stab.tools.eclipse.editors {
 			var t0 = System.nanoTime();
 
 			var newTokens = new ArrayList<Token>();
+			var newRemovedTokens = new ArrayList<Token>();
 			var newPreprocessorPositions = new ArrayList<StyledPosition>();
 			try {
 				var errorManager = new CodeErrorManager();
@@ -225,6 +239,7 @@ package stab.tools.eclipse.editors {
 						}
 						this.Text = text;
 						this.tokens = newTokens;
+						this.removedTokens = newRemovedTokens;
 						this.preprocessorPositions = newPreprocessorPositions;
 						if (invalidate) {
 							sourceViewer.invalidateTextPresentation();
@@ -238,6 +253,7 @@ package stab.tools.eclipse.editors {
 			}
 			this.Text = text;
 			this.tokens = newTokens;
+			this.removedTokens = newRemovedTokens;
 			this.preprocessorPositions = newPreprocessorPositions;
 			this.CompilationUnit = null;
 			//checkPositionsConsistency();
@@ -524,11 +540,56 @@ package stab.tools.eclipse.editors {
 				return;
 			}
 			updateOffsetsAfter(0, startToken.offset, insertedTokens);
-
-			// Update the offset of the trailing tokens and preprocessor parts
-			updateOffsetsAfter(endToken.offset + endToken.length, delta, pppositions);
-			updateOffsetsAfter(endToken.offset + endToken.length, delta, tokens);
 			
+			// Update the offset of the trailing tokens and preprocessor parts
+			int start = Math.max(startToken.offset + startToken.length, offset);
+			updateOffsetsAfter(start, delta, pppositions);
+			updateOffsetsAfter(start, delta, tokens);
+			updateOffsetsAfter(start, delta, removedTokens);
+
+			// Exclude the unmodified tokens
+			var commonPartLength = 0;
+			for (int i = 0; i < insertedTokens.size(); i++) {
+				var oldToken = tokens[startIndex];
+				var newToken = insertedTokens[i];
+				if (sameToken(oldToken, newToken)) {
+					commonPartLength++;
+					startIndex++;
+				} else {
+					break;
+				}
+			}
+			while (commonPartLength-- > 0) {
+				insertedTokens.remove(0);
+			}
+			startToken = tokens[startIndex];
+
+			commonPartLength = 0;
+			for (int i = insertedTokens.size() - 1; i >= 0; i--) {
+				var oldToken = tokens[endIndex];
+				var newToken = insertedTokens[i];
+				if (sameToken(oldToken, newToken)) {
+					commonPartLength++;
+					endIndex--;
+				} else {
+					break;
+				}
+			}
+			while (commonPartLength-- > 0) {
+				insertedTokens.remove(insertedTokens.size() - 1);
+			}
+			endToken = tokens[endIndex];
+			
+			// Copy the removed tokens
+			for (int i = startIndex; i <= endIndex; i++) {
+				var token = tokens[i];
+				if (!token.IsUpdated) {
+					token.IsUpdated = true;
+					removedTokens.add(token);
+				}
+			}
+			Collections.sort(removedTokens, tokenPositionComparator);
+
 			// Create the new list of tokens
 			var newTokens = new ArrayList<Token>();
 			for (int i = 0; i < startIndex; i++) {
@@ -550,6 +611,25 @@ package stab.tools.eclipse.editors {
 						
 			Environment.trace(this, "update done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 		}
+		
+		private static boolean sameToken(Token t1, Token t2) {
+			if (t1.offset != t2.offset) {
+				return false;
+			}
+			if (t1.length != t2.length) {
+				return false;
+			}
+			if (t1.LexicalUnit != t2.LexicalUnit) {
+				return false;
+			}
+			if (t1.LexicalUnit == LexicalUnit.Identifier) {
+				return false;
+			}
+			if (t1.LexicalUnit == LexicalUnit.Keyword && t1.Keyword != t2.Keyword) {
+				return false;
+			}
+			return true;
+		}
 
 		private List<Token> scan(char[] text) {
 			Environment.trace(this, "Scanning [" + new String(text) + "]");
@@ -560,7 +640,7 @@ package stab.tools.eclipse.editors {
 				LexicalUnit lu;
 				while ((lu = scanner.nextLexicalUnit()) != LexicalUnit.EndOfStream) {
 					int sp = scanner.StartPosition;
-					result.add(new Token(sp, scanner.EndPosition - sp, sharedTextColors, lu, scanner.Keyword));
+					result.add(new Token(sp, scanner.EndPosition - sp, sharedTextColors, lu, scanner.Keyword) { IsUpdated = true });
 				}
 				if (errorManager.HasErrors) {
 					return null;

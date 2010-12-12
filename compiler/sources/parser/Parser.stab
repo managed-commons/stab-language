@@ -807,6 +807,7 @@ package stab.tools.parser {
                 var decl = new VariableDeclaratorNode { NameOffset = sp, NameLength = len };
                 setSavedScannerState(decl);
                 decl.Value = parseFieldInitializer();
+                decl.EndPosition = decl.Value.EndPosition;
                 declaration.Declarators.add(decl);
                 while (lexicalUnit == LexicalUnit.Comma) {
                     if (!isIdentifier(nextLexicalUnit(true))) {
@@ -814,10 +815,12 @@ package stab.tools.parser {
                     }
                     decl = new VariableDeclaratorNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
                     setScannerState(decl);
+                    decl.EndPosition = scanner.EndPosition;
                     declaration.Declarators.add(decl);
                     if (nextLexicalUnit(true) == LexicalUnit.Assign) {
                         nextLexicalUnit(true);
                         decl.Value = parseFieldInitializer();
+                        decl.EndPosition = decl.Value.EndPosition;
                     }
                 }
                 docCommentEndPosition = 0;
@@ -837,6 +840,7 @@ package stab.tools.parser {
                 declaration.Annotations.addAll(annotations);
                 var decl = new VariableDeclaratorNode { NameOffset = sp, NameLength = len };
                 setSavedScannerState(decl);
+                decl.EndPosition = sp + len;
                 declaration.Declarators.add(decl);
                 do {
                     if (!isIdentifier(nextLexicalUnit(true))) {
@@ -845,9 +849,11 @@ package stab.tools.parser {
                     decl = new VariableDeclaratorNode { NameOffset = scanner.StartPosition, NameLength = getLexicalUnitLength() };
                     setScannerState(decl);
                     declaration.Declarators.add(decl);
+                    decl.EndPosition = scanner.EndPosition;
                     if (nextLexicalUnit(true) == LexicalUnit.Assign) {
                         nextLexicalUnit(true);
                         decl.Value = parseFieldInitializer();
+                        decl.EndPosition = decl.Value.EndPosition;
                     }
                 } while (lexicalUnit == LexicalUnit.Comma);
                 docCommentEndPosition = 0;
@@ -867,6 +873,7 @@ package stab.tools.parser {
                 declaration.Annotations.addAll(annotations);
                 var decl = new VariableDeclaratorNode { NameOffset = sp, NameLength = len };
                 setSavedScannerState(decl);
+                decl.EndPosition = sp + len;
                 declaration.Declarators.add(decl);
                 docCommentEndPosition = 0;
 				declaration.EndPosition = scanner.EndPosition;
@@ -2810,8 +2817,13 @@ package stab.tools.parser {
         }
 
         private ExpressionNode parseCastExpression(boolean force) {
+            var filename = scanner.Filename;
+            var line = scanner.StartLine;
+            var column = scanner.StartColumn;
+            var disabledWarnings = scanner.CodeErrorManager.DisabledWarnings;
+            var startPosition = scanner.StartPosition;
+        
             var restorePoint = this.createRestorePoint();
-            saveScannerState();
             nextLexicalUnit(true);
             var type = parseType(false);
             if (type == null || lexicalUnit != LexicalUnit.CloseParenthesis || nextLexicalUnit(false) == LexicalUnit.EndOfStream) {
@@ -2851,8 +2863,8 @@ package stab.tools.parser {
 
             case ContextualKeyword:
                 if (scanner.Keyword == Keyword.From) {
-                    var result = new CastExpressionNode { TargetType = type };
-                    copyScannerState(type, result);
+                    var result = new CastExpressionNode { Filename = filename, Line = line, Column = column, DisabledWarnings = disabledWarnings,
+                        StartPosition = startPosition, TargetType = type };
                     result.Expression = parseQueryExpression();
                     result.EndPosition = result.Expression.EndPosition;
                     return result;
@@ -2866,8 +2878,8 @@ package stab.tools.parser {
                 }
                 break;
             }
-            var result = new CastExpressionNode { TargetType = type };
-           	copyScannerState(type, result);
+            var result = new CastExpressionNode { Filename = filename, Line = line, Column = column, DisabledWarnings = disabledWarnings,
+                        StartPosition = startPosition, TargetType = type };
             result.Expression = parseUnaryExpression();
             result.EndPosition = result.Expression.EndPosition;
             return result;
@@ -3046,8 +3058,7 @@ package stab.tools.parser {
                     break;
                 }
                 case This: {
-                    result = new ThisAccessExpressionNode();
-                    result.EndPosition = scanner.EndPosition;
+                    result = new ThisAccessExpressionNode { EndPosition = scanner.EndPosition };
                     setScannerState(result);
                     nextLexicalUnit(false);
                     break;
@@ -3348,6 +3359,7 @@ package stab.tools.parser {
                     } else {
                         memberInitializer.Value = parseExpression();
                     }
+                    memberInitializer.EndPosition = memberInitializer.Value.EndPosition;
                     objectInitializer.MemberInitializers.add(memberInitializer);
                     while (lexicalUnit == LexicalUnit.Comma) {
                         if (!isIdentifier(nextLexicalUnit(true))) {
@@ -3355,16 +3367,19 @@ package stab.tools.parser {
                         }
                         sp = scanner.StartPosition;
                         len = getLexicalUnitLength();
+		                saveScannerState();
                         if (nextLexicalUnit(true) != LexicalUnit.Assign) {
                             throw error(ParseErrorId.AssignExpected);
                         }
                         memberInitializer = new MemberInitializerNode { NameOffset = sp, NameLength = len };
+	                    setSavedScannerState(memberInitializer);
                         if (nextLexicalUnit(true) == LexicalUnit.OpenBrace) {
                             nextLexicalUnit(true);
                             memberInitializer.Value = parseObjectOrCollectionInitializer();
                         } else {
                             memberInitializer.Value = parseExpression();
                         }
+	                    memberInitializer.EndPosition = memberInitializer.Value.EndPosition;
                         objectInitializer.MemberInitializers.add(memberInitializer);
                     }
                     if (lexicalUnit != LexicalUnit.CloseBrace) {
@@ -3557,10 +3572,11 @@ package stab.tools.parser {
                 return result;
             }
             do {
-                var arrayType = new ArrayTypeReferenceNode { EndPosition = scanner.EndPosition };
+                var arrayType = new ArrayTypeReferenceNode();
                 copyScannerState(result, arrayType);
                 arrayType.ElementType = result;
                 result = arrayType;
+                result.EndPosition = scanner.EndPosition;
                 if (nextLexicalUnit(false) != LexicalUnit.OpenBracket) {
                     return result;
                 }
