@@ -413,6 +413,16 @@ package stab.tools.eclipse.editors {
 				return null;
 			}
 	
+			protected override Void handleBreak(BreakStatementNode breakStatement, Void source) {
+				highlighter.setStartAndEndTokens(breakStatement);
+				return null;
+			}
+	
+			protected override Void handleContinue(ContinueStatementNode continueStatement, Void source) {
+				highlighter.setStartAndEndTokens(continueStatement);
+				return null;
+			}
+	
 			protected override Void handleDo(DoStatementNode doStatement, Void source) {
 				highlighter.setStartAndEndTokens(doStatement);
 				handleStatement(doStatement.Statement, null);

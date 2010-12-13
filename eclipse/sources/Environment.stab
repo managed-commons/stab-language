@@ -36,6 +36,7 @@ package stab.tools.eclipse {
 		Interface("interface.gif"),
 		Jar("jar.gif"),
 		Library("library.gif"),
+		LocalVariable("local_var.gif"),
 		Package("package.gif"),
 		PublicField("field_public.gif"),
 		PublicMethod("method_public.gif"),

@@ -2752,8 +2752,7 @@ package stab.tools.parser {
                 var binary = new BinaryExpressionNode { Operator = op, LeftOperand = leftExpression };
                 copyScannerState(leftExpression, binary);
                 if (doParseType) {
-                    var type = new TypeExpressionNode();
-                    type.TypeReference = parseType(true);
+                    var type = new TypeExpressionNode { TypeReference = parseType(true) };
                     copyScannerState(type.TypeReference, type);
                     type.EndPosition = type.TypeReference.EndPosition;
                     binary.RightOperand = type;
@@ -2766,31 +2765,24 @@ package stab.tools.parser {
         }
 
         private ExpressionNode parseUnaryExpression() {
-            saveScannerState();
             switch (lexicalUnit) {
             case Plus:
-                nextLexicalUnit(true);
-                return createUnaryExpression(UnaryOperator.Plus, parseUnaryExpression());
+                return createUnaryExpression(UnaryOperator.Plus);
 
             case Minus:
-                nextLexicalUnit(true);
-                return createUnaryExpression(UnaryOperator.Minus, parseUnaryExpression());
+                return createUnaryExpression(UnaryOperator.Minus);
 
             case Complement:
-                nextLexicalUnit(true);
-                return createUnaryExpression(UnaryOperator.Complement, parseUnaryExpression());
+                return createUnaryExpression(UnaryOperator.Complement);
 
             case Not:
-                nextLexicalUnit(true);
-                return createUnaryExpression(UnaryOperator.Not, parseUnaryExpression());
+                return createUnaryExpression(UnaryOperator.Not);
 
             case Increment:
-                nextLexicalUnit(true);
-                return createUnaryExpression(UnaryOperator.PreIncrement, parseUnaryExpression());
+                return createUnaryExpression(UnaryOperator.PreIncrement);
 
             case Decrement:
-                nextLexicalUnit(true);
-                return createUnaryExpression(UnaryOperator.PreDecrement, parseUnaryExpression());
+                return createUnaryExpression(UnaryOperator.PreDecrement);
 
             case OpenParenthesis:
                 var cast = parseCastExpression(false);
@@ -2809,10 +2801,12 @@ package stab.tools.parser {
             return parsePrimaryExpression();
         }
         
-        private UnaryExpressionNode createUnaryExpression(UnaryOperator operator, ExpressionNode operand) {
-            var result = new UnaryExpressionNode { Operator = operator, Operand = operand };
-            setSavedScannerState(result);
-            result.EndPosition = operand.EndPosition;
+        private UnaryExpressionNode createUnaryExpression(UnaryOperator operator) {
+            var result = new UnaryExpressionNode { Operator = operator };
+            setScannerState(result);
+            nextLexicalUnit(true);
+            result.Operand = parseUnaryExpression();
+            result.EndPosition = result.Operand.EndPosition;
             return result;
         }
 

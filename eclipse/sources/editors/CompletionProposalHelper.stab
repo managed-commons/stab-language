@@ -65,6 +65,11 @@ package stab.tools.eclipse.editors {
 						proposals.add(createMethod(offset, length, jvmMethod.Name.substring(prefix.length()), jvmMethod));
 					}
 					break;
+				case Local:
+					if (member.Name.startsWith(prefix)) {
+						proposals.add(createLocal(offset, length, member.Name.substring(prefix.length()), member));
+					}
+					break;
 				}
 			}
 			
@@ -72,6 +77,9 @@ package stab.tools.eclipse.editors {
 				proposals.add(createText(offset, length, text.substring(prefix.length()), text));
 			}
 
+			if (proposals.size() == 0) {
+				return createEmpty();
+			}
 			Collections.sort(proposals, completionProposalComparator);
 			return proposals.toArray(new ICompletionProposal[proposals.size()]);
 		}
@@ -91,6 +99,10 @@ package stab.tools.eclipse.editors {
 
 		private static String getDisplayName(JvmMethodInfo method) {
 			return method.Name + getParameters(method) + " - " + getName(method.DeclaringType);
+		}
+		
+		private static String getDisplayName(MemberInfo member) {
+			return member.Name + " - " + getName(member.Type);
 		}
 		
 		private static String getParameters(JvmMethodInfo method) {
@@ -160,6 +172,10 @@ package stab.tools.eclipse.editors {
 				image = Environment.getIcon(Icon.DefaultMethod);
 			}
 			return new CompletionProposal(text, offset, length, text.length(), image, getDisplayName(method), null, null);
+		}
+
+		private static ICompletionProposal createLocal(int offset, int length, String text, MemberInfo member) {
+			return new CompletionProposal(text, offset, length, text.length(), Environment.getIcon(Icon.LocalVariable), getDisplayName(member), null, null);
 		}
 		
 		private class EmptyCompletionProposal : ICompletionProposal {

@@ -200,6 +200,10 @@ package stab.tools.eclipse.editors {
 			try {
 				compilationUnitHighlighter.highlight(compilationUnit, tokens);
 				sourceViewer.invalidateTextPresentation();
+				foreach (var token in tokens) {
+					token.IsUpdated = false;
+				}
+				removedTokens.clear();
 				this.CompilationUnit = compilationUnit;
 			} catch (Exception e) {
 				Environment.logException(e);

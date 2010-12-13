@@ -30,9 +30,11 @@ package stab.tools.eclipse.editors {
 
 	public class ContentAssistProcessor : IContentAssistProcessor {
 		private static final ICompletionProposal[] EMPTY_PROPOSALS = CompletionProposalHelper.createEmpty();
-		private static final Iterable<String> BODY_TEXTS = new ArrayList<String> {
+		private static final Iterable<String> STATEMENT_TEXTS = new ArrayList<String> {
 			"boolean", "byte", "char", "do", "double", "float", "for", "foreach", "if", "int",
-			"long", "new", "short", "synchronized", "using", "while" };
+			"long", "new", "return", "short", "super", "synchronized", "this", "using", "while" };
+		private static final Iterable<String> EXPRESSION_TEXTS = new ArrayList<String> {
+			"false", "new", "null", "sizeof", "super", "this", "true", "typeof" };
 		private static final Iterable<String> TYPE_TEXTS = new ArrayList<String> {
 			"boolean", "byte", "char", "double", "float", "int", "long", "short" };
 	
@@ -501,20 +503,15 @@ package stab.tools.eclipse.editors {
 		}
 
 		private ICompletionProposal[] computeCompletionProposalsInSimpleType(TypeReferenceNode type) {
-			String prefix;
-			int length;
-			if (offset == token.offset) {
-				var tk = tokens[tokenIndex - 1];
-				length = 0;
-				prefix = new String(text, tk.offset, tk.length);
-			} else {
-				length = token.length - (offset - token.offset);
-				prefix = new String(text, token.offset, offset - token.offset);
+			var token = this.token;
+			if (token.offset == offset) {
+				token = tokens[tokenIndex - 1];
 			}
+			var length = token.length - (offset - token.offset);
+			var prefix = new String(text, token.offset, offset - token.offset);
 			return CompletionProposalHelper.createCompletionProposals(offset, length, prefix, context.getRootPackages(),
 					context.getTypeMembers(), TYPE_TEXTS);
 		}
-		
 		
 		private ICompletionProposal[] computeCompletionProposalsInType(TypeReferenceNode type, JvmTypeInfo jvmType) {
 			Environment.trace(this, "type");
@@ -617,6 +614,12 @@ package stab.tools.eclipse.editors {
 			return endToken.offset + endToken.length - startToken.offset != syntaxNode.EndPosition - syntaxNode.StartPosition;
 		}
 		
+		private boolean isAfterEndToken(SyntaxNode syntaxNode) {
+			var bounds = syntaxNode.getUserData(typeof(SyntaxNodeBounds));
+			var endToken = bounds.EndToken;
+			return endToken.offset + endToken.length == offset;
+		}
+		
 		private Token getPreviousToken(int offset) {
 			int index = Highlighter.getPositionIndex(tokens, offset);
 			for (int i = index - 1; i >= 0; --i) {
@@ -634,7 +637,7 @@ package stab.tools.eclipse.editors {
 			return null;
 		}
 		
-		private ICompletionProposal[] computeCompletionProposalsInBody(SyntaxNode syntaxNode) {
+		private ICompletionProposal[] computeCompletionProposalsInStatement(SyntaxNode syntaxNode) {
 			var prefix = "";
 			int length = 0;
 			if (editedText(syntaxNode)) {
@@ -656,7 +659,7 @@ package stab.tools.eclipse.editors {
 				}
 			}
 			return CompletionProposalHelper.createCompletionProposals(offset, length, prefix, context.getRootPackages(),
-					context.getMembers(), BODY_TEXTS);
+					context.getMembers(), STATEMENT_TEXTS);
 		}
 
 		private ICompletionProposal[] computeCompletionProposalsInExpression(SyntaxNode syntaxNode) {
@@ -681,7 +684,18 @@ package stab.tools.eclipse.editors {
 				}
 			}
 			return CompletionProposalHelper.createCompletionProposals(offset, length, prefix, context.getRootPackages(),
-					context.getMembers(), TYPE_TEXTS);
+					context.getMembers(), EXPRESSION_TEXTS);
+		}
+
+		private ICompletionProposal[] computeCompletionProposalsInName(SyntaxNode syntaxNode) {
+			var token = this.token;
+			if (token.offset == offset) {
+				token = tokens[tokenIndex - 1];
+			}
+			var length = token.length - (offset - token.offset);
+			var prefix = new String(text, token.offset, offset - token.offset);
+			return CompletionProposalHelper.createCompletionProposals(offset, length, prefix, Query.empty<String>(),
+					context.getMembers(), EXPRESSION_TEXTS);
 		}
 		
 		private class StatementProcessor : StatementHandler<Void, ICompletionProposal[]> {
@@ -708,9 +722,19 @@ package stab.tools.eclipse.editors {
 				}
 		
 				Environment.trace(this, "block");
-				return processor.computeCompletionProposalsInBody(block);
+				return processor.computeCompletionProposalsInStatement(block);
 			}
 			
+			protected override ICompletionProposal[] handleBreak(BreakStatementNode breakStatement, Void source) {
+				Environment.trace(this, "break");
+				return EMPTY_PROPOSALS;
+			}
+	
+			protected override ICompletionProposal[] handleContinue(ContinueStatementNode continueStatement, Void source) {
+				Environment.trace(this, "continue");
+				return EMPTY_PROPOSALS;
+			}
+	
 			protected override ICompletionProposal[] handleDo(DoStatementNode doStatement, Void source) {
 				if (processor.containsOffset(doStatement.Statement)) {
 					return handleStatement(doStatement.Statement, null);
@@ -724,7 +748,16 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override ICompletionProposal[] handleExpression(ExpressionStatementNode expression, Void source) {
-				return processor.expressionProcessor.handleExpression(expression.Expression, null, false);
+				if (processor.containsOffset(expression.Expression)) {
+					return processor.expressionProcessor.handleExpression(expression.Expression, null, false);
+				}
+				
+				Environment.trace(this, "expression statement");
+				if (processor.isAfterEndToken(expression)) {
+					return processor.computeCompletionProposalsInStatement(expression);
+				} else {
+					return processor.computeCompletionProposalsInExpression(expression);
+				}
 			}
 			
 			protected override ICompletionProposal[] handleFor(ForStatementNode forStatement, Void source) {
@@ -768,7 +801,7 @@ package stab.tools.eclipse.editors {
 					return processor.computeCompletionProposalsInType(foreachStatement.Type, info.Type);
 				}
 				if (processor.containsOffset(foreachStatement.Source)) {
-					processor.expressionProcessor.handleExpression(foreachStatement.Source, null, true);
+					return processor.expressionProcessor.handleExpression(foreachStatement.Source, null, true);
 				}
 				if (processor.containsOffset(foreachStatement.Statement)) {
 					return handleStatement(foreachStatement.Statement, null);
@@ -879,7 +912,7 @@ package stab.tools.eclipse.editors {
 			
 			protected override ICompletionProposal[] handleThrow(ThrowStatementNode throwStatement, Void source) {
 				if (throwStatement.Exception != null && processor.containsOffset(throwStatement.Exception)) {
-					return processor.expressionProcessor.handleExpression(throwStatement.Exception, null, false);
+					return processor.expressionProcessor.handleExpression(throwStatement.Exception, null, true);
 				}
 		
 				Environment.trace(this, "throw");
@@ -1033,7 +1066,7 @@ package stab.tools.eclipse.editors {
 				}
 		
 				Environment.trace(this, "assign");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInExpression(assign);
 			}
 			
 			protected override ICompletionProposal[] handleBinary(BinaryExpressionNode binary, Void source, boolean nested) {
@@ -1045,7 +1078,7 @@ package stab.tools.eclipse.editors {
 				}
 		
 				Environment.trace(this, "binary");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInExpression(binary);
 			}
 	
 			protected override ICompletionProposal[] handleCast(CastExpressionNode cast, Void source, boolean nested) {
@@ -1073,7 +1106,7 @@ package stab.tools.eclipse.editors {
 				}
 		
 				Environment.trace(this, "conditional");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInExpression(conditional);
 			}
 			
 			protected override ICompletionProposal[] handleElementAccess(ElementAccessExpressionNode elementAccess, Void source, boolean nested) {
@@ -1092,7 +1125,7 @@ package stab.tools.eclipse.editors {
 				}
 		
 				Environment.trace(this, "element access");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInExpression(elementAccess);
 			}
 			
 			protected override ICompletionProposal[] handleInvocation(InvocationExpressionNode invocation, Void source, boolean nested) {
@@ -1137,6 +1170,7 @@ package stab.tools.eclipse.editors {
 				}
 				
 				if (processor.containsOffset(lambda.Body)) {
+		            processor.context.enterLambda(lambda);
 					return processor.statementProcessor.handleStatement(lambda.Body, null);
 				}
 		
@@ -1145,7 +1179,6 @@ package stab.tools.eclipse.editors {
 			}
 
 			protected override ICompletionProposal[] handleLiteral(LiteralExpressionNode literal, Void source, boolean nested) {
-		
 				Environment.trace(this, "literal");
 				return EMPTY_PROPOSALS;
 			}
@@ -1156,7 +1189,11 @@ package stab.tools.eclipse.editors {
 				}
 				if (processor.containsOffset(memberAccess.Member)) {
 					Environment.trace(this, "member access name");
-					var token = processor.tokens[Highlighter.getPositionIndex(processor.tokens, processor.offset)];
+					int index = Highlighter.getPositionIndex(processor.tokens, processor.offset);
+					var token = processor.tokens[index];
+					if (token.offset == processor.offset) {
+						token = processor.tokens[index - 1];
+					}
 					var length = token.length - (processor.offset - token.offset);
 					var prefix = new String(processor.text, token.offset, processor.offset - token.offset);
 					var tinfo = memberAccess.TargetObject.getUserData(typeof(ExpressionInfo));
@@ -1175,7 +1212,8 @@ package stab.tools.eclipse.editors {
 						if (type == null) {
 							// Package
 						} else {
-							// Type
+							return CompletionProposalHelper.createCompletionProposals(processor.offset, 0, "", Query.empty<String>(),
+									processor.context.getMembers(type, true), Query.empty<String>());
 						}
 					} else {
 						var tinfo = memberAccess.TargetObject.getUserData(typeof(ExpressionInfo));
@@ -1252,9 +1290,8 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override ICompletionProposal[] handleSimpleName(SimpleNameExpressionNode simpleName, Void source, boolean nested) {
-		
 				Environment.trace(this, "simple name");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInName(simpleName);
 			}
 			
 	
@@ -1262,21 +1299,26 @@ package stab.tools.eclipse.editors {
 				if (processor.containsOffset(sizeofExpression.Expression)) {
 					return handleExpression(sizeofExpression.Expression, null, true);
 				}
-		
 				Environment.trace(this, "sizeof");
-				return EMPTY_PROPOSALS;
+				var token = processor.getPreviousToken(processor.offset);
+				if (token != null && token.LexicalUnit == LexicalUnit.OpenParenthesis) {
+					return CompletionProposalHelper.createCompletionProposals(processor.offset, 0, "", processor.context.getRootPackages(),
+							processor.context.getMembers(), EXPRESSION_TEXTS);
+				} else if (processor.token.LexicalUnit == LexicalUnit.Keyword && processor.token.Keyword == Keyword.Sizeof) {
+					return processor.computeCompletionProposalsInName(sizeofExpression);
+				} else {
+					return processor.computeCompletionProposalsInExpression(sizeofExpression);
+				}
 			}
 			
 			protected override ICompletionProposal[] handleSuperAccess(SuperAccessExpressionNode superAccess, Void source, boolean nested) {
-		
 				Environment.trace(this, "super access");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInName(superAccess);
 			}
 			
 			protected override ICompletionProposal[] handleThisAccess(ThisAccessExpressionNode thisAccess, Void source, boolean nested) {
-		
 				Environment.trace(this, "this access");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInName(thisAccess);
 			}
 	
 			protected override ICompletionProposal[] handleType(TypeExpressionNode type, Void source, boolean nested) {
@@ -1290,16 +1332,24 @@ package stab.tools.eclipse.editors {
 				}
 		
 				Environment.trace(this, "typeof");
-				return EMPTY_PROPOSALS;
+				var token = processor.getPreviousToken(processor.offset);
+				if (token != null && token.LexicalUnit == LexicalUnit.OpenParenthesis) {
+					return CompletionProposalHelper.createCompletionProposals(processor.offset, 0, "", processor.context.getRootPackages(),
+							processor.context.getTypeMembers(), TYPE_TEXTS);
+				} else if (processor.token.LexicalUnit == LexicalUnit.Keyword && processor.token.Keyword == Keyword.Typeof) {
+					return processor.computeCompletionProposalsInName(typeofExpression);
+				} else {
+					return processor.computeCompletionProposalsInExpression(typeofExpression);
+				}
 			}
 			
 			protected override ICompletionProposal[] handleUnary(UnaryExpressionNode unary, Void source, boolean nested) {
 				if (processor.containsOffset(unary.Operand)) {
 					return handleExpression(unary.Operand, null, true);
 				}
-		
+				
 				Environment.trace(this, "unary");
-				return EMPTY_PROPOSALS;
+				return processor.computeCompletionProposalsInExpression(unary);
 			}
 		}
 	}

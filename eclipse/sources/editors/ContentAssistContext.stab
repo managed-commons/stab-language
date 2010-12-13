@@ -77,6 +77,10 @@ package stab.tools.eclipse.editors {
 			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
 		}
 		
+		public void enterLambda(LambdaExpressionNode declaration) {
+			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+		}
+		
 		public void declareLocals(LocalDeclarationStatementNode statement) {
             foreach (var decl in statement.Declarators) {
 				localInfos.add(decl.getUserData(typeof(MemberInfo)));
@@ -107,6 +111,15 @@ package stab.tools.eclipse.editors {
 				putMembers(t, members);
 			}
 			putMembers(type, members);
+			foreach (var method in methodInfos) {
+				foreach (var p in method.Parameters) {
+					var member = MemberInfo.getInfo(p, method);
+					members[member.Name] = member;
+				}
+			}
+			foreach (var member in localInfos) {
+				members[member.Name] = member;
+			}
 			return filterMembers(type, false, members.values());
 		}
 
@@ -188,7 +201,7 @@ package stab.tools.eclipse.editors {
 		
         private Iterable<MemberInfo> filterMembers(JvmTypeInfo scope, boolean staticOnly, Iterable<MemberInfo> members) {
             foreach (var mi in members) {
-            	if (mi.DeclaringType == null) {
+            	if (mi.MemberKind == MemberKind.Local || mi.DeclaringType == null) {
             		yield return mi;
             	} else {
 	                if (staticOnly && !mi.IsStatic) {
