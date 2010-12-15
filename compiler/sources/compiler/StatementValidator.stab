@@ -160,7 +160,9 @@ package stab.tools.compiler {
         protected override Void handleGotoCase(GotoCaseStatementNode gotoCase, Void source) {
             var expression = gotoCase.Expression;
             if (expression != null) {
+            	context.DisableIgnoredErrorTracking = true;
                 if (this.ExpressionValidator.handleExpressionNoError(expression, null, true)) {
+	            	context.DisableIgnoredErrorTracking = false;
                     var einfo = expression.getUserData(typeof(ExpressionInfo));
                     if (einfo != null) {
                         if (!einfo.IsConstant) {
@@ -182,6 +184,8 @@ package stab.tools.compiler {
                             break;
                         }
                     }
+                } else {
+	            	context.DisableIgnoredErrorTracking = false;
                 }
             }
             return null;

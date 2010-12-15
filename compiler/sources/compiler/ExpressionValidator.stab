@@ -1048,6 +1048,9 @@ package stab.tools.compiler {
                         }
                     }
                     if (method == null) {
+                    	if (context.addIgnoredError()) {
+                    		throw new CodeErrorException();
+                    	}
                     	if (methods.count() == 1) {
 	                    	method = methods.single();
                     		int nparams = method.Parameters.count();
@@ -1089,6 +1092,9 @@ package stab.tools.compiler {
             }
             
         memberSelectionDone:
+        	if (!context.CodeValidationContext.IsInLambda) {
+	        	context.clearIgnoredError();
+        	}
             fixArguments(method, arguments, invocation);
             var info = new ExpressionInfo(method.ReturnType) { Method = method, IsExtension = isExtension };
             invocation.addOrReplaceUserData(info);

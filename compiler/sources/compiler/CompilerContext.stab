@@ -26,6 +26,9 @@ package stab.tools.compiler {
 
     class CompilerContext {
         HashMap<LocalInfo, JvmFieldInfo> localFields;
+        private CompileErrorId id;
+        private SyntaxNode node;
+        private Object[] arguments;
     
         #region Reflection cache
         private JvmTypeInfo stringBuilderType;
@@ -248,7 +251,32 @@ package stab.tools.compiler {
             addError(1, id, node, arguments);
         }
         
+        boolean DisableIgnoredErrorTracking {
+        	get;
+        	set;
+        }
+        
+        boolean addIgnoredError() {
+        	if (this.id != null && !this.IsErrorHandlingDisabled) {
+        		addError(this.id, this.node, this.arguments);
+        		return true;
+        	} else {
+        		return false;
+        	}
+        }
+        
+        void clearIgnoredError() {
+    		this.id = null;
+    		this.node = null;
+    		this.arguments = null;
+        }
+        
         private void addError(int level, CompileErrorId id, SyntaxNode node, params Object[] arguments) {
+        	if (this.IsErrorHandlingDisabled && !this.DisableIgnoredErrorTracking && level == 0 && this.id == null) {
+        		this.id = id;
+        		this.node = node;
+        		this.arguments = arguments;
+        	}
             this.Results.codeErrorManager.DisabledWarnings = node.DisabledWarnings;
             this.Results.codeErrorManager.addError(node.Filename, id.ordinal() + 161, level,
                 Resources.getMessage(id, arguments), node.Line + 1, node.Column + 1);
