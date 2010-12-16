@@ -106,7 +106,7 @@ package stab.tools.eclipse.editors {
 			public override IContentAssistant getContentAssistant(ISourceViewer sourceViewer) {
 				ContentAssistant contentAssistant = new ContentAssistant();
 				contentAssistant.enableAutoActivation(true);
-				contentAssistant.enableAutoInsert(true);
+				//contentAssistant.enableAutoInsert(true);
 				contentAssistant.enablePrefixCompletion(true);
 				contentAssistant.setContentAssistProcessor(new ContentAssistProcessor(editor, sourceViewer), IDocument.DEFAULT_CONTENT_TYPE);
 				return contentAssistant;

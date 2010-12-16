@@ -59,6 +59,11 @@ package stab.tools.eclipse.editors {
 						proposals.add(createField(offset, length, jvmField.Name.substring(prefix.length()), jvmField));
 					}
 					break;
+				case Property:
+					if (member.Name.startsWith(prefix)) {
+						proposals.add(createProperty(offset, length, member.Name.substring(prefix.length()), member));
+					}
+					break;
 				case Method:
 					var jvmMethod = member.Method;
 					if (jvmMethod.Name.startsWith(prefix)) {
@@ -98,11 +103,15 @@ package stab.tools.eclipse.editors {
 		}
 
 		private static String getDisplayName(JvmMethodInfo method) {
-			return method.Name + getParameters(method) + " - " + getName(method.DeclaringType);
+			return method.Name + getParameters(method) + ": " + getName(method.ReturnType) + " - " + getName(method.DeclaringType);
 		}
 		
 		private static String getDisplayName(MemberInfo member) {
 			return member.Name + " - " + getName(member.Type);
+		}
+		
+		private static String getPropertyDisplayName(MemberInfo member) {
+			return member.Name + ": " + getName(member.Type) + " - " + getName(member.DeclaringType);
 		}
 		
 		private static String getParameters(JvmMethodInfo method) {
@@ -122,8 +131,42 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private static String getName(JvmTypeInfo type) {
-			// TODO: type parameters
-			return type.FullName.replace('/', '.').replace('$', '.');
+			switch (type.TypeKind) {
+			case Void:
+			case Boolean:
+			case Byte:
+			case Char:
+			case Short:
+			case Int:
+			case Long:
+			case Float:
+			case Double:
+				return type.TypeKind.toString().toLowerCase();
+			case Array:
+				return getName(type.ElementType) + "[]";
+			case UnboundedWildcard:
+				return "?";
+			case LowerBoundedWildcard:
+				return "? : " + getName(type.WildcardBound);
+			case UpperBoundedWildcard:
+				return getName(type.WildcardBound) + " : ?";
+			}
+			var sb = new StringBuilder();
+			sb.append(type.FullName.replace('/', '.').replace('$', '.'));
+			if (type.GenericArguments.any()) {
+				sb.append("<");
+				var first = true;
+				foreach (var t in type.GenericArguments) {
+					if (first) {
+						first = false;
+					} else {
+						sb.append(", ");
+					}
+					sb.append(getName(t));
+				}
+				sb.append(">");
+			}
+			return sb.toString();
 		}
 		
 		private static ICompletionProposal createPackage(int offset, int length, String text, String displayName) {
@@ -158,6 +201,20 @@ package stab.tools.eclipse.editors {
 				image = Environment.getIcon(Icon.DefaultField);
 			}
 			return new CompletionProposal(text, offset, length, text.length(), image, getDisplayName(field), null, null);
+		}
+
+		private static ICompletionProposal createProperty(int offset, int length, String text, MemberInfo property) {
+			Image image;
+			if (property.IsPublic) {
+				image = Environment.getIcon(Icon.PublicProperty);
+			} else if (property.IsProtected) {
+				image = Environment.getIcon(Icon.ProtectedProperty);
+			} else if (property.IsPrivate) {
+				image = Environment.getIcon(Icon.PrivateProperty);
+			} else {
+				image = Environment.getIcon(Icon.DefaultProperty);
+			}
+			return new CompletionProposal(text, offset, length, text.length(), image, getPropertyDisplayName(property), null, null);
 		}
 
 		private static ICompletionProposal createMethod(int offset, int length, String text, JvmMethodInfo method) {

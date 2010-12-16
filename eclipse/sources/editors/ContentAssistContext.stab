@@ -25,14 +25,16 @@ package stab.tools.eclipse.editors {
 
 	public class ContentAssistContext {
 		private JvmTypeSystem typeSystem;
+		private JvmTypeSystem annotatedTypeSystem;
 		private Iterable<String> packageNames;
 		private List<PackageInfo> packageInfos;
 		private List<JvmTypeInfo> typeInfos;
 		private List<JvmMethodInfo> methodInfos;
 		private List<MemberInfo> localInfos;
 		
-		public ContentAssistContext(JvmTypeSystem typeSystem) {
+		public ContentAssistContext(JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem) {
 			this.typeSystem = typeSystem;
+			this.annotatedTypeSystem = annotatedTypeSystem;
 			this.packageNames = Query.empty();
 			this.packageInfos = new ArrayList<PackageInfo>();
 			this.typeInfos = new ArrayList<JvmTypeInfo>();
@@ -104,23 +106,26 @@ package stab.tools.eclipse.editors {
 		}
 		
 		public Iterable<MemberInfo> getMembers() {
+			var type = typeInfos[typeInfos.size() - 1];
+			return filterMembers(type, false, getMemberMap().values());
+		}
+		
+		private Map<String, MemberInfo> getMemberMap() {
 			var members = new HashMap<String, MemberInfo>();
 			putTypeMembers(members);
 			var type = typeInfos[typeInfos.size() - 1];
 			foreach (var t in type.getBaseTypes().reverse()) {
-				putMembers(t, members);
+				putFields(t, members);
+				putProperties(t, members);
+				putMethods(t, members);
+				putNestedTypes(t, members);
 			}
-			putMembers(type, members);
-			foreach (var method in methodInfos) {
-				foreach (var p in method.Parameters) {
-					var member = MemberInfo.getInfo(p, method);
-					members[member.Name] = member;
-				}
-			}
-			foreach (var member in localInfos) {
-				members[member.Name] = member;
-			}
-			return filterMembers(type, false, members.values());
+			putFields(type, members);
+			putProperties(type, members);
+			putMethods(type, members);
+			putNestedTypes(type, members);
+			putLocals(members);
+			return members;
 		}
 
 		public Iterable<MemberInfo> getTypeMembers() {
@@ -129,12 +134,44 @@ package stab.tools.eclipse.editors {
 			return members.values();
 		}
 		
+		public Iterable<MemberInfo> getMembers(String identifier) {
+			if (identifier.equals("this")) {
+				return getMembers();
+			} else if (identifier.equals("super")) {
+				var type = typeInfos[typeInfos.size() - 1];
+				return getMembers(type.BaseType, false);
+			}
+			var members = new HashMap<String, MemberInfo>();
+			putTypeMembers(members);
+			var type = typeInfos[typeInfos.size() - 1];
+			foreach (var t in type.getBaseTypes().reverse()) {
+				putFields(t, members);
+				putProperties(t, members);
+				putNestedTypes(t, members);
+			}
+			putFields(type, members);
+			putProperties(type, members);
+			putNestedTypes(type, members);
+			putLocals(members);
+			var member = members[identifier];
+			if (member == null) {
+				return Query.empty();
+			}
+			return getMembers(member.Type, (member.MemberKind == MemberKind.Local) ? false : member.IsStatic);
+		}
+		
 		public Iterable<MemberInfo> getMembers(JvmTypeInfo declaringType, boolean staticOnly) {
 			var members = new HashMap<String, MemberInfo>();
 			foreach (var t in declaringType.getBaseTypes().reverse()) {
-				putMembers(t, members);
+				putFields(t, members);
+				putProperties(t, members);
+				putMethods(t, members);
+				putNestedTypes(t, members);
 			}
-			putMembers(declaringType, members);
+			putFields(declaringType, members);
+			putProperties(declaringType, members);
+			putMethods(declaringType, members);
+			putNestedTypes(declaringType, members);
 			return filterMembers(typeInfos[typeInfos.size() - 1], staticOnly, members.values());
 		}
 		
@@ -180,23 +217,66 @@ package stab.tools.eclipse.editors {
 			}
 		}
 		
-		private Map<String, MemberInfo> putMembers(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
+		private void putFields(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var field in declaringType.Fields.where(p => !p.IsSynthetic)) {
 				var member = MemberInfo.getInfo(field);
 				members[field.Name] = member;
 			}
-			
+		}
+
+		private void putMethods(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
 				var member = MemberInfo.getInfo(method);
 				members[method.Name] = member;
 			}
-			
+		}
+
+		private void putProperties(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
+			var getters = new HashMap<String, JvmMethodInfo>();
+			var setters = new HashMap<String, JvmMethodInfo>();
+			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
+                foreach (var annotation in BytecodeHelper.getAnnotations(typeSystem, method)) {
+                    if (BytecodeHelper.isPropertyGet(annotation)) {
+                    	var name = BytecodeHelper.getPropertyGetName(method, annotation);
+                    	getters[name] = method;
+                    }
+                    if (BytecodeHelper.isPropertySet(annotation)) {
+                    	var name = BytecodeHelper.getPropertySetName(method, annotation);
+                    	setters[name] = method;
+                    }
+                }
+			}
+			foreach (var e in getters.entrySet()) {
+				var setter = setters[e.Key];
+				if (setter != null) {
+					setters.remove(e.Key);
+				}
+				var member = MemberInfo.getInfo(e.Value, setter, e.Key);
+				members[e.Key] = member;
+			}
+			foreach (var e in setters.entrySet()) {
+				var member = MemberInfo.getInfo(null, e.Value, e.Key);
+				members[e.Key] = member;
+			}
+		}
+
+		private void putNestedTypes(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var nt in declaringType.NestedTypes.where(p => !p.IsSynthetic)) {
 				var member = MemberInfo.getInfo(nt);
 				members[nt.Name] = member;
 			}
-			
-			return members;
+		}
+		
+		private void putLocals(Map<String, MemberInfo> members) {
+			foreach (var method in methodInfos) {
+				foreach (var p in method.Parameters) {
+					var member = MemberInfo.getInfo(p, method);
+					members[member.Name] = member;
+				}
+			}
+			foreach (var member in localInfos) {
+				members[member.Name] = member;
+			}
 		}
 		
         private Iterable<MemberInfo> filterMembers(JvmTypeInfo scope, boolean staticOnly, Iterable<MemberInfo> members) {
