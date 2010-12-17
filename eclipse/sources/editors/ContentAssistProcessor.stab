@@ -638,10 +638,9 @@ package stab.tools.eclipse.editors {
 			int length = 0;
 			if (inEditedText) {
 				var editedTokens = getEditedTokens(syntaxNode).toList();
-				Environment.trace(this, "EDITED STATEMENT " + editedTokens);
 				int size = editedTokens.size();
-				if (size == 1) {
-					if (expression && editedTokens[0].LexicalUnit == LexicalUnit.Dot) {
+				if (size == 1 || (size > 1 && isExpressionSeparator(editedTokens[size - 2]))) {
+					if (expression && editedTokens[size - 1].LexicalUnit == LexicalUnit.Dot) {
 						var tinfo = syntaxNode.getUserData(typeof(ExpressionInfo));
 						if (actualToken.offset < actualOffset) {
 							length = actualToken.length - (actualOffset - actualToken.offset);
@@ -651,7 +650,7 @@ package stab.tools.eclipse.editors {
 								context.getMembers(tinfo.Type, tinfo.Member != null && tinfo.Member.MemberKind == MemberKind.Type),
 								Query.empty<String>());
 					}
-				} else if ((size == 2 || isExpressionSeparator(editedTokens[size - 3])) &&
+				} else if ((size == 2 || (size > 2 && isExpressionSeparator(editedTokens[size - 3]))) &&
 						editedTokens[size - 1].LexicalUnit == LexicalUnit.Dot) {
 					var tk = editedTokens[size - 2];
 					switch (tk.LexicalUnit) {
@@ -665,6 +664,25 @@ package stab.tools.eclipse.editors {
 						var text = new String(text, tk.offset, tk.length);
 						return CompletionProposalHelper.createCompletionProposals(actualOffset, length, prefix, Query.empty<String>(),
 								context.getMembers(text), Query.empty<String>());
+					}
+				} else if ((size == 3 || (size > 3 && isExpressionSeparator(editedTokens[size - 4]))) &&
+						editedTokens[size - 2].LexicalUnit == LexicalUnit.Dot && actualToken.offset == actualOffset) {
+					var tk = editedTokens[size - 3];
+					switch (tk.LexicalUnit) {
+					case Identifier:
+					case Keyword:
+					case ContextualKeyword:
+						var tk2 = editedTokens[size - 1];
+						switch (tk2.LexicalUnit) {
+						case Identifier:
+						case Keyword:
+						case ContextualKeyword:
+							prefix = new String(text, tk2.offset, actualOffset - tk2.offset);
+							var text = new String(text, tk.offset, tk.length);
+							return CompletionProposalHelper.createCompletionProposals(actualOffset, length, prefix, Query.empty<String>(),
+									context.getMembers(text), Query.empty<String>());
+						}
+						break;
 					}
 				}
 			}
@@ -874,6 +892,7 @@ package stab.tools.eclipse.editors {
 					return processor.expressionProcessor.handleExpression(foreachStatement.Source, null, true);
 				}
 				if (processor.containsOffset(foreachStatement.Statement)) {
+					processor.context.declareLocal(foreachStatement);
 					return handleStatement(foreachStatement.Statement, null);
 				}
 		
@@ -1002,6 +1021,7 @@ package stab.tools.eclipse.editors {
 						continue;
 					}
 					if (cc.ExceptionType != null && processor.containsOffset(cc.ExceptionType)) {
+						processor.context.declareLocal(cc);
 						var t = cc.getUserData(typeof(JvmTypeInfo));
 						return processor.computeCompletionProposalsInType(cc.ExceptionType, t);
 					}
@@ -1022,6 +1042,9 @@ package stab.tools.eclipse.editors {
 					return handleStatement(usingStatement.ResourceAcquisition, null);
 				}
 				if (processor.containsOffset(usingStatement.Statement)) {
+					if (usingStatement.ResourceAcquisition.StatementKind == StatementKind.LocalDeclaration) {
+						processor.context.declareLocals((LocalDeclarationStatementNode)usingStatement.ResourceAcquisition);
+					}
 					return handleStatement(usingStatement.Statement, null);
 				}
 		

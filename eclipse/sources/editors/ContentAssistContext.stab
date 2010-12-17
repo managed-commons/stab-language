@@ -89,6 +89,14 @@ package stab.tools.eclipse.editors {
 			}
 		}
 		
+		public void declareLocal(ForeachStatementNode statement) {
+			localInfos.add(statement.getUserData(typeof(MemberInfo)));
+		}
+		
+		public void declareLocal(CatchClauseNode node) {
+			localInfos.add(node.getUserData(typeof(MemberInfo)));
+        }
+		
 		public Iterable<String> getRootPackages() {
 			var result = new HashSet<String>();
 			foreach (var c in typeSystem.AllClassNames) {
@@ -226,8 +234,21 @@ package stab.tools.eclipse.editors {
 
 		private void putMethods(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
-				var member = MemberInfo.getInfo(method);
-				members[method.Name] = member;
+				var isPropertyAccessor = false;
+                foreach (var annotation in BytecodeHelper.getAnnotations(annotatedTypeSystem, method)) {
+                    if (BytecodeHelper.isPropertyGet(annotation)) {
+                    	isPropertyAccessor = true;
+                    	break;
+                    }
+                    if (BytecodeHelper.isPropertySet(annotation)) {
+                    	isPropertyAccessor = true;
+                    	break;
+                    }
+                }
+                if (!isPropertyAccessor) {
+					var member = MemberInfo.getInfo(method);
+					members[method.Name + method.Signature] = member;
+				}
 			}
 		}
 
@@ -235,22 +256,21 @@ package stab.tools.eclipse.editors {
 			var getters = new HashMap<String, JvmMethodInfo>();
 			var setters = new HashMap<String, JvmMethodInfo>();
 			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
-                foreach (var annotation in BytecodeHelper.getAnnotations(typeSystem, method)) {
+                foreach (var annotation in BytecodeHelper.getAnnotations(annotatedTypeSystem, method)) {
                     if (BytecodeHelper.isPropertyGet(annotation)) {
                     	var name = BytecodeHelper.getPropertyGetName(method, annotation);
                     	getters[name] = method;
+                    	break;
                     }
                     if (BytecodeHelper.isPropertySet(annotation)) {
                     	var name = BytecodeHelper.getPropertySetName(method, annotation);
                     	setters[name] = method;
+                    	break;
                     }
                 }
 			}
 			foreach (var e in getters.entrySet()) {
-				var setter = setters[e.Key];
-				if (setter != null) {
-					setters.remove(e.Key);
-				}
+				var setter = setters.remove(e.Key);
 				var member = MemberInfo.getInfo(e.Value, setter, e.Key);
 				members[e.Key] = member;
 			}

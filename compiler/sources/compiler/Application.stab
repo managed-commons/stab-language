@@ -91,7 +91,7 @@ package stab.tools.compiler {
                         Description = "specify a manifest file to include in the generated jar file\n\t" },
                 new OptionInfo { Option = Option.Out, Name = "out",
                         Arguments = "<file>",
-                        Description = "specify output file name (default: base name of the first\n\tinput file)" },
+                        Description = "specify output file or directory name (default: base name of the\n\tfirst input file)" },
                 new OptionInfo { Option = Option.Resources, Name = "resources", ShortForm = "res",
                         Arguments = "<directory>",
                         Description = "specify a directory containing the resources to include in\n\tthe generated jar" }
@@ -155,37 +155,51 @@ package stab.tools.compiler {
 					System.out.println(error.Message);
 				}
 				if (!hasErrors) {
-					var destination = outputPath;
-					if (PathHelper.getExtension(destination).length() == 0) {
-						destination += ".jar";
-					}
-					using (var zipStream = new ZipOutputStream(new FileOutputStream(destination))) {
-						if (manifestPath != null) {
-							var zipEntry = new ZipEntry("META-INF/MANIFEST.MF");
-							zipStream.putNextEntry(zipEntry);
-							var buffer = new byte[4096];
-							var inputStream = new FileInputStream(manifestPath);
-							int read;
-							while ((read = inputStream.read(buffer)) != -1) {
-								zipStream.write(buffer, 0, read);
+					var outputFile = new File(outputPath);
+					if (outputFile.isDirectory() || outputPath.endsWith("\\") || outputPath.endsWith("/")) {
+						foreach (var e in results.ClassFiles.entrySet()) {
+							var file = new File(outputFile, e.Key.replace('.', '/') + ".class");
+							var dir = file.getParentFile();
+							if (!dir.exists()) {
+								dir.mkdirs();
 							}
-							inputStream.close();
+							using (var s = new FileOutputStream(file)) {
+								s.write(e.Value);
+							}
 						}
-						if (resourcesPath != null) {
-							var rootDir = new File(resourcesPath);
-							foreach (var content in rootDir.list()) {
-								var file = new File(rootDir, content);
-								if (file.isDirectory()) {
-									exploreDirectory(zipStream, "", file);
-								} else {
-									addEntry(zipStream, "", file);
+					} else {
+						var destination = outputPath;
+						if (PathHelper.getExtension(destination).length() == 0) {
+							destination += ".jar";
+						}
+						using (var zipStream = new ZipOutputStream(new FileOutputStream(destination))) {
+							if (manifestPath != null) {
+								var zipEntry = new ZipEntry("META-INF/MANIFEST.MF");
+								zipStream.putNextEntry(zipEntry);
+								var buffer = new byte[4096];
+								var inputStream = new FileInputStream(manifestPath);
+								int read;
+								while ((read = inputStream.read(buffer)) != -1) {
+									zipStream.write(buffer, 0, read);
+								}
+								inputStream.close();
+							}
+							if (resourcesPath != null) {
+								var rootDir = new File(resourcesPath);
+								foreach (var content in rootDir.list()) {
+									var file = new File(rootDir, content);
+									if (file.isDirectory()) {
+										exploreDirectory(zipStream, "", file);
+									} else {
+										addEntry(zipStream, "", file);
+									}
 								}
 							}
-						}
-						foreach (var e in results.ClassFiles.entrySet()) {
-							var zipEntry = new ZipEntry(e.Key.replace('.', '/') + ".class");
-							zipStream.putNextEntry(zipEntry);
-							zipStream.write(e.Value);
+							foreach (var e in results.ClassFiles.entrySet()) {
+								var zipEntry = new ZipEntry(e.Key.replace('.', '/') + ".class");
+								zipStream.putNextEntry(zipEntry);
+								zipStream.write(e.Value);
+							}
 						}
 					}
 					System.out.println();
