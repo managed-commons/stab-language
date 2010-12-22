@@ -21,7 +21,7 @@ using org.eclipse.jface.util;
 using org.eclipse.swt;
 using org.eclipse.swt.graphics;
 
-package stab.tools.eclipse {
+package stab.tools.eclipse.editors {
 
 	public enum TextStyle {
 		Bold,
@@ -89,7 +89,6 @@ package stab.tools.eclipse {
 			}
 		
 			propertyChangeListener = p => {
-				Environment.trace(store, "Property Changed " + p.getProperty());
 				foreach (var value in values()) {
 					if (p.getProperty().startsWith(value.PreferenceKeyPrefix)) {
 						switch (p.getProperty().substring(value.PreferenceKeyPrefix.length())) {

@@ -261,7 +261,7 @@ package stab.tools.eclipse.editors {
 			
 			// TODO
 			Environment.trace(this, "class " + beforeMembers);
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInInterface(InterfaceDeclarationNode declaration) {
@@ -288,14 +288,14 @@ package stab.tools.eclipse.editors {
 				
 			// TODO
 			Environment.trace(this, "interface " + beforeMembers);
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInDelegate(DelegateDeclarationNode declaration) {
 		
 			// TODO
 			Environment.trace(this, "delegate");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInMethod(MethodDeclarationNode declaration) {
@@ -320,7 +320,7 @@ package stab.tools.eclipse.editors {
 				}
 	
 				Environment.trace(this, "method parameter");
-				return EMPTY_PROPOSALS;
+				return computeCompletionProposalsOutsideExpression(declaration);
 			}
 			var body = declaration.Body;
 			if (body != null && containsOffset(body)) {
@@ -330,7 +330,7 @@ package stab.tools.eclipse.editors {
 		
 			// TODO
 			Environment.trace(this, "method");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInProperty(PropertyDeclarationNode declaration) {
@@ -373,7 +373,7 @@ package stab.tools.eclipse.editors {
 			
 			// TODO
 			Environment.trace(this, "property");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInIndexer(IndexerDeclarationNode declaration) {
@@ -439,7 +439,7 @@ package stab.tools.eclipse.editors {
 		
 			// TODO
 			Environment.trace(this, "indexer");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInConstructor(ConstructorDeclarationNode declaration) {
@@ -460,7 +460,7 @@ package stab.tools.eclipse.editors {
 				}
 	
 				Environment.trace(this, "constructor parameter");
-				return EMPTY_PROPOSALS;
+				return computeCompletionProposalsOutsideExpression(declaration);
 			}
 		
 			var body = declaration.Body;
@@ -470,7 +470,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			Environment.trace(this, "constructor");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInDestructor(DestructorDeclarationNode declaration) {
@@ -480,7 +480,7 @@ package stab.tools.eclipse.editors {
 			}
 		
 			Environment.trace(this, "destructor");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInField(FieldDeclarationNode declaration) {
@@ -496,15 +496,18 @@ package stab.tools.eclipse.editors {
 					break;
 				}
 				if (bounds.isBeforeOffset(offset)) {
-					expressionProcessor.handleExpression(decl.Value, null, true);
+					continue;
 				}
 				
 				Environment.trace(this, "field declarator");
+				if (decl.Value != null) {
+					return expressionProcessor.handleExpression(decl.Value, null, true);
+				}
 				return EMPTY_PROPOSALS;
 			}
 			
 			Environment.trace(this, "field");
-			return EMPTY_PROPOSALS;
+			return computeCompletionProposalsOutsideExpression(declaration);
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInEnumConstant(EnumConstantDeclarationNode declaration) {
@@ -538,7 +541,7 @@ package stab.tools.eclipse.editors {
 			Environment.trace(this, "type");
 
 			if (inEditedText) {
-				Environment.trace(this, "EDITED TYPE");
+				Environment.trace(this, "edited type");
 				return EMPTY_PROPOSALS;
 			}
 			
@@ -708,6 +711,30 @@ package stab.tools.eclipse.editors {
 						(length == 0) ? context.getRootPackages() : Query.empty<String>(),
 						context.getMembers(), STATEMENT_TEXTS);
 			}
+		}
+
+		private ICompletionProposal[] computeCompletionProposalsOutsideExpression(SyntaxNode syntaxNode) {
+			var prefix = "";
+			int length = 0;
+			if (inEditedText) {
+				Environment.trace(this, "edited outside expression");
+			}
+			
+			var token = this.actualToken;
+			if (token.offset == actualOffset) {
+				token = tokens[actualTokenIndex - 1];
+			}
+			switch (token.LexicalUnit) {
+			case Identifier:
+			case Keyword:
+			case ContextualKeyword:
+				length = token.length - (actualOffset - token.offset);
+				prefix = new String(text, token.offset, actualOffset - token.offset);
+				break;
+			}
+			return CompletionProposalHelper.createCompletionProposals(actualOffset, length, prefix,
+					(length == 0) ? context.getRootPackages() : Query.empty<String>(),
+					context.getTypeMembers(), TYPE_TEXTS);
 		}
 		
 		private Iterable<Token> getEditedTokens(SyntaxNode syntaxNode) {

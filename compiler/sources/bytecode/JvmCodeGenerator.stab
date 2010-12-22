@@ -24,7 +24,7 @@ package stab.tools.bytecode {
     public class JvmLocalInfo {
         private JvmTypeInfo type;
         private String name;
-        private int index;
+        int index;
         Label beginLabel;
         Label endLabel;
         
@@ -102,10 +102,17 @@ package stab.tools.bytecode {
         public void removeThis() {
             checkCreated();
             locals.remove(0);
+            foreach (var l in locals) {
+            	l.index--;
+            }
             for (int i = 0; i < instructions.size(); i++) {
-                if (instructions[i] instanceof LocalVariableInstruction) {
-                    var lv = (LocalVariableInstruction)instructions[i];
+            	var inst = instructions[i];
+                if (inst instanceof LocalVariableInstruction) {
+                    var lv = (LocalVariableInstruction)inst;
                     instructions.set(i, new LocalVariableInstruction(lv.Opcode, lv.LocalVariable - 1));
+                } else if (inst instanceof IncrementInstruction) {
+                    var ii = (IncrementInstruction)inst;
+                    instructions.set(i, new IncrementInstruction(ii.LocalVariable - 1, ii.Increment));
                 }
             }
         }
@@ -1100,7 +1107,7 @@ package stab.tools.bytecode {
                 i.accept(visitor);
             }
             foreach (var l in locals) {
-                visitor.visitLocalVariable(l.Name, l.Type.Descriptor, l.Type.Signature, l.beginLabel, l.endLabel, l.getIndex());
+                visitor.visitLocalVariable(l.Name, l.Type.Descriptor, l.Type.Signature, l.beginLabel, l.endLabel, l.index);
             }
             foreach (var l in lineNumbers) {
                 visitor.visitLineNumber(l.line, l.label);

@@ -31,6 +31,8 @@ package stab.tools.eclipse.editors {
 		private List<JvmTypeInfo> typeInfos;
 		private List<JvmMethodInfo> methodInfos;
 		private List<MemberInfo> localInfos;
+		private Set<MemberInfo> allTypeInfos;
+		private Set<JvmMethodInfo> extensionMethodInfos;
 		
 		public ContentAssistContext(JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem) {
 			this.typeSystem = typeSystem;
@@ -64,19 +66,19 @@ package stab.tools.eclipse.editors {
 		}
 		
 		public void enterPropertyGetter(PropertyDeclarationNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.GetAccessor.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterPropertySetter(PropertyDeclarationNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.SetAccessor.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterIndexerGetter(IndexerDeclarationNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.GetAccessor.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterIndexerSetter(IndexerDeclarationNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.SetAccessor.getUserData(typeof(JvmMethodInfo)));
 		}
 		
 		public void enterLambda(LambdaExpressionNode declaration) {
@@ -184,45 +186,60 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private void putTypeMembers(Map<String, MemberInfo> members) {
-			var currentPackage = packageNames.aggregate("", (p, q) => p + q + "/");
-			
-			// Top level types
-			foreach (var type in typeSystem.AllClassNames.where(p => p.indexOf('/') == -1)) {
-				var info = MemberInfo.getInfo(typeSystem.getType(type));
-				if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
-					members[info.Type.Name] = info;
-				}
+			foreach (var info in getAllTypeInfos()) {
+				members[info.Type.Name] = info;
 			}
 			
-			// Types from enclosing packages
-			var pkg = "";
-			var classNames = typeSystem.AllClassNames;
-			foreach (var name in packageNames) {
-				pkg += name + "/";
-				classNames = classNames.where(p => p.startsWith(pkg));
-				foreach (var type in classNames.where(p => p.indexOf('/', pkg.length()) == -1)) {
-					var info = MemberInfo.getInfo(typeSystem.getType(type));
-					if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
-						members[info.Type.Name] = info;
-					}
-				}
-			}
-			
-			// Types from using directives
 			foreach (var pinfo in packageInfos) {
 				foreach (var e in pinfo.UsedTypes.entrySet()) {
 					members[e.Key] = MemberInfo.getInfo(e.Value.Type);
 				}
-				foreach (var name in pinfo.UsedPackages) {
-					pkg = name + "/";
-					foreach (var type in typeSystem.AllClassNames.where(p => p.startsWith(pkg) && p.indexOf('/', pkg.length()) == -1)) {
+			}
+		}
+		
+		private Set<MemberInfo> getAllTypeInfos() {
+			if (allTypeInfos == null) {
+				var l = new HashSet<MemberInfo>();
+				var currentPackage = packageNames.aggregate("", (p, q) => p + q + "/");
+				
+				// Top level types
+				foreach (var type in typeSystem.AllClassNames.where(p => p.indexOf('/') == -1)) {
+					var info = MemberInfo.getInfo(typeSystem.getType(type));
+					if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
+						l.add(info);
+					}
+				}
+				
+				// Types from enclosing packages
+				var pkg = "";
+				var classNames = typeSystem.AllClassNames;
+				foreach (var name in packageNames) {
+					pkg += name + "/";
+					classNames = classNames.where(p => p.startsWith(pkg));
+					foreach (var type in classNames.where(p => p.indexOf('/', pkg.length()) == -1)) {
 						var info = MemberInfo.getInfo(typeSystem.getType(type));
 						if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
-							members[info.Type.Name] = info;
+							l.add(info);
 						}
 					}
 				}
+				
+				// Types from using directives
+				foreach (var pinfo in packageInfos) {
+					foreach (var name in pinfo.UsedPackages) {
+						pkg = name + "/";
+						foreach (var type in typeSystem.AllClassNames.where(p => p.startsWith(pkg) && p.indexOf('/', pkg.length()) == -1)) {
+							var info = MemberInfo.getInfo(typeSystem.getType(type));
+							if (info.Type.PackageName.equals(currentPackage) || info.IsPublic) {
+								l.add(info);
+							}
+						}
+					}
+				}
+				
+				allTypeInfos = l;
 			}
+			return allTypeInfos;
 		}
 		
 		private void putFields(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
@@ -250,6 +267,28 @@ package stab.tools.eclipse.editors {
 					members[method.Name + method.Signature] = member;
 				}
 			}
+			
+			foreach (var method in getExtensionMethods().where(p => p.Parameters.first().Type == declaringType)) {
+				var member = MemberInfo.getInfo(method);
+				members[method.Name + method.Signature] = member;
+			}
+		}
+		
+		private Set<JvmMethodInfo> getExtensionMethods() {
+			if (extensionMethodInfos == null) {
+				var l = new HashSet<JvmMethodInfo>();
+				foreach (var info in getAllTypeInfos().where(
+						p => BytecodeHelper.getAnnotations(annotatedTypeSystem, p.Type).any(a => BytecodeHelper.isStaticClass(a)))) {
+					foreach (var m in info.Type.Methods.where(
+							p => BytecodeHelper.getAnnotations(annotatedTypeSystem, p).any(a => BytecodeHelper.isExtensionMethod(a)))) {
+						if (m.Parameters.any()) {
+							l.add(m);
+						}
+					}
+				}
+				extensionMethodInfos = l;
+			}
+			return extensionMethodInfos;
 		}
 
 		private void putProperties(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {

@@ -835,5 +835,10 @@ package stab.tools.compiler.test {
 		public void lambdaForeachVariable() {
 			doTest("LambdaForeachVariable", new Class<?>[] {}, new Object[] {}, "abc");
 		}
+		
+		[Test]
+		public void lambdaStatic() {
+			doTest("LambdaStatic", new Class<?>[] {}, new Object[] {}, 3);
+		}
     }
 }

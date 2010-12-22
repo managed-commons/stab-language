@@ -80,5 +80,11 @@ package stab.tools.compiler.test {
 		public void autoboxingPuzzle() {
 			doTest("AutoboxingPuzzle", new Class<?>[] {}, new Object[] {}, 100);
 		}
+		
+		[Test]
+		public void nbody() {
+			doTest("nbody", new Class<?>[] { typeof(int), typeof(String), typeof(String) },
+					new Object[] { 1000, "-0.16907516382852447", "-0.169087605234606" }, true);
+		}
 	}
 }

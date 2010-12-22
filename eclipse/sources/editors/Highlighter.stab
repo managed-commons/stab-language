@@ -553,7 +553,7 @@ package stab.tools.eclipse.editors {
 
 			// Exclude the unmodified tokens
 			var commonPartLength = 0;
-			for (int i = 0; i < insertedTokens.size(); i++) {
+			for (int i = 0; i < insertedTokens.size() && startIndex < endIndex; i++) {
 				var oldToken = tokens[startIndex];
 				var newToken = insertedTokens[i];
 				if (sameToken(oldToken, newToken)) {
@@ -569,7 +569,7 @@ package stab.tools.eclipse.editors {
 			startToken = tokens[startIndex];
 
 			commonPartLength = 0;
-			for (int i = insertedTokens.size() - 1; i >= 0; i--) {
+			for (int i = insertedTokens.size() - 1; i >= 0 && endIndex > startIndex; i--) {
 				var oldToken = tokens[endIndex];
 				var newToken = insertedTokens[i];
 				if (sameToken(oldToken, newToken)) {

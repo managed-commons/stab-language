@@ -2233,7 +2233,7 @@ package stab.tools.compiler {
                         value = "0" + value;
                     }
                     double dvalue = Double.parseDouble(value);
-                    info.Value = Double.valueOf(dvalue);
+                    info.Value = Double.valueOf((negative) ? -dvalue : dvalue);
                     info.Type = JvmTypeInfo.DOUBLE;
                 } catch (NumberFormatException e1) {
                     throw new IllegalStateException("Internal error: double parsing failed");

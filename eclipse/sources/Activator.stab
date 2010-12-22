@@ -26,6 +26,7 @@ using org.eclipse.jface.resource;
 using Image = org.eclipse.swt.graphics.Image;
 using org.eclipse.ui.plugin;
 using org.osgi.framework;
+using stab.tools.eclipse.editors;
 using stab.tools.eclipse.helpers;
 
 package stab.tools.eclipse {
@@ -66,7 +67,6 @@ package stab.tools.eclipse {
 			foreach (var project in workspace.getRoot().getProjects()) {
 				configureProject(project);
 			}
-			
 			
 			SemanticStyle.installListener(getPreferenceStore());
 			
