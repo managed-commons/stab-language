@@ -502,7 +502,135 @@ package stab.tools.compiler {
             }
             return false;
         }
+        
+        static void initializeAnonymousType(CompilerContext context, JvmTypeInfo type) {
+            if (!type.Methods.any(p => p.Name.equals("hashCode"))) {
+            	var typeBuilder = (JvmTypeBuilder)type;
 
+                //
+                // Constructor body
+                //
+                var baseConstructor = context.TypeSystem.ObjectType.getMethod("<init>", Query.empty<JvmTypeInfo>());
+	            var constructor = (JvmMethodBuilder)type.Methods.where(p => p.Name.equals("<init>")).first();
+                var gen = constructor.CodeGenerator;
+                gen.beginScope();
+                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                gen.emit(JvmOpcode.Invokespecial, baseConstructor);
+                var it = typeBuilder.Fields.iterator();
+                foreach (var p in constructor.Parameters) {
+                    gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                    gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
+                    gen.emit(JvmOpcode.Putfield, it.next());
+                }
+                gen.emit(JvmOpcode.Return);
+                gen.endScope();
+
+                //
+                // Object.equals redefinition
+                //
+                var methodBuilder = typeBuilder.defineMethod("equals");
+                methodBuilder.setReturnType(JvmTypeInfo.BOOLEAN);
+                methodBuilder.addParameter(context.TypeSystem.ObjectType).setName("obj");
+                gen = methodBuilder.CodeGenerator;
+                gen.beginScope();
+                gen.emit(JvmOpcode.Aload, gen.getLocal("obj"));
+                gen.emit(JvmOpcode.Instanceof, typeBuilder);
+                var label = gen.defineLabel();
+                gen.emit(JvmOpcode.Ifne, label);
+                gen.emit(JvmOpcode.Iconst_0);
+                gen.emit(JvmOpcode.Ireturn);
+                gen.markLabel(label);
+                gen.emit(JvmOpcode.Aload, gen.getLocal("obj"));
+                gen.emit(JvmOpcode.Checkcast, typeBuilder);
+                gen.emit(JvmOpcode.Astore, gen.declareLocal(typeBuilder, "other"));
+                var equals = context.TypeSystem.ObjectType.getMethod("equals", Collections.singletonList(context.TypeSystem.ObjectType));
+                foreach (var f in typeBuilder.Fields) {
+                    gen.emit(JvmOpcode.Aload, gen.getLocal("other"));
+                    gen.emit(JvmOpcode.Getfield, f);
+                    gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                    gen.emit(JvmOpcode.Getfield, f);
+                    label = gen.defineLabel();
+                    switch (f.Type.TypeKind) {
+                    case Boolean:
+                    case Byte:
+                    case Char:
+                    case Short:
+                    case Int:
+                        gen.emit(JvmOpcode.If_icmpeq, label);
+                        break;
+                    case Long:
+                        gen.emit(JvmOpcode.Lcmp);
+                        gen.emit(JvmOpcode.Ifeq, label);
+                        break;
+                    case Float:
+                        gen.emit(JvmOpcode.Fcmpg);
+                        gen.emit(JvmOpcode.Ifeq, label);
+                        break;
+                    case Double:
+                        gen.emit(JvmOpcode.Dcmpg);
+                        gen.emit(JvmOpcode.Ifeq, label);
+                        break;
+                    default:
+                        gen.emit(JvmOpcode.Invokevirtual, equals);
+                        gen.emit(JvmOpcode.Ifne, label);
+                        break;
+                    }
+                    gen.emit(JvmOpcode.Iconst_0);
+                    gen.emit(JvmOpcode.Ireturn);
+                    gen.markLabel(label);
+                }
+                gen.emit(JvmOpcode.Iconst_1);
+                gen.emit(JvmOpcode.Ireturn);
+                gen.endScope();
+            	
+                //
+                // Object.hashCode redefinition
+                //
+                methodBuilder = typeBuilder.defineMethod("hashCode");
+                methodBuilder.setReturnType(JvmTypeInfo.INT);
+                gen = methodBuilder.CodeGenerator;
+                gen.beginScope();
+                var hashCode = context.TypeSystem.ObjectType.getMethod("hashCode", Query.empty<JvmTypeInfo>());
+                gen.emit(JvmOpcode.Iconst_0);
+                gen.emit(JvmOpcode.Istore, gen.declareLocal(JvmTypeInfo.INT, "result"));
+                var first = true;
+                foreach (var f in typeBuilder.Fields) {
+                    gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                    gen.emit(JvmOpcode.Getfield, f);
+                    switch (f.Type.TypeKind) {
+                    case Boolean:
+                    case Byte:
+                    case Char:
+                    case Short:
+                    case Int:
+                        break;
+                    case Long:
+                        gen.emit(JvmOpcode.L2i);
+                        break;
+                    case Float:
+                        gen.emit(JvmOpcode.F2i);
+                        break;
+                    case Double:
+                        gen.emit(JvmOpcode.D2i);
+                        break;
+                    default:
+                        gen.emit(JvmOpcode.Invokevirtual, hashCode);
+                        break;
+                    }
+                    if (first) {
+                        first = false;
+                    } else {
+                        gen.emit(JvmOpcode.Iload, gen.getLocal("result"));
+                        gen.emit(JvmOpcode.Ixor);
+                    }
+                    gen.emit(JvmOpcode.Istore, gen.getLocal("result"));
+                }
+                gen.emit(JvmOpcode.Iload, gen.getLocal("result"));
+                gen.emit(JvmOpcode.Ireturn);
+                gen.endScope();
+            }
+        }
+        
         static JvmTypeInfo createDelegateType(CompilerContext context, JvmTypeInfo delegateType, JvmMethodInfo method) {
             var invokeMethod = delegateType.Methods.where(p => p.Name.equals("invoke")).first();
             

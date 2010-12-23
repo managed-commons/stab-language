@@ -100,11 +100,13 @@ package stab.tools.compiler {
             }
             return null;
         }
-
+        
         protected override Void handleAnonymousObjectCreation(AnonymousObjectCreationExpressionNode anonymousObject,
                 TargetLabels labels, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             var type = anonymousObject.getUserData(typeof(ExpressionInfo)).Type;
+            CompilerHelper.initializeAnonymousType(context, type);
+            
             var constructor = type.Methods.where(p => p.Name.equals("<init>")).first();
             generator.emit(JvmOpcode.New, type);
             if (nested) {

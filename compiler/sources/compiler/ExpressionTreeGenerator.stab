@@ -1086,6 +1086,8 @@ package stab.tools.compiler {
                     Void source, boolean nested) {
                 var generator = context.MethodGenerationContext.Generator;
                 var typeInfo = anonymousObject.getUserData(typeof(ExpressionInfo)).Type;
+                CompilerHelper.initializeAnonymousType(context, typeInfo);
+                
                 var constructor = typeInfo.Methods.where(p => p.Name.equals("<init>")).first();
                 BytecodeHelper.emitTypeof(generator, context.TypeSystem, typeInfo);
                 BytecodeHelper.emitIntConstant(generator, constructor.Parameters.count());
