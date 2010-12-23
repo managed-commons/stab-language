@@ -189,8 +189,9 @@ package stab.tools.eclipse.helpers {
 						typesToRebuild = typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
 					}
 					foreach (var type in oldTypes.intersect(newTypes)) {
-							if (!JvmTypeSystemHelper.isStructurallyEqual(JvmTypeSystemHelper.getType(parameters.TypeSystem, type),
-										JvmTypeSystemHelper.getType(results.TypeSystem, type))) {
+						if (!JvmTypeSystemHelper.isStructurallyEqual(JvmTypeSystemHelper.getType(parameters.TypeSystem, type),
+									JvmTypeSystemHelper.getType(results.TypeSystem, type))) {
+							Environment.trace(this, "Structurally changed: " + type);
 							typesToRebuild = typesToRebuild.concat(oldDependencyInfo.getReferencingTypes(type));
 						}
 					}
@@ -200,6 +201,11 @@ package stab.tools.eclipse.helpers {
 					
 					if (filesToRebuild.any()) {
 						Environment.trace(this, "Structural changes: referencing types rebuild required (" + filesToRebuild.count() + " files)");
+
+						parameters.ProgressiveBuild = false;
+						results = compileCore(new SubProgressMonitor(monitor, 3));
+						
+						/* The compilation units are not using the current type system
 						
 						// If some types have changed, rebuild the referencing types
 						var oldResult = results;
@@ -221,6 +227,7 @@ package stab.tools.eclipse.helpers {
 							results.ClassFiles[e.Key] = e.Value;
 						}
 						results.CompiledFiles.addAll(oldResult.CompiledFiles);
+						*/
 					} else {
 						monitor.worked(2);
 					}
@@ -273,7 +280,7 @@ package stab.tools.eclipse.helpers {
 					
 					var filesToKeep = allFiles.getAllProjectRelativeNames().except(referencingFiles);
 					typesToCopy = filesToKeep.selectMany(p => parameters.DependencyInfo.getFileContents(p))
-							.where(p => p.indexOf('$') == -1).select(p => parameters.getTypeSystem().getType(p));
+							.where(p => p.indexOf('$') == -1).select(p => parameters.TypeSystem.getType(p));
 							
 					Environment.trace(this, "keeping " + filesToKeep.count() + " files");
 					Environment.trace(this, "ignoring " +

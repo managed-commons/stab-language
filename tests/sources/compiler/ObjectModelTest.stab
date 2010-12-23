@@ -840,5 +840,10 @@ package stab.tools.compiler.test {
 		public void lambdaStatic() {
 			doTest("LambdaStatic", new Class<?>[] {}, new Object[] {}, 3);
 		}
+		
+		[Test]
+		public void lambdaInConstructor() {
+			doTest("LambdaInConstructor", new Class<?>[] {}, new Object[] {}, 3);
+		}
     }
 }

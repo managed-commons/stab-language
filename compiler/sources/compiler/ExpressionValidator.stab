@@ -1033,6 +1033,7 @@ package stab.tools.compiler {
             }
 			var methodName = "lambda$" + context.CodeValidationContext.LambdaCount++;
             methodBuilder = typeBuilder.defineMethod(methodName);
+            methodBuilder.setSynthetic(true);
             lambda.addOrReplaceUserData(methodBuilder);
             
             if (targetType == null) {

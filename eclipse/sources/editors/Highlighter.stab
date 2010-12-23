@@ -25,6 +25,7 @@ using org.eclipse.swt;
 using org.eclipse.swt.custom;
 using org.eclipse.swt.graphics;
 using stab.query;
+using stab.tools.bytecode;
 using stab.tools.helpers;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
@@ -193,7 +194,17 @@ package stab.tools.eclipse.editors {
 			private set;
 		}
 		
-		public void update(char[] text, CompilationUnitNode compilationUnit) {
+		public JvmTypeSystem TypeSystem {
+			get;
+			private set;
+		}
+		
+		public JvmTypeSystem AnnotatedTypeSystem {
+			get;
+			private set;
+		}
+		
+		public void update(char[] text, CompilationUnitNode compilationUnit, JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem) {
 			if (text != this.Text) {
 				return;
 			}
@@ -205,6 +216,8 @@ package stab.tools.eclipse.editors {
 				}
 				removedTokens.clear();
 				this.CompilationUnit = compilationUnit;
+				this.TypeSystem = typeSystem;
+				this.AnnotatedTypeSystem = annotatedTypeSystem;
 			} catch (Exception e) {
 				Environment.logException(e);
 				initialize(text, false);
@@ -260,6 +273,8 @@ package stab.tools.eclipse.editors {
 			this.removedTokens = newRemovedTokens;
 			this.preprocessorPositions = newPreprocessorPositions;
 			this.CompilationUnit = null;
+			this.TypeSystem = null;
+			this.AnnotatedTypeSystem = null;
 			//checkPositionsConsistency();
 			
 			Environment.trace(this, "initialization done in " + ((System.nanoTime() - t0) / 1e6) + "ms");

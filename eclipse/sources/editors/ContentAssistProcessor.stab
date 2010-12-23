@@ -167,8 +167,8 @@ package stab.tools.eclipse.editors {
 			this.tokenIndex = tokenIndex;
 			this.tokens = tokens;
 			this.text = highlighter.Text;
-			this.context = new ContentAssistContext(projectManager.TypeSystem, projectManager.AnnotatedTypeSystem);
-
+			this.context = new ContentAssistContext(highlighter.TypeSystem, highlighter.AnnotatedTypeSystem);
+			
 			var result = computeCompletionProposalsInPackage(Query.empty<String>(), compilationUnit.Body);
 			Environment.trace(this, "compute completion done in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 			return result;

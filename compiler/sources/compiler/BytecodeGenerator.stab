@@ -58,13 +58,13 @@ package stab.tools.compiler {
                 context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, null), context.LambdaScopes[methodBuilder]);
                 var generator = context.MethodGenerationContext.Generator;
                 generator.beginScope();
-                initializeLambdaScope(methodBuilder);
                 generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
                 if (methodBuilder.DeclaringType.IsEnum) {
                     generator.emit(JvmOpcode.Aload, generator.getLocal("name$0"));
                     generator.emit(JvmOpcode.Iload, generator.getLocal("ordinal$0"));
                 }
                 generator.emit(JvmOpcode.Invokespecial, baseConstructor);
+                initializeLambdaScope(methodBuilder);
                 foreach (var c in methodBuilder.DeclaringType.getAllUserData(typeof(ClassDeclarationNode))) {
                     initializeFields(generator, c);
                 }
@@ -191,7 +191,6 @@ package stab.tools.compiler {
                 context.LambdaScopes[methodBuilder]);
             var generator = context.MethodGenerationContext.Generator;
             generator.beginScope();
-            initializeLambdaScope(methodBuilder);
             var initializer = constructorDeclaration.getInitializer();
             generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
             var initFields = true;
@@ -209,6 +208,7 @@ package stab.tools.compiler {
                 }
                 generator.emit(JvmOpcode.Invokespecial, iinfo.Method);
             }
+            initializeLambdaScope(methodBuilder);
             if (initFields) {
                 // Partial classes can have more than one declaration
                 foreach (var c in methodBuilder.DeclaringType.getAllUserData(typeof(ClassDeclarationNode))) {

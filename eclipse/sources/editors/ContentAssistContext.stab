@@ -268,7 +268,8 @@ package stab.tools.eclipse.editors {
 				}
 			}
 			
-			foreach (var method in getExtensionMethods().where(p => p.Parameters.first().Type == declaringType)) {
+			foreach (var method in getExtensionMethods().where(
+					p => JvmTypeInfo.hasImplicitConversion(declaringType, p.Parameters.first().Type))) {
 				var member = MemberInfo.getInfo(method);
 				members[method.Name + method.Signature] = member;
 			}

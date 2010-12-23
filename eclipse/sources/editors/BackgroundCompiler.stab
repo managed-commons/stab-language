@@ -23,6 +23,7 @@ using org.eclipse.jface.text.source;
 using org.eclipse.ui.progress;
 using org.eclipse.ui.texteditor;
 using stab.query;
+using stab.tools.bytecode;
 using stab.tools.eclipse.helpers;
 using stab.tools.syntaxtree;
 
@@ -101,7 +102,7 @@ package stab.tools.eclipse.editors {
 					var compilationUnit = results.CompilationUnits[filename];
 					if (compilationUnit != null && text == editor.Highlighter.Text) {
 						initialized = true;
-						new HighlightJob(editor, text, compilationUnit).schedule();
+						new HighlightJob(editor, text, compilationUnit, results.TypeSystem, results.AnnotatedTypeSystem).schedule();
 					}
 				}
 
@@ -231,18 +232,23 @@ package stab.tools.eclipse.editors {
 			private SourceEditor editor;
 			private char[] text;
 			private CompilationUnitNode compilationUnit;
+			private JvmTypeSystem typeSystem;
+			private JvmTypeSystem annotatedTypeSystem;
 		
-			HighlightJob(SourceEditor editor, char[] text, CompilationUnitNode compilationUnit)
+			HighlightJob(SourceEditor editor, char[] text, CompilationUnitNode compilationUnit,
+					JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem)
 					: super("Semantic Highlight") {
 				this.editor = editor;
 				this.text = text;
 				this.compilationUnit = compilationUnit;
+				this.typeSystem = typeSystem;
+				this.annotatedTypeSystem = annotatedTypeSystem;
 			}
 		
 			public override IStatus runInUIThread(IProgressMonitor monitor) {
 				try {
 					monitor.beginTask("", 1);
-					editor.Highlighter.update(text, compilationUnit);
+					editor.Highlighter.update(text, compilationUnit, typeSystem, annotatedTypeSystem);
 					monitor.worked(1);
 					monitor.done();
 				} catch {
