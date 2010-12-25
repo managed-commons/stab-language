@@ -846,8 +846,8 @@ package stab.tools.bytecode {
         
         public override String Descriptor {
             get {
-                if (genericParameterBounds.size() == 1) {
-                    return genericParameterBounds.get(0).Descriptor;
+                if (genericParameterBounds.size() >= 1) {
+                    return genericParameterBounds[0].Descriptor;
                 } else {
                     return "Ljava/lang/Object;";
                 }

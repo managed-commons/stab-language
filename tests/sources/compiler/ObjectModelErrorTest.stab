@@ -341,5 +341,12 @@ package stab.tools.compiler.test {
 				"FieldInitializerLambda.stab (4, 24) error 332: Lambda expressions cannot be used inside field initializers" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void abstractMethod() {
+			doTest("AbstractMethod", new String[]{
+				"AbstractMethod.stab (2, 25) error 333: 'm()' is abstract but it is contained in non-abstract class 'C'" },
+				new String[] {});
+		}
 	}
 }

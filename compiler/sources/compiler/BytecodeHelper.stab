@@ -160,18 +160,7 @@ package stab.tools.compiler {
         }
     
         public static String getPropertyDisplayName(JvmMethodInfo method, String name) {
-            var sb = new StringBuilder();
-            sb.append(name).append('[');
-            var first = true;
-            foreach (var t in method.Parameters.select(p => p.Type)) {
-                if (first) {
-                    first = false;
-                } else {
-                    sb.append(", ");
-                }
-                sb.append(getDisplayName(t));
-            }
-            return sb.append(']').toString();
+            return name;
         }
 
         public static JvmMethodInfo getDisposeMethod(JvmTypeSystem typeSystem, JvmTypeInfo type) {
@@ -188,23 +177,10 @@ package stab.tools.compiler {
         }
         
         public static JvmTypeInfo getGenericParameterTypeErasure(JvmTypeSystem typeSystem, JvmTypeInfo type) {
-            JvmTypeInfo result = null;
-            foreach (var t in type.GenericParameterBounds) {
-                if (result != null) {
-                    if (t.isAssignableFrom(result)) {
-                        result = t;
-                    } else if (!result.isAssignableFrom(t)) {
-                        result = null;
-                        break;
-                    }
-                } else {
-                    result = t;
-                }
-            }
-            if (result == null) {
-                return typeSystem.ObjectType;
+            if (type.GenericParameterBounds.any()) {
+            	return type.GenericParameterBounds.first();
             } else {
-                return result;
+	            return typeSystem.ObjectType;
             }
         }
         

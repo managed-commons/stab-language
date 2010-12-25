@@ -2934,6 +2934,12 @@ package stab.tools.compiler {
                 }
             }
             
+            if (indexerDeclaration.Modifiers.contains(Modifier.Abstract) && !memberInfo.DeclaringType.IsAbstract) {
+                context.addError(CompileErrorId.AbstractMemberInClass, indexerDeclaration,
+	                    BytecodeHelper.getDisplayName(memberInfo.DeclaringType),
+    	                BytecodeHelper.getIndexerDisplayName(getBuilder ?? setBuilder));
+            }
+            
             var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
             if (indexerDeclaration.Modifiers.contains(Modifier.Override)) {
                 var baseIndexer = overriden.where(p => !p.DeclaringType.IsInterface).firstOrDefault();
@@ -2992,6 +2998,11 @@ package stab.tools.compiler {
                             memberInfo.Name,
                             BytecodeHelper.getDisplayName(mi.DeclaringType));
                 }
+            }
+
+            if (propertyDeclaration.Modifiers.contains(Modifier.Abstract) && !memberInfo.DeclaringType.IsAbstract) {
+                context.addError(CompileErrorId.AbstractMemberInClass, propertyDeclaration,
+	                    BytecodeHelper.getDisplayName(memberInfo.DeclaringType), name);
             }
             
             var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
@@ -3102,6 +3113,9 @@ package stab.tools.compiler {
                     }
                 } else if (!methodDeclaration.IsPartial && !methodBuilder.IsAbstract && !methodBuilder.IsNative) {
                     context.addError(CompileErrorId.MethodWithoutBody, methodDeclaration,
+                        BytecodeHelper.getDisplayName(methodBuilder.DeclaringType), BytecodeHelper.getDisplayName(methodBuilder));
+                } else if (methodBuilder.IsAbstract && !methodBuilder.DeclaringType.IsAbstract) {
+                    context.addError(CompileErrorId.AbstractMemberInClass, methodDeclaration,
                         BytecodeHelper.getDisplayName(methodBuilder.DeclaringType), BytecodeHelper.getDisplayName(methodBuilder));
                 }
             } finally {

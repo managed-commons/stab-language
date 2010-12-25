@@ -193,7 +193,8 @@ package stab.tools.compiler {
 		NoMatchingNumberOfArguments,
 		InconsistentCollectionInitializerTypes,
 		LambdaOutsideMethod,
-    }
+		AbstractMemberInClass,
+	}
 
     class Resources {
         private static ResourceManager resourceManager;
