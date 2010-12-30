@@ -7,7 +7,6 @@ Features ==============================
 Issues ================================
 
 - validate generic constraints
-- generate bridge methods for public abstract methods implemented in private superclasses?
 - create an InternalErrorException class
 - test partial methods
 - check that #define/#undef is used before any lexical unit

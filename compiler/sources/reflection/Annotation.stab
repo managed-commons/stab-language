@@ -160,7 +160,7 @@ package stab.reflection {
         }
     }
         
-    class ArrayAnnotationArgument : AnnotationArgument {
+    public class ArrayAnnotationArgument : AnnotationArgument {
         ArrayList<AnnotationArgument> elements;
         
         ArrayAnnotationArgument()

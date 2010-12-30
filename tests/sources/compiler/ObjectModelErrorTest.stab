@@ -348,5 +348,19 @@ package stab.tools.compiler.test {
 				"AbstractMethod.stab (2, 25) error 333: 'm()' is abstract but it is contained in non-abstract class 'C'" },
 				new String[] {});
 		}
+		
+		[Test]
+		public void lessAccessibleBaseClass() {
+			doTest("LessAccessibleBaseClass", new String[]{
+				"LessAccessibleBaseClass.stab (4, 18) error 334: Base class 'A' is less accessible than 'B'" },
+				new String[] {});
+		}
+		
+		[Test]
+		public void nestedLessAccessibleBaseClass() {
+			doTest("NestedLessAccessibleBaseClass", new String[]{
+				"NestedLessAccessibleBaseClass.stab (5, 15) error 334: Base class 'C.A' is less accessible than 'C.B'" },
+				new String[] {});
+		}
 	}
 }

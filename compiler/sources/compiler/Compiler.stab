@@ -957,6 +957,11 @@ package stab.tools.compiler {
                                     BytecodeHelper.getDisplayName(typeBuilder), BytecodeHelper.getDisplayName(type));
                                 continue;
                             }
+                            if ((typeBuilder.IsPublic && !type.IsPublic) ||
+                            	(!typeBuilder.IsNestedPrivate && type.IsNestedPrivate)) {
+                                context.addError(CompileErrorId.InconsistentBaseTypeAccessibility, typeReference,
+                                    BytecodeHelper.getDisplayName(typeBuilder), BytecodeHelper.getDisplayName(type));
+                            }
                             typeBuilder.setBaseType(type);
                         }
                     } else {
