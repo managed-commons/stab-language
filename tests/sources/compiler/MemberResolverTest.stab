@@ -18,7 +18,7 @@ using java.lang;
 using java.util;
 using org.junit;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 
 package stab.tools.compiler.test {
@@ -30,8 +30,8 @@ package stab.tools.compiler.test {
 			var userDir = System.getProperty("user.dir");
 			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
 			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
-			var typeSystem = new JvmTypeSystem(new String[] { rtPath });
-			var annotatedTypeSystem = new JvmTypeSystem(new String[] { alPath }, typeSystem);
+			var typeSystem = new Library(new String[] { rtPath });
+			var annotatedTypeSystem = new Library(new String[] { alPath }, typeSystem);
 		
 			var memberResolver = new MemberResolver(typeSystem, annotatedTypeSystem);
 			memberResolver.initialize();
@@ -53,8 +53,8 @@ package stab.tools.compiler.test {
 			var userDir = System.getProperty("user.dir");
 			var alPath = PathHelper.combine(userDir, "bin/stabal.jar");
 			var rtPath = PathHelper.combine(userDir, "bin/stabrt.jar");
-			var typeSystem = new JvmTypeSystem(new String[] { rtPath });
-			var annotatedTypeSystem = new JvmTypeSystem(new String[] { alPath }, typeSystem);
+			var typeSystem = new Library(new String[] { rtPath });
+			var annotatedTypeSystem = new Library(new String[] { alPath }, typeSystem);
 		
 			var memberResolver = new MemberResolver(typeSystem, annotatedTypeSystem);
 			memberResolver.initialize();

@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 
-package stab.tools.bytecode.signature {
+package stab.reflection {
 
     public enum TypeSignatureKind {
         Boolean,
@@ -94,8 +94,8 @@ package stab.tools.bytecode.signature {
         }
     }
     
-    public class ClassTypeSignature : TypeSignature {
-        private ArrayList<TypeSignature> typeArguments;
+    class ClassTypeSignature : TypeSignature {
+        List<TypeSignature> typeArguments;
         
         ClassTypeSignature(TypeSignatureKind typeSignatureKind, String name)
             : super(typeSignatureKind, name) {
@@ -109,8 +109,24 @@ package stab.tools.bytecode.signature {
         }
     }
     
-    public class FormalTypeParameterSignature : TypeSignature {
-        ArrayList<TypeSignature> formalTypeParameterBounds;
+    class PrimitiveTypeSignature : TypeSignature {
+    	static final TypeSignature VoidSignature = new PrimitiveTypeSignature(TypeSignatureKind.Void, "V");
+    	static final TypeSignature BooleanSignature = new PrimitiveTypeSignature(TypeSignatureKind.Boolean, "Z");
+    	static final TypeSignature ByteSignature = new PrimitiveTypeSignature(TypeSignatureKind.Byte, "B");
+    	static final TypeSignature CharSignature = new PrimitiveTypeSignature(TypeSignatureKind.Char, "C");
+    	static final TypeSignature ShortSignature = new PrimitiveTypeSignature(TypeSignatureKind.Short, "S");
+    	static final TypeSignature IntSignature = new PrimitiveTypeSignature(TypeSignatureKind.Int, "I");
+    	static final TypeSignature LongSignature = new PrimitiveTypeSignature(TypeSignatureKind.Long, "J");
+    	static final TypeSignature FloatSignature = new PrimitiveTypeSignature(TypeSignatureKind.Float, "F");
+    	static final TypeSignature DoubleSignature = new PrimitiveTypeSignature(TypeSignatureKind.Double, "D");
+    
+        PrimitiveTypeSignature(TypeSignatureKind typeSignatureKind, String name)
+            : super(typeSignatureKind, name) {
+        }
+    }
+    
+    class FormalTypeParameterSignature : TypeSignature {
+        List<TypeSignature> formalTypeParameterBounds;
         
         FormalTypeParameterSignature(String name)
             : super(TypeSignatureKind.FormalTypeParameter, name) {
@@ -144,5 +160,4 @@ package stab.tools.bytecode.signature {
             }
         }
     }
-    
 }

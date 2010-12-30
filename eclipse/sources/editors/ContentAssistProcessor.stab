@@ -20,7 +20,7 @@ using org.eclipse.jface.text;
 using org.eclipse.jface.text.contentassist;
 using org.eclipse.jface.text.source;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.compiler;
 using stab.tools.helpers;
 using stab.tools.parser;
@@ -299,7 +299,7 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInMethod(MethodDeclarationNode declaration) {
-			var m = declaration.getUserData(typeof(JvmMethodInfo));
+			var m = declaration.getUserData(typeof(MethodInfo));
 			if (containsOffset(declaration.ReturnType)) {
 				return computeCompletionProposalsInType(declaration.ReturnType, m.ReturnType);
 			}
@@ -336,12 +336,12 @@ package stab.tools.eclipse.editors {
 		private ICompletionProposal[] computeCompletionProposalsInProperty(PropertyDeclarationNode declaration) {
 			var get = declaration.GetAccessor;
 			var set = declaration.SetAccessor;
-			JvmTypeInfo t = null;
+			TypeInfo t = null;
 			if (get != null) {
-				var m = get.getUserData(typeof(JvmMethodInfo));
+				var m = get.getUserData(typeof(MethodInfo));
 				t = m.ReturnType;
 			} else if (set != null) {
-				var m = set.getUserData(typeof(JvmMethodInfo));
+				var m = set.getUserData(typeof(MethodInfo));
 				t = m.Parameters.first().Type;
 			}
 			
@@ -379,13 +379,13 @@ package stab.tools.eclipse.editors {
 		private ICompletionProposal[] computeCompletionProposalsInIndexer(IndexerDeclarationNode declaration) {
 			var get = declaration.GetAccessor;
 			var set = declaration.SetAccessor;
-			JvmTypeInfo t = null;
-			JvmMethodInfo m = null;
+			TypeInfo t = null;
+			MethodInfo m = null;
 			if (get != null) {
-				m = get.getUserData(typeof(JvmMethodInfo));
+				m = get.getUserData(typeof(MethodInfo));
 				t = m.ReturnType;
 			} else if (set != null) {
-				m = set.getUserData(typeof(JvmMethodInfo));
+				m = set.getUserData(typeof(MethodInfo));
 				t = m.Parameters.last().Type;
 			}
 			
@@ -443,7 +443,7 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInConstructor(ConstructorDeclarationNode declaration) {
-			var pit = declaration.getUserData(typeof(JvmMethodInfo)).Parameters.iterator();
+			var pit = declaration.getUserData(typeof(MethodInfo)).Parameters.iterator();
 			foreach (var p in declaration.Parameters) {
 				var pt = pit.next().Type;
 			
@@ -484,7 +484,7 @@ package stab.tools.eclipse.editors {
 		}
 		
 		private ICompletionProposal[] computeCompletionProposalsInField(FieldDeclarationNode declaration) {
-			var f = declaration.Declarators[0].getUserData(typeof(JvmFieldInfo));
+			var f = declaration.Declarators[0].getUserData(typeof(FieldInfo));
 			
 			if (containsOffset(declaration.Type)) {
 				return computeCompletionProposalsInType(declaration.Type, f.Type);
@@ -537,7 +537,7 @@ package stab.tools.eclipse.editors {
 					context.getTypeMembers(), TYPE_TEXTS);
 		}
 		
-		private ICompletionProposal[] computeCompletionProposalsInType(TypeReferenceNode type, JvmTypeInfo jvmType) {
+		private ICompletionProposal[] computeCompletionProposalsInType(TypeReferenceNode type, TypeInfo Type) {
 			Environment.trace(this, "type");
 
 			if (inEditedText) {
@@ -564,7 +564,7 @@ package stab.tools.eclipse.editors {
 				if (offset <= nameToken.offset + nameToken.length) {
 					return computeCompletionProposalsInSimpleType(type);
 				} else {
-					var ait = jvmType.GenericArguments.iterator();
+					var ait = Type.GenericArguments.iterator();
 					foreach (var arg in simple.TypeArguments) {
 						var at = ait.next();
 					
@@ -594,16 +594,16 @@ package stab.tools.eclipse.editors {
 						prefix = new String(text, token.offset, offset - token.offset);
 					}
 					Iterable<MemberInfo> typeMembers;
-					if (jvmType.DeclaringType == null) {
-						typeMembers = context.getTypeMembers().where(p => p.Type.PackageName.equals(jvmType.PackageName));
+					if (Type.DeclaringType == null) {
+						typeMembers = context.getTypeMembers().where(p => p.Type.PackageName.equals(Type.PackageName));
 					} else {
-						typeMembers = context.getTypeMembers().where(p => p.Type.DeclaringType == jvmType.DeclaringType);
+						typeMembers = context.getTypeMembers().where(p => p.Type.DeclaringType == Type.DeclaringType);
 					}
 					return CompletionProposalHelper.createCompletionProposals(offset, length, prefix, Query.empty<String>(),
 							typeMembers, TYPE_TEXTS);
 				} else if (containsOffset(qualified.EnclosingType)) {
-					if (jvmType.DeclaringType != null) {
-						return computeCompletionProposalsInType(qualified.EnclosingType, jvmType.DeclaringType);
+					if (Type.DeclaringType != null) {
+						return computeCompletionProposalsInType(qualified.EnclosingType, Type.DeclaringType);
 					}
 				}
 				break;
@@ -611,7 +611,7 @@ package stab.tools.eclipse.editors {
 			case Array:
 				var arrayType = (ArrayTypeReferenceNode)type;
 				if (containsOffset(arrayType.ElementType)) {
-					return computeCompletionProposalsInType(arrayType.ElementType, jvmType.ElementType);
+					return computeCompletionProposalsInType(arrayType.ElementType, Type.ElementType);
 				}
 				break;
 				
@@ -619,7 +619,7 @@ package stab.tools.eclipse.editors {
 			case UpperBoundedWildcard:
 				var wildcard = (WildcardTypeReferenceNode)type;
 				if (containsOffset(wildcard.Bound)) {
-					return computeCompletionProposalsInType(wildcard.Bound, jvmType.WildcardBound);
+					return computeCompletionProposalsInType(wildcard.Bound, Type.WildcardBound);
 				}
 				break;
 			}
@@ -1049,7 +1049,7 @@ package stab.tools.eclipse.editors {
 					}
 					if (cc.ExceptionType != null && processor.containsOffset(cc.ExceptionType)) {
 						processor.context.declareLocal(cc);
-						var t = cc.getUserData(typeof(JvmTypeInfo));
+						var t = cc.getUserData(typeof(TypeInfo));
 						return processor.computeCompletionProposalsInType(cc.ExceptionType, t);
 					}
 					if (processor.containsOffset(cc.Block)) {
@@ -1268,7 +1268,7 @@ package stab.tools.eclipse.editors {
 			}
 			
 			protected override ICompletionProposal[] handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
-				var m = lambda.getUserData(typeof(JvmMethodInfo));
+				var m = lambda.getUserData(typeof(MethodInfo));
 				var pit = m.Parameters.iterator();
 				foreach (var p in lambda.Parameters) {
 					var pt = pit.next().Type;
@@ -1444,7 +1444,7 @@ package stab.tools.eclipse.editors {
 			
 			protected override ICompletionProposal[] handleTypeof(TypeofExpressionNode typeofExpression, Void source, boolean nested) {
 				if (processor.containsOffset(typeofExpression.Type)) {
-					return processor.computeCompletionProposalsInType(typeofExpression.Type, typeofExpression.getUserData(typeof(JvmTypeInfo)));
+					return processor.computeCompletionProposalsInType(typeofExpression.Type, typeofExpression.getUserData(typeof(TypeInfo)));
 				}
 		
 				Environment.trace(this, "typeof");

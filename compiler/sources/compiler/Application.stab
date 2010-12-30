@@ -19,7 +19,7 @@ using java.lang;
 using java.util;
 using java.util.jar;
 using java.util.zip;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 
 package stab.tools.compiler {
@@ -211,7 +211,7 @@ package stab.tools.compiler {
 					System.out.println("Compilation failed");
 					return 1;
 				}
-			} catch (JvmTypeLoadException e) {
+			} catch (TypeLoadException e) {
 				System.out.println("Cannot find type " + e.TypeName + ". The class is missing from the classpath.");
 				System.out.println("Compilation failed");
 				return 1;

@@ -18,9 +18,8 @@ using java.io;
 using java.lang;
 using java.lang.annotation;
 using java.util;
-using org.w3c.dom;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
@@ -55,12 +54,12 @@ package stab.tools.compiler {
             set;
         }
 		
-		public JvmTypeSystem TypeSystem {
+		public Library TypeSystem {
 			get;
 			set;
 		}
 		
-		public JvmTypeSystem AnnotatedTypeSystem {
+		public Library AnnotatedTypeSystem {
 			get;
 			set;
 		}
@@ -271,10 +270,10 @@ package stab.tools.compiler {
 			if (context.Parameters.TypeSystem == null) {
 				int nPaths = context.Parameters.ClassPath.size();
 				var classPath = context.Parameters.ClassPath.toArray(new String[nPaths]);
-				context.TypeSystem = new JvmTypeSystem(classPath);
+				context.TypeSystem = new Library(classPath);
 				
 				nPaths = context.Parameters.AnnotatedLibraryPaths.size();
-				context.AnnotatedTypeSystem = new JvmTypeSystem(context.Parameters.AnnotatedLibraryPaths.toArray(new String[nPaths]),
+				context.AnnotatedTypeSystem = new Library(context.Parameters.AnnotatedLibraryPaths.toArray(new String[nPaths]),
 						context.TypeSystem);
 			} else {
 				context.TypeSystem = context.Parameters.TypeSystem;
@@ -426,7 +425,7 @@ package stab.tools.compiler {
         
         private void defineClass(String packageName, ClassDeclarationNode classDeclaration) {
             var className = getTypeName(packageName, classDeclaration.NameOffset, classDeclaration.NameLength);
-            JvmTypeBuilder typeBuilder = null;
+            TypeBuilder typeBuilder = null;
             if (classDeclaration.IsPartial) {
                 var partialTypeInfo = this.partialTypes[className];
                 if (partialTypeInfo != null) {
@@ -448,10 +447,10 @@ package stab.tools.compiler {
             defineNestedTypes(typeBuilder, classDeclaration);
         }
 
-        private void defineNestedClass(JvmTypeBuilder declaringClass, ClassDeclarationNode classDeclaration) {
+        private void defineNestedClass(TypeBuilder declaringClass, ClassDeclarationNode classDeclaration) {
             var shortName = context.getIdentifier(classDeclaration.NameOffset, classDeclaration.NameLength);
             var className = declaringClass.FullName + '$' + shortName;
-            JvmTypeBuilder typeBuilder = null;
+            TypeBuilder typeBuilder = null;
             if (classDeclaration.IsPartial) {
                 var partialTypeInfo = this.partialTypes[className];
                 if (partialTypeInfo != null) {
@@ -474,7 +473,7 @@ package stab.tools.compiler {
             defineNestedTypes(typeBuilder, classDeclaration);
         }
         
-        private void defineNestedTypes(JvmTypeBuilder declaringClass, ClassDeclarationNode classDeclaration) {
+        private void defineNestedTypes(TypeBuilder declaringClass, ClassDeclarationNode classDeclaration) {
             foreach (var member in classDeclaration.Members) {
                 switch (member.TypeMemberKind) {
                 case Class:
@@ -502,7 +501,7 @@ package stab.tools.compiler {
         
         private void defineInterface(String packageName, InterfaceDeclarationNode interfaceDeclaration) {
             var className = getTypeName(packageName, interfaceDeclaration.NameOffset, interfaceDeclaration.NameLength);
-            JvmTypeBuilder typeBuilder = null;
+            TypeBuilder typeBuilder = null;
             if (interfaceDeclaration.IsPartial) {
                 var partialTypeInfo = this.partialTypes[className];
                 if (partialTypeInfo != null) {
@@ -523,10 +522,10 @@ package stab.tools.compiler {
             typeBuilder.setAbstract(true);
         }
         
-        private void defineNestedInterface(JvmTypeBuilder declaringClass, InterfaceDeclarationNode interfaceDeclaration) {
+        private void defineNestedInterface(TypeBuilder declaringClass, InterfaceDeclarationNode interfaceDeclaration) {
             var shortName = context.getIdentifier(interfaceDeclaration.NameOffset, interfaceDeclaration.NameLength);
             var className = declaringClass.FullName + '$' + shortName;
-            JvmTypeBuilder typeBuilder = null;
+            TypeBuilder typeBuilder = null;
             if (interfaceDeclaration.IsPartial) {
                 var partialTypeInfo = this.partialTypes[className];
                 if (partialTypeInfo != null) {
@@ -555,7 +554,7 @@ package stab.tools.compiler {
             setDelegateModifiers(delegateDeclaration, typeBuilder);
         }
         
-        private void defineNestedDelegate(JvmTypeBuilder declaringClass, DelegateDeclarationNode delegateDeclaration) {
+        private void defineNestedDelegate(TypeBuilder declaringClass, DelegateDeclarationNode delegateDeclaration) {
             var shortName = context.getIdentifier(delegateDeclaration.NameOffset, delegateDeclaration.NameLength);
             var className = declaringClass.FullName + '$' + shortName;
             var typeBuilder = defineNestedType(declaringClass, className, shortName, delegateDeclaration);
@@ -573,7 +572,7 @@ package stab.tools.compiler {
             return sb.toString();
         }
         
-        private void setTypeParameters(JvmTypeBuilder typeBuilder, List<SimpleNameTypeReferenceNode> typeParameters, SyntaxNode node) {
+        private void setTypeParameters(TypeBuilder typeBuilder, List<SimpleNameTypeReferenceNode> typeParameters, SyntaxNode node) {
             if (typeParameters.size() > 0) {
                 var genericParams = getTypeParameterNames(typeParameters);
                 int i = 0;
@@ -598,7 +597,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setTypeParameters(JvmMethodBuilder methodBuilder, List<SimpleNameTypeReferenceNode> typeParameters, SyntaxNode node) {
+        private void setTypeParameters(MethodBuilder methodBuilder, List<SimpleNameTypeReferenceNode> typeParameters, SyntaxNode node) {
             if (typeParameters.size() > 0) {
                 var genericParams = getTypeParameterNames(typeParameters);
                 int i = 0;
@@ -635,7 +634,7 @@ package stab.tools.compiler {
             return Collections.emptyList();
         }
 
-        private JvmTypeBuilder defineType(String name, SyntaxNode node) {
+        private TypeBuilder defineType(String name, SyntaxNode node) {
 			if (context.TypeSystem.typeExists(name)) {
 				throw context.error(CompileErrorId.AlreadyDefinedType, node, name.replace('/', '.').replace('$', '.'));
 			}
@@ -644,7 +643,7 @@ package stab.tools.compiler {
 			return result;
         }
 
-        private JvmTypeBuilder defineNestedType(JvmTypeBuilder declaringClass, String className, String shortName, SyntaxNode node) {
+        private TypeBuilder defineNestedType(TypeBuilder declaringClass, String className, String shortName, SyntaxNode node) {
             if (context.TypeSystem.typeExists(className)) {
                 throw context.error(CompileErrorId.AlreadyDefinedType, node, className.replace('/', '.').replace('$', '.'));
             }
@@ -653,7 +652,7 @@ package stab.tools.compiler {
             return result;
         }
 
-        private void setClassModifiers(ClassDeclarationNode classDeclaration, JvmTypeBuilder typeBuilder) {
+        private void setClassModifiers(ClassDeclarationNode classDeclaration, TypeBuilder typeBuilder) {
             foreach (var modifier in classDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -684,7 +683,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setNestedClassModifiers(ClassDeclarationNode classDeclaration, JvmTypeBuilder typeBuilder) {
+        private void setNestedClassModifiers(ClassDeclarationNode classDeclaration, TypeBuilder typeBuilder) {
             foreach (var modifier in classDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -738,7 +737,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setInterfaceModifiers(InterfaceDeclarationNode interfaceDeclaration, JvmTypeBuilder typeBuilder) {
+        private void setInterfaceModifiers(InterfaceDeclarationNode interfaceDeclaration, TypeBuilder typeBuilder) {
             foreach (var modifier in interfaceDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -755,7 +754,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void setNestedInterfaceModifiers(InterfaceDeclarationNode interfaceDeclaration, JvmTypeBuilder typeBuilder) {
+        private void setNestedInterfaceModifiers(InterfaceDeclarationNode interfaceDeclaration, TypeBuilder typeBuilder) {
             foreach (var modifier in interfaceDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -793,7 +792,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void setDelegateModifiers(DelegateDeclarationNode delegateDeclaration, JvmTypeBuilder typeBuilder) {
+        private void setDelegateModifiers(DelegateDeclarationNode delegateDeclaration, TypeBuilder typeBuilder) {
             foreach (var modifier in delegateDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -807,7 +806,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setNestedDelegateModifiers(DelegateDeclarationNode delegateDeclaration, JvmTypeBuilder typeBuilder) {
+        private void setNestedDelegateModifiers(DelegateDeclarationNode delegateDeclaration, TypeBuilder typeBuilder) {
             foreach (var modifier in delegateDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -933,7 +932,7 @@ package stab.tools.compiler {
         }
 
         private void setClassBaseTypes(ClassDeclarationNode classDeclaration) {
-            var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = classDeclaration.getUserData(typeof(TypeBuilder));
             context.MemberResolver.enterType(typeBuilder);
             try {
                 var first = true;
@@ -979,7 +978,7 @@ package stab.tools.compiler {
                     if (classDeclaration.IsEnum) {
                         typeBuilder.setEnum(true);
                         var enumType = context.TypeSystem.getType("java/lang/Enum");
-                        typeBuilder.setBaseType(context.TypeSystem.getGenericType(enumType, Collections.singletonList<JvmTypeInfo>(typeBuilder)));
+                        typeBuilder.setBaseType(context.TypeSystem.getGenericType(enumType, Collections.singletonList<TypeInfo>(typeBuilder)));
                     } else {
                         typeBuilder.setBaseType(context.TypeSystem.ObjectType);
                     }
@@ -1015,7 +1014,7 @@ package stab.tools.compiler {
         }
 
         private void setInterfaceBaseTypes(InterfaceDeclarationNode interfaceDeclaration) {
-            var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = interfaceDeclaration.getUserData(typeof(TypeBuilder));
             context.MemberResolver.enterType(typeBuilder);
             try {
                 typeBuilder.setBaseType(context.TypeSystem.ObjectType);
@@ -1037,7 +1036,7 @@ package stab.tools.compiler {
         }
 
         private void setDelegateBaseTypes(DelegateDeclarationNode delegateDeclaration) {
-            var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = delegateDeclaration.getUserData(typeof(TypeBuilder));
             typeBuilder.setBaseType(context.getType("stab/lang/Delegate", delegateDeclaration));
         }
         
@@ -1076,20 +1075,20 @@ package stab.tools.compiler {
                         methodBuilder.setPrivate(true);
                         var pb = methodBuilder.addParameter(context.TypeSystem.StringType);
                         pb.setName("name$0");
-                        pb = methodBuilder.addParameter(JvmTypeInfo.INT);
+                        pb = methodBuilder.addParameter(context.TypeSystem.IntType);
                         pb.setName("ordinal$0");
                     } else if (typeBuilder.IsAbstract) {
                         methodBuilder.setProtected(true);
                     } else {
                         methodBuilder.setPublic(true);
                     }
-                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    methodBuilder.setReturnType(context.TypeSystem.VoidType);
                 }
                 
                 foreach (var ti in partialTypes.values()) {
                     foreach (var mi in ti.partialMethods.values()) {
                         if (mi.implementingPart == null) {
-                            var methodBuilder = mi.definingPart.getUserData(typeof(JvmMethodBuilder));
+                            var methodBuilder = mi.definingPart.getUserData(typeof(MethodBuilder));
                             methodBuilder.IsExcludedFromCompilation = true;
                             context.addWarning(CompileErrorId.NoPartialImplementingDeclaration, mi.definingPart);
                         }
@@ -1140,7 +1139,7 @@ package stab.tools.compiler {
         }
 
         private void defineClassMembers(ClassDeclarationNode classDeclaration) {
-            var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = classDeclaration.getUserData(typeof(TypeBuilder));
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
             try {
@@ -1207,7 +1206,7 @@ package stab.tools.compiler {
         }
 
         private void defineInterfaceMembers(InterfaceDeclarationNode interfaceDeclaration) {
-            var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = interfaceDeclaration.getUserData(typeof(TypeBuilder));
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
             try {
@@ -1242,7 +1241,7 @@ package stab.tools.compiler {
         }
 
         private void defineDelegateMembers(DelegateDeclarationNode delegateDeclaration) {
-            var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = delegateDeclaration.getUserData(typeof(TypeBuilder));
             context.CurrentType = typeBuilder;
             setTypeParameters(typeBuilder, delegateDeclaration.TypeParameters, delegateDeclaration);
             try {
@@ -1263,7 +1262,7 @@ package stab.tools.compiler {
                 // Constructor
                 methodBuilder = typeBuilder.defineMethod("<init>");
                 methodBuilder.setProtected(true);
-                methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                methodBuilder.setReturnType(context.TypeSystem.VoidType);
                 var pb = methodBuilder.addParameter(context.TypeSystem.ObjectType);
                 pb.setName("target");
             } finally {
@@ -1271,11 +1270,11 @@ package stab.tools.compiler {
             }
         }
         
-        private void setTypeConstraints(Iterable<TypeParameterConstraintsClauseNode> constraintClauses, JvmTypeBuilder typeBuilder) {
+        private void setTypeConstraints(Iterable<TypeParameterConstraintsClauseNode> constraintClauses, TypeBuilder typeBuilder) {
             var packageName = typeBuilder.PackageName;
             foreach (var constraint in constraintClauses) {
                 var name = context.getIdentifier(constraint.NameOffset, constraint.NameLength);
-                JvmTypeInfo bound = CompilerHelper.resolveTypeReference(context, packageName, constraint.Constraints[0]);
+                TypeInfo bound = CompilerHelper.resolveTypeReference(context, packageName, constraint.Constraints[0]);
                 if (bound.IsFinal) {
                     context.addError(CompileErrorId.ConstraintNotInterfaceOrFinal, constraint.Constraints[0],
                         BytecodeHelper.getDisplayName(bound));
@@ -1292,7 +1291,7 @@ package stab.tools.compiler {
             }
         }
         
-        private JvmMethodBuilder lookupMethod(JvmTypeBuilder typeBuilder, List<SimpleNameTypeReferenceNode> typeParameters,
+        private MethodBuilder lookupMethod(TypeBuilder typeBuilder, List<SimpleNameTypeReferenceNode> typeParameters,
                 List<ParameterNode> parameters, String name) {
             var typeParams = getTypeParameterNames(typeParameters);
             foreach (var meth in typeBuilder.Methods) {
@@ -1301,7 +1300,7 @@ package stab.tools.compiler {
                 }
                 context.MemberResolver.enterMethod(meth);
                 int i = 0;
-                var paramTypes = new ArrayList<JvmTypeInfo>();
+                var paramTypes = new ArrayList<TypeInfo>();
                 try {
                     foreach (var p in parameters) {
                         var t = CompilerHelper.resolveTypeReference(context, typeBuilder.PackageName, p.Type, false, true);
@@ -1317,7 +1316,7 @@ package stab.tools.compiler {
                 if (i < typeParams.size()) {
                     continue;
                 }
-                var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod(name, paramTypes);
+                var methodBuilder = (MethodBuilder)typeBuilder.getMethod(name, paramTypes);
                 if (methodBuilder != null) {
                     return methodBuilder;
                 }
@@ -1325,7 +1324,7 @@ package stab.tools.compiler {
             return null;
         }
 
-        private boolean isCompatible(JvmMethodInfo method, String name, List<String> typeParameters, List<ParameterNode> parameters) {
+        private boolean isCompatible(MethodInfo method, String name, List<String> typeParameters, List<ParameterNode> parameters) {
             if (!method.Name.equals(name)) {
                 return false;
             }
@@ -1345,7 +1344,7 @@ package stab.tools.compiler {
             return true;
         }
 
-        private void defineClassMethod(MethodDeclarationNode methodDeclaration, boolean partial, JvmTypeBuilder typeBuilder) {
+        private void defineClassMethod(MethodDeclarationNode methodDeclaration, boolean partial, TypeBuilder typeBuilder) {
             var name = context.getIdentifier(methodDeclaration.NameOffset, methodDeclaration.NameLength);
             if (name.equals("finalize") && methodDeclaration.Parameters.size() == 0) {
                 context.addError(CompileErrorId.FinalizeMethodOverride, methodDeclaration);
@@ -1354,7 +1353,7 @@ package stab.tools.compiler {
                 if (!partial) {
                     context.addError(CompileErrorId.PartialMethodWithinPartialClass, methodDeclaration);
                 }
-                if (methodDeclaration.ReturnType != JvmTypeInfo.VOID) {
+                if (methodDeclaration.ReturnType != context.TypeSystem.VoidType) {
                     context.addError(CompileErrorId.PartialMethodNotVoid, methodDeclaration);
                 }
             }
@@ -1433,7 +1432,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setMethodModifiers(MethodDeclarationNode methodDeclaration, JvmMethodBuilder methodBuilder) {
+        private void setMethodModifiers(MethodDeclarationNode methodDeclaration, MethodBuilder methodBuilder) {
             var isFinal = true;
             foreach (var modifier in methodDeclaration.Modifiers) {
                 switch (modifier) {
@@ -1513,7 +1512,7 @@ package stab.tools.compiler {
             methodBuilder.setFinal(isFinal);
         }
 
-        private void setPartialMethodModifiers(MethodDeclarationNode methodDeclaration, JvmMethodBuilder methodBuilder) {
+        private void setPartialMethodModifiers(MethodDeclarationNode methodDeclaration, MethodBuilder methodBuilder) {
             foreach (var modifier in methodDeclaration.Modifiers) {
                 switch (modifier) {
                 case Final:
@@ -1539,7 +1538,7 @@ package stab.tools.compiler {
             methodBuilder.setPrivate(true);
         }
         
-        private void setMethodConstraints(Iterable<TypeParameterConstraintsClauseNode> constraintClauses, JvmMethodBuilder methodBuilder) {
+        private void setMethodConstraints(Iterable<TypeParameterConstraintsClauseNode> constraintClauses, MethodBuilder methodBuilder) {
             var packageName = methodBuilder.DeclaringType.PackageName;
             foreach (var constraint in constraintClauses) {
                 var name = context.getIdentifier(constraint.NameOffset, constraint.NameLength);
@@ -1560,7 +1559,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void defineClassField(FieldDeclarationNode fieldDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineClassField(FieldDeclarationNode fieldDeclaration, TypeBuilder typeBuilder) {
             var type = CompilerHelper.resolveTypeReference(context, typeBuilder.PackageName, fieldDeclaration.Type);
             foreach (var decl in fieldDeclaration.Declarators) {
                 var name = context.getIdentifier(decl.NameOffset, decl.NameLength);
@@ -1574,7 +1573,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void setFieldModifiers(FieldDeclarationNode fieldDeclaration, JvmFieldBuilder fieldBuilder) {
+        private void setFieldModifiers(FieldDeclarationNode fieldDeclaration, FieldBuilder fieldBuilder) {
             foreach (var modifier in fieldDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -1632,7 +1631,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void defineEnumConstant(EnumConstantDeclarationNode enumConstant, JvmTypeBuilder typeBuilder) {
+        private void defineEnumConstant(EnumConstantDeclarationNode enumConstant, TypeBuilder typeBuilder) {
             var name = context.getIdentifier(enumConstant.NameOffset, enumConstant.NameLength);
             if (typeBuilder.getField(name) != null) {
                 context.addError(CompileErrorId.AlreadyDefinedField, enumConstant,
@@ -1646,11 +1645,11 @@ package stab.tools.compiler {
             fieldBuilder.setFinal(true);
         }
 
-        private void defineClassIndexer(IndexerDeclarationNode indexerDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineClassIndexer(IndexerDeclarationNode indexerDeclaration, TypeBuilder typeBuilder) {
             defineTypeIndexer(indexerDeclaration, typeBuilder);
         }
 
-        private void defineTypeIndexer(IndexerDeclarationNode indexerDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineTypeIndexer(IndexerDeclarationNode indexerDeclaration, TypeBuilder typeBuilder) {
             var isInterface = typeBuilder.IsInterface;
             var type = CompilerHelper.resolveTypeReference(context, typeBuilder.PackageName, indexerDeclaration.Type);
             var get = indexerDeclaration.GetAccessor;
@@ -1659,7 +1658,7 @@ package stab.tools.compiler {
                 checkAccessors(indexerDeclaration.Modifiers, get, set, indexerDeclaration);
             }
             
-            var paramTypes = new JvmTypeInfo[indexerDeclaration.Parameters.size()];
+            var paramTypes = new TypeInfo[indexerDeclaration.Parameters.size()];
             var paramNames = new String[sizeof(paramTypes)];
             var isVarargs = false;
             int i = 0;
@@ -1713,7 +1712,7 @@ package stab.tools.compiler {
                 } else {
                     setPropertyOrIndexerModifiers(set, indexerDeclaration.getModifiers(), methodBuilder);
                 }
-                methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                methodBuilder.setReturnType(context.TypeSystem.VoidType);
                 for (i = 0; i < sizeof(paramTypes); i++) {
                     var paramBuilder = methodBuilder.addParameter(paramTypes[i]);
                     paramBuilder.setName(paramNames[i]);
@@ -1727,11 +1726,11 @@ package stab.tools.compiler {
             }
         }
 
-        private void defineClassProperty(PropertyDeclarationNode propertyDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineClassProperty(PropertyDeclarationNode propertyDeclaration, TypeBuilder typeBuilder) {
             defineTypeProperty(propertyDeclaration, typeBuilder);
         }
         
-        private void defineTypeProperty(PropertyDeclarationNode propertyDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineTypeProperty(PropertyDeclarationNode propertyDeclaration, TypeBuilder typeBuilder) {
             var isInterface = typeBuilder.IsInterface;
             var name = context.getIdentifier(propertyDeclaration.NameOffset, propertyDeclaration.NameLength);
             foreach (var meth in typeBuilder.Methods) {
@@ -1782,28 +1781,28 @@ package stab.tools.compiler {
                 } else {
                     setPropertyOrIndexerModifiers(set, propertyDeclaration.getModifiers(), methodBuilder);
                 }
-                methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                methodBuilder.setReturnType(context.TypeSystem.VoidType);
                 var paramBuilder = methodBuilder.addParameter(type);
                 paramBuilder.setName("value");
                 methodBuilder.addAnnotation(context.getType("stab/lang/PropertySet", set), false);
             }
         }
         
-        private void defineClassConstructor(ConstructorDeclarationNode constructorDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineClassConstructor(ConstructorDeclarationNode constructorDeclaration, TypeBuilder typeBuilder) {
             var name = context.getIdentifier(constructorDeclaration.NameOffset, constructorDeclaration.NameLength);
             if (!name.equals(typeBuilder.Name)) {
                 context.addError(CompileErrorId.MethodWithoutReturnType, constructorDeclaration, name);
             }
             if (constructorDeclaration.Modifiers.contains(Modifier.Static)) {
                 // TODO: check that modifiers.size() == 1
-                var clinit = (JvmMethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<JvmTypeInfo>());
+                var clinit = (MethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<TypeInfo>());
                 if (clinit != null) {
                     context.addError(CompileErrorId.AlreadyDefinedStaticInitializer, constructorDeclaration,
                         BytecodeHelper.getDisplayName(typeBuilder));
                 }
                 clinit = typeBuilder.defineMethod("<clinit>");
                 clinit.setStatic(true);
-                clinit.setReturnType(JvmTypeInfo.VOID);
+                clinit.setReturnType(context.TypeSystem.VoidType);
                 constructorDeclaration.addUserData(clinit);
             } else {
 				if (typeBuilder.IsEnum) {
@@ -1815,7 +1814,7 @@ package stab.tools.compiler {
                             BytecodeHelper.getDisplayName(typeBuilder));
                 }
                 methodBuilder = typeBuilder.defineMethod("<init>");
-                methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                methodBuilder.setReturnType(context.TypeSystem.VoidType);
                 constructorDeclaration.addUserData(methodBuilder);
                 setTypeParameters(methodBuilder, constructorDeclaration.getTypeParameters(), constructorDeclaration);
                 context.MemberResolver.enterMethod(methodBuilder);
@@ -1824,7 +1823,7 @@ package stab.tools.compiler {
                     if (typeBuilder.IsEnum) {
                         var pb = methodBuilder.addParameter(context.TypeSystem.StringType);
                         pb.setName("name$0");
-                        pb = methodBuilder.addParameter(JvmTypeInfo.INT);
+                        pb = methodBuilder.addParameter(context.TypeSystem.IntType);
                         pb.setName("ordinal$0");
                     }
                     foreach (var p in constructorDeclaration.Parameters) {
@@ -1842,7 +1841,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setConstructorModifiers(ConstructorDeclarationNode constructorDeclaration, JvmMethodBuilder methodBuilder) {
+        private void setConstructorModifiers(ConstructorDeclarationNode constructorDeclaration, MethodBuilder methodBuilder) {
             foreach (var modifier in constructorDeclaration.Modifiers) {
                 switch (modifier) {
                 case Public:
@@ -1888,11 +1887,11 @@ package stab.tools.compiler {
             }
         }
         
-        private void defineClassDestructor(DestructorDeclarationNode destructorDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineClassDestructor(DestructorDeclarationNode destructorDeclaration, TypeBuilder typeBuilder) {
             if (typeBuilder.IsEnum) {
                 // TODO: error
             }
-            var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod("finalize", Query.empty<JvmTypeInfo>());
+            var methodBuilder = (MethodBuilder)typeBuilder.getMethod("finalize", Query.empty<TypeInfo>());
             if (methodBuilder != null) {
                 context.addError(CompileErrorId.AlreadyDefinedDestructor, destructorDeclaration,
                         BytecodeHelper.getDisplayName(typeBuilder));
@@ -1902,12 +1901,12 @@ package stab.tools.compiler {
                 context.addError(CompileErrorId.InvalidDestructorName, destructorDeclaration, name);
             }
             methodBuilder = typeBuilder.defineMethod("finalize");
-            methodBuilder.setReturnType(JvmTypeInfo.VOID);
+            methodBuilder.setReturnType(context.TypeSystem.VoidType);
             methodBuilder.setProtected(true);
             destructorDeclaration.addUserData(methodBuilder);
         }
         
-        private void defineInterfaceMethod(MethodDeclarationNode methodDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineInterfaceMethod(MethodDeclarationNode methodDeclaration, TypeBuilder typeBuilder) {
             var packageName = typeBuilder.PackageName;
             var name = context.getIdentifier(methodDeclaration.NameOffset, methodDeclaration.NameLength);
             var methodBuilder = lookupMethod(typeBuilder, methodDeclaration.TypeParameters, methodDeclaration.Parameters, name);
@@ -1936,11 +1935,11 @@ package stab.tools.compiler {
             }
         }
         
-        private void defineInterfaceIndexer(IndexerDeclarationNode indexerDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineInterfaceIndexer(IndexerDeclarationNode indexerDeclaration, TypeBuilder typeBuilder) {
             defineTypeIndexer(indexerDeclaration, typeBuilder);
         }
         
-        private void defineInterfaceProperty(PropertyDeclarationNode propertyDeclaration, JvmTypeBuilder typeBuilder) {
+        private void defineInterfaceProperty(PropertyDeclarationNode propertyDeclaration, TypeBuilder typeBuilder) {
             defineTypeProperty(propertyDeclaration, typeBuilder);
         }
         
@@ -1970,7 +1969,7 @@ package stab.tools.compiler {
         }
         
         private void setPropertyOrIndexerModifiers(AccessorDeclarationNode accessor, EnumSet<Modifier> propertyModifiers,
-                JvmMethodBuilder methodBuilder) {
+                MethodBuilder methodBuilder) {
             var protectionSet = false;
             var isFinal = true;
             var modifiers = accessor.Modifiers;
@@ -2159,8 +2158,8 @@ package stab.tools.compiler {
                         t.setBaseType(context.TypeSystem.ObjectType);
                     }
                     var packageInfo = context.TypeSystem.getType(packageInfoName);
-                    if (packageInfo instanceof JvmTypeBuilder) {
-                        bytecodeGenerator.generateAnnotationsBytecode(packageDeclaration.Annotations, (JvmTypeBuilder)packageInfo);
+                    if (packageInfo instanceof TypeBuilder) {
+                        bytecodeGenerator.generateAnnotationsBytecode(packageDeclaration.Annotations, (TypeBuilder)packageInfo);
                     } else {
                         context.addError(CompileErrorId.PackageAnnotatedExternally, packageDeclaration);
                     }
@@ -2175,7 +2174,7 @@ package stab.tools.compiler {
             }
         }
         private void generateClassAnnotations(ClassDeclarationNode classDeclaration, boolean annotationTypesOnly) {
-            var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = classDeclaration.getUserData(typeof(TypeBuilder));
             if (!annotationTypesOnly) {
                 validateAnnotationSection(classDeclaration.Annotations, ElementType.TYPE);
                 bytecodeGenerator.generateAnnotationsBytecode(classDeclaration.Annotations, typeBuilder);
@@ -2230,7 +2229,7 @@ package stab.tools.compiler {
         }
 
         private void generateInterfaceAnnotations(InterfaceDeclarationNode interfaceDeclaration, boolean annotationTypesOnly) {
-            var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = interfaceDeclaration.getUserData(typeof(TypeBuilder));
             var isAnnotation = typeBuilder.Interfaces.any(p => p.FullName.equals("java/lang/annotation/Annotation"));
             if (annotationTypesOnly) {
                 if (isAnnotation) {
@@ -2279,7 +2278,7 @@ package stab.tools.compiler {
                 return;
             }
             validateAnnotationSection(destructorDeclaration.Annotations, ElementType.METHOD);
-            var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = destructorDeclaration.getUserData(typeof(MethodBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(destructorDeclaration.Annotations, methodBuilder);
             setExceptions(methodBuilder, destructorDeclaration);
         }
@@ -2289,7 +2288,7 @@ package stab.tools.compiler {
                 return;
             }
             validateAnnotationSection(constructorDeclaration.Annotations, ElementType.METHOD);
-            var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = constructorDeclaration.getUserData(typeof(MethodBuilder));
             if (!methodBuilder.IsStatic) {
                 var typeInfo = methodBuilder.DeclaringType;
                 if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2300,7 +2299,7 @@ package stab.tools.compiler {
             var it = methodBuilder.Parameters.iterator();
             foreach (var p in constructorDeclaration.Parameters) {
                 validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
-                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (ParameterBuilder)it.next());
             }
             setExceptions(methodBuilder, constructorDeclaration);
         }
@@ -2310,7 +2309,7 @@ package stab.tools.compiler {
                 return;
             }
             validateAnnotationSection(enumConstant.Annotations, ElementType.FIELD);
-            var field = enumConstant.getUserData(typeof(JvmFieldBuilder));
+            var field = enumConstant.getUserData(typeof(FieldBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(enumConstant.Annotations, field);
         }
 
@@ -2330,7 +2329,7 @@ package stab.tools.compiler {
             bytecodeGenerator.emitAccessorAnnotations(get, indexerDeclaration.Annotations);
             bytecodeGenerator.emitAccessorAnnotations(set, indexerDeclaration.Annotations);
             if (get != null) {
-                var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = get.getUserData(typeof(MethodBuilder));
                 if (!methodBuilder.IsStatic) {
                     var typeInfo = methodBuilder.DeclaringType;
                     if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2340,12 +2339,12 @@ package stab.tools.compiler {
 				var it = methodBuilder.Parameters.iterator();
 				foreach (var p in indexerDeclaration.Parameters) {
 					validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
-					bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+					bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (ParameterBuilder)it.next());
 				}
                 setExceptions(methodBuilder, get);
             }
             if (set != null) {
-                var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = set.getUserData(typeof(MethodBuilder));
                 if (!methodBuilder.IsStatic) {
                     var typeInfo = methodBuilder.DeclaringType;
                     if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2355,7 +2354,7 @@ package stab.tools.compiler {
 				var it = methodBuilder.Parameters.iterator();
 				foreach (var p in indexerDeclaration.Parameters) {
 					validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
-					bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+					bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (ParameterBuilder)it.next());
 				}
                 setExceptions(methodBuilder, set);
             }
@@ -2377,7 +2376,7 @@ package stab.tools.compiler {
             bytecodeGenerator.emitAccessorAnnotations(get, propertyDeclaration.Annotations);
             bytecodeGenerator.emitAccessorAnnotations(set, propertyDeclaration.Annotations);
             if (get != null) {
-                var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = get.getUserData(typeof(MethodBuilder));
                 if (!methodBuilder.IsStatic) {
                     var typeInfo = methodBuilder.DeclaringType;
                     if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2387,7 +2386,7 @@ package stab.tools.compiler {
                 setExceptions(methodBuilder, get);
             }
             if (set != null) {
-                var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = set.getUserData(typeof(MethodBuilder));
                 if (!methodBuilder.IsStatic) {
                     var typeInfo = methodBuilder.DeclaringType;
                     if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2404,16 +2403,16 @@ package stab.tools.compiler {
                 return;
             }
             validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
-            var method = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var method = methodDeclaration.getUserData(typeof(MethodBuilder));
             if (methodDeclaration.DefaultValue != null) {
                 validateAnnotationArgument(method, methodDeclaration.DefaultValue);
             }
-            var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
             bytecodeGenerator.generateInterfaceMethodAnnotations(methodDeclaration);
             var it = methodBuilder.Parameters.iterator();
             foreach (var p in methodDeclaration.Parameters) {
                 validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
-                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (ParameterBuilder)it.next());
             }
             setExceptions(methodBuilder, methodDeclaration);
         }
@@ -2423,13 +2422,13 @@ package stab.tools.compiler {
                 return;
             }
             validateAnnotationSection(delegateDeclaration.Annotations, ElementType.TYPE);
-            var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = delegateDeclaration.getUserData(typeof(TypeBuilder));
             bytecodeGenerator.generateAnnotationsBytecode(delegateDeclaration.Annotations, typeBuilder);
-			var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethods().first(p => p.Name.equals("invoke"));
+			var methodBuilder = (MethodBuilder)typeBuilder.getMethods().first(p => p.Name.equals("invoke"));
             var it = methodBuilder.Parameters.iterator();
             foreach (var p in delegateDeclaration.Parameters) {
                 validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
-                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (ParameterBuilder)it.next());
             }
         }
 
@@ -2440,15 +2439,15 @@ package stab.tools.compiler {
             validateAnnotationSection(methodDeclaration.Annotations, ElementType.METHOD);
             foreach (var section in methodDeclaration.Annotations) {
                 foreach (var annotation in section.Annotations) {
-                    if (annotation.getUserData(typeof(JvmTypeInfo)).FullName.equals("stab/lang/Conditional")) {
-                        var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
-                        if (methodBuilder.ReturnType != JvmTypeInfo.VOID) {
+                    if (annotation.getUserData(typeof(TypeInfo)).FullName.equals("stab/lang/Conditional")) {
+                        var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
+                        if (methodBuilder.ReturnType != context.TypeSystem.VoidType) {
                             context.addError(CompileErrorId.ConditionalMethodNotVoid, methodDeclaration);
                         }
                     }
                 }
             }
-            var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
             if (!methodBuilder.IsStatic) {
                 var typeInfo = methodBuilder.DeclaringType;
                 if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2459,7 +2458,7 @@ package stab.tools.compiler {
             var it = methodBuilder.Parameters.iterator();
             foreach (var p in methodDeclaration.Parameters) {
                 validateAnnotationSection(p.Annotations, ElementType.PARAMETER);
-                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (JvmParameterBuilder)it.next());
+                bytecodeGenerator.generateAnnotationsBytecode(p.Annotations, (ParameterBuilder)it.next());
             }
             setExceptions(methodBuilder, methodDeclaration);
         }
@@ -2470,7 +2469,7 @@ package stab.tools.compiler {
             }
             validateAnnotationSection(fieldDeclaration.Annotations, ElementType.FIELD);
             foreach (var decl in fieldDeclaration.Declarators) {
-                var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                var fieldBuilder = decl.getUserData(typeof(FieldBuilder));
                 if (!fieldBuilder.IsStatic) {
                     var typeInfo = fieldBuilder.DeclaringType;
                     if (typeInfo.Annotations.firstOrDefault(p => p.Type.FullName.equals("stab/lang/StaticClass")) != null) {
@@ -2505,8 +2504,8 @@ package stab.tools.compiler {
             }
         }
         
-        private void validateAnnotationArgument(JvmTypeInfo annotationType, String name, ExpressionNode expression) {
-            var method = annotationType.getMethod(name, Query.empty<JvmTypeInfo>());
+        private void validateAnnotationArgument(TypeInfo annotationType, String name, ExpressionNode expression) {
+            var method = annotationType.getMethod(name, Query.empty<TypeInfo>());
             if (method == null) {
                 context.addError(CompileErrorId.UnresolvedName, expression, name);
             } else {
@@ -2514,7 +2513,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void validateAnnotationArgument(JvmMethodInfo method, ExpressionNode expression) {
+        private void validateAnnotationArgument(MethodInfo method, ExpressionNode expression) {
             context.CodeValidationContext.IsStatic = true;
             switch (expression.ExpressionKind) {
             case Annotation: {
@@ -2567,7 +2566,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void validateAnnotationArrayArgumentElement(JvmTypeInfo elementType, ExpressionNode expression) {
+        private void validateAnnotationArrayArgumentElement(TypeInfo elementType, ExpressionNode expression) {
             context.CodeValidationContext.IsStatic = true;
             switch (expression.ExpressionKind) {
             case Annotation: {
@@ -2615,7 +2614,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void setExceptions(JvmMethodBuilder methodBuilder, SyntaxNode node) {
+        private void setExceptions(MethodBuilder methodBuilder, SyntaxNode node) {
             foreach (var av in methodBuilder.Annotations) {
                 if (av.Type.FullName.equals("stab/lang/Throws")) {
                     foreach (var elt in av.getArgument("value").Elements) {
@@ -2653,8 +2652,8 @@ package stab.tools.compiler {
                 foreach (var methodBuilder in context.ConstructorBuilders) {
                     var baseConstructor = methodBuilder.DeclaringType.BaseType.getMethod("<init>",
                             (methodBuilder.DeclaringType.IsEnum)
-                                ? new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT }
-                                : Query.empty<JvmTypeInfo>());
+                                ? new ArrayList<TypeInfo> { context.TypeSystem.StringType, context.TypeSystem.IntType }
+                                : Query.empty<TypeInfo>());
                     if (baseConstructor == null) {
                         context.addError(CompileErrorId.BaseMissingDefaultConstructor,
                             methodBuilder.DeclaringType.getUserData(typeof(ClassDeclarationNode)),
@@ -2709,7 +2708,7 @@ package stab.tools.compiler {
             	var node = (SyntaxNode)m;
                 switch (m.TypeMemberKind) {
 				case Method:
-		            var methodBuilder = node.getUserData(typeof(JvmMethodBuilder));
+		            var methodBuilder = node.getUserData(typeof(MethodBuilder));
 	                var member = MemberInfo.getInfo(methodBuilder);
 	                foreach (var mi in member.getOverridenMembers(context.AnnotatedTypeSystem)) {
 	                    var meth = mi.Method;
@@ -2728,11 +2727,11 @@ package stab.tools.compiler {
         }
 
         private void validateClassCode(ClassDeclarationNode classDeclaration) {
-            var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = classDeclaration.getUserData(typeof(TypeBuilder));
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
             try {
-                var t = visitBaseTypes(typeBuilder, new HashSet<JvmTypeInfo>());
+                var t = visitBaseTypes(typeBuilder, new HashSet<TypeInfo>());
                 if (t != null) {
                     throw context.error(CompileErrorId.CircularBaseTypeDependency, classDeclaration,
                         BytecodeHelper.getDisplayName(typeBuilder), BytecodeHelper.getDisplayName(t));
@@ -2792,7 +2791,7 @@ package stab.tools.compiler {
             }
         }
 
-        private static JvmTypeInfo visitBaseTypes(JvmTypeInfo type, HashSet<JvmTypeInfo> visited) {
+        private static TypeInfo visitBaseTypes(TypeInfo type, HashSet<TypeInfo> visited) {
             if (!visited.add(type)) {
                 return type.IsInterface ? type : type.BaseType;
             }
@@ -2813,7 +2812,7 @@ package stab.tools.compiler {
         }
 
         private void validateDestructorCode(DestructorDeclarationNode destructorDeclaration) {
-            var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = destructorDeclaration.getUserData(typeof(MethodBuilder));
             methodBuilder.addOrReplaceUserData(destructorDeclaration);
             try {
                 context.CodeValidationContext.enterMethod(methodBuilder);
@@ -2828,9 +2827,9 @@ package stab.tools.compiler {
         }
 
         private void validateConstructorCode(ConstructorDeclarationNode constructorDeclaration) {
-            var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = constructorDeclaration.getUserData(typeof(MethodBuilder));
             methodBuilder.addOrReplaceUserData(constructorDeclaration);
-            var typeBuilder = (JvmTypeBuilder)methodBuilder.DeclaringType;
+            var typeBuilder = (TypeBuilder)methodBuilder.DeclaringType;
             try {
                 context.CodeValidationContext.enterMethod(methodBuilder);
                 
@@ -2846,7 +2845,7 @@ package stab.tools.compiler {
                         }
                     }
 					context.CodeValidationContext.IsStatic = false;
-                    var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, initializer.Arguments, JvmTypeInfo.VOID);
+                    var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, initializer.Arguments, context.TypeSystem.VoidType);
 					if (constructor == null) {
                         context.addError(CompileErrorId.BaseMissingConstructor,
                             constructorDeclaration,
@@ -2857,12 +2856,12 @@ package stab.tools.compiler {
                     initializer.addUserData(info);
                 } else if (!isStatic) {
                     // TODO: check overloading
-                    JvmMethodInfo base;
+                    MethodInfo base;
                     if (typeBuilder.IsEnum) {
-                        var paramTypes = new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT };
+                        var paramTypes = new ArrayList<TypeInfo> { context.TypeSystem.StringType, context.TypeSystem.IntType };
                         base = typeBuilder.BaseType.getMethod("<init>", paramTypes);
                     } else {
-                        base = typeBuilder.getBaseType().getMethod("<init>", Query.empty<JvmTypeInfo>());
+                        base = typeBuilder.getBaseType().getMethod("<init>", Query.empty<TypeInfo>());
                     }
                     if (base == null) {
                         context.addError(CompileErrorId.BaseMissingDefaultConstructor,
@@ -2889,18 +2888,18 @@ package stab.tools.compiler {
             foreach (var e in enumConstant.Arguments) {
                 expressionValidator.handleExpression(e, null, true);
             }
-            var fieldBuilder = enumConstant.getUserData(typeof(JvmFieldBuilder));
-            var typeBuilder = (JvmTypeBuilder)fieldBuilder.DeclaringType;
+            var fieldBuilder = enumConstant.getUserData(typeof(FieldBuilder));
+            var typeBuilder = (TypeBuilder)fieldBuilder.DeclaringType;
             var constructors = typeBuilder.Methods.where(p => p.Name.equals("<init>"));
             var arguments = new ArrayList<ExpressionNode>();
             var arg1 = new SimpleNameExpressionNode();
             arg1.addUserData(new ExpressionInfo(context.TypeSystem.StringType));
             arguments.add(arg1);
             var arg2 = new SimpleNameExpressionNode();
-            arg2.addUserData(new ExpressionInfo(JvmTypeInfo.INT));
+            arg2.addUserData(new ExpressionInfo(context.TypeSystem.IntType));
             arguments.add(arg2);
             arguments.addAll(enumConstant.Arguments);
-            var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, arguments, JvmTypeInfo.VOID);
+            var constructor = expressionValidator.MethodResolver.resolveMethod(constructors, arguments, context.TypeSystem.VoidType);
 			if (constructor == null) {
 				context.addError(CompileErrorId.NoAccessibleConstructors, enumConstant,
 						BytecodeHelper.getDisplayName(typeBuilder));
@@ -2908,19 +2907,19 @@ package stab.tools.compiler {
             var info = new ExpressionInfo(typeBuilder);
             info.setMethod(constructor);
             enumConstant.addUserData(info);
-            var clinit = (JvmMethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<JvmTypeInfo>());
+            var clinit = (MethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<TypeInfo>());
             if (clinit == null) {
                 clinit = typeBuilder.defineMethod("<clinit>");
                 clinit.setStatic(true);
-                clinit.setReturnType(JvmTypeInfo.VOID);
+                clinit.setReturnType(context.TypeSystem.VoidType);
             }
         }
 
         private void validateClassIndexerCode(IndexerDeclarationNode indexerDeclaration) {
             var get = indexerDeclaration.GetAccessor;
             var set = indexerDeclaration.SetAccessor;
-            var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-            var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
+            var getBuilder = (get == null) ? null : get.getUserData(typeof(MethodBuilder));
+            var setBuilder = (set == null) ? null : set.getUserData(typeof(MethodBuilder));
             
             var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder);
             indexerDeclaration.addUserData(memberInfo);
@@ -2984,8 +2983,8 @@ package stab.tools.compiler {
         private void validateClassPropertyCode(PropertyDeclarationNode propertyDeclaration) {
             var get = propertyDeclaration.GetAccessor;
             var set = propertyDeclaration.SetAccessor;
-            var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-            var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
+            var getBuilder = (get == null) ? null : get.getUserData(typeof(MethodBuilder));
+            var setBuilder = (set == null) ? null : set.getUserData(typeof(MethodBuilder));
 
             var name = context.getIdentifier(propertyDeclaration.NameOffset, propertyDeclaration.NameLength);
             var memberInfo = MemberInfo.getInfo(getBuilder, setBuilder, name);
@@ -3048,7 +3047,7 @@ package stab.tools.compiler {
 
         private void validateAccessors(AccessorDeclarationNode get, AccessorDeclarationNode set) {
             if (get != null && get.Body != null) {
-                var methodBuilder = get.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = get.getUserData(typeof(MethodBuilder));
                 methodBuilder.addOrReplaceUserData(get);
                 try {
                     context.CodeValidationContext.enterMethod(methodBuilder);
@@ -3063,7 +3062,7 @@ package stab.tools.compiler {
                 }
             }
             if (set != null && set.Body != null) {
-                var methodBuilder = set.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = set.getUserData(typeof(MethodBuilder));
                 methodBuilder.addOrReplaceUserData(set);
                 try {
                     context.CodeValidationContext.enterMethod(methodBuilder);
@@ -3081,7 +3080,7 @@ package stab.tools.compiler {
         }
 
         private void validateClassMethodCode(MethodDeclarationNode methodDeclaration) {
-            var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
             methodBuilder.addOrReplaceUserData(methodDeclaration);
             try {
                 context.CodeValidationContext.enterMethod(methodBuilder);
@@ -3123,7 +3122,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void checkAccessibility(JvmMethodInfo method, SyntaxNode node) {
+        private void checkAccessibility(MethodInfo method, SyntaxNode node) {
             if (!method.IsPublic || !method.DeclaringType.IsPublic) {
                 return;
             }
@@ -3133,7 +3132,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void checkOverloading(JvmMethodInfo method, EnumSet<Modifier> modifiers, SyntaxNode node) {
+        private void checkOverloading(MethodInfo method, EnumSet<Modifier> modifiers, SyntaxNode node) {
             var superMethod = method.DeclaringType.getBaseClasses().selectMany(p => p.Methods).firstOrDefault(p => method.isOverriding(p));
             if (superMethod != null) {
                 if (modifiers.contains(Modifier.Virtual)) {
@@ -3158,7 +3157,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void validateControlFlow(JvmMethodBuilder methodBuilder, BlockStatementNode body, boolean insertReturn) {
+        private void validateControlFlow(MethodBuilder methodBuilder, BlockStatementNode body, boolean insertReturn) {
             var uninitializedLocals = this.reachabilityChecker.checkMethod(methodBuilder, body, insertReturn);
             foreach (var li in uninitializedLocals) {
                 if (li.assignmentCount > 0) {
@@ -3182,7 +3181,7 @@ package stab.tools.compiler {
                 if (decl.Value == null) {
                     continue;
                 }
-                var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                var fieldBuilder = decl.getUserData(typeof(FieldBuilder));
                 context.CodeValidationContext.IsStatic = fieldBuilder.IsStatic;
                 decl.Value = queryTranslator.translate(decl.Value, first);
                 expressionValidator.handleExpression(decl.Value, fieldBuilder.Type, true);
@@ -3197,12 +3196,12 @@ package stab.tools.compiler {
                 if (fieldBuilder.IsStatic) {
                     var ei = decl.Value.getUserData(typeof(ExpressionInfo));
                     if (ei != null && (!ei.IsConstant || ei.BoxingKind != BoxingKind.None)) {
-                        var typeBuilder = (JvmTypeBuilder)fieldBuilder.DeclaringType;
-                        var clinit = (JvmMethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<JvmTypeInfo>());
+                        var typeBuilder = (TypeBuilder)fieldBuilder.DeclaringType;
+                        var clinit = (MethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<TypeInfo>());
                         if (clinit == null) {
                             clinit = typeBuilder.defineMethod("<clinit>");
                             clinit.setStatic(true);
-                            clinit.setReturnType(JvmTypeInfo.VOID);
+                            clinit.setReturnType(context.TypeSystem.VoidType);
                         }
                     }
                 }
@@ -3251,7 +3250,7 @@ package stab.tools.compiler {
         }
 
         private void generateClassBytecode(ClassDeclarationNode classDeclaration) {
-            var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = classDeclaration.getUserData(typeof(TypeBuilder));
             typeBuilder.setSourceFile(PathHelper.getFileName(classDeclaration.Filename));
             context.CurrentType = typeBuilder;
             
@@ -3300,7 +3299,7 @@ package stab.tools.compiler {
         
         private void buildDocumentation(File file) {
             var doc = XmlHelper.load(new StringReader("<?xml version=\"1.0\"?><doc><members/></doc>"));
-            this.documentationBuilder = new DocumentationBuilder(context, (Element)doc.getDocumentElement().getFirstChild());
+            this.documentationBuilder = new DocumentationBuilder(context, (org.w3c.dom.Element)doc.getDocumentElement().getFirstChild());
             foreach (var compilationUnit in context.CompilationUnits) {
                 context.Text = compilationUnit.Text;
                 context.MemberResolver.enterScope();
@@ -3365,7 +3364,7 @@ package stab.tools.compiler {
         }
 
         private void buildClassDocumentation(ClassDeclarationNode classDeclaration) {
-            var typeBuilder = classDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = classDeclaration.getUserData(typeof(TypeBuilder));
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
             try {
@@ -3416,7 +3415,7 @@ package stab.tools.compiler {
         }
 
         private void buildInterfaceDocumentation(InterfaceDeclarationNode interfaceDeclaration) {
-            var typeBuilder = interfaceDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = interfaceDeclaration.getUserData(typeof(TypeBuilder));
             context.CurrentType = typeBuilder;
             context.MemberResolver.enterType(typeBuilder);
             try {
@@ -3453,7 +3452,7 @@ package stab.tools.compiler {
 
         private void buildDelegateDocumentation(DelegateDeclarationNode delegateDeclaration) {
             if (delegateDeclaration.DocumentationLength > 0) {
-                var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+                var typeBuilder = delegateDeclaration.getUserData(typeof(TypeBuilder));
                 context.CurrentType = typeBuilder;
                 documentationBuilder.buildTypeDocumentation(typeBuilder, delegateDeclaration);
             }
@@ -3462,7 +3461,7 @@ package stab.tools.compiler {
         private void buildFieldDocumentation(FieldDeclarationNode fieldDeclaration) {
             if (fieldDeclaration.DocumentationLength > 0) {
                 foreach (var decl in fieldDeclaration.Declarators) {
-                    var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                    var fieldBuilder = decl.getUserData(typeof(FieldBuilder));
                     documentationBuilder.buildFieldDocumentation(fieldBuilder, fieldDeclaration);
                 }
             }
@@ -3470,28 +3469,28 @@ package stab.tools.compiler {
         
         private void buildEnumConstantDocumentation(EnumConstantDeclarationNode enumConstantDeclaration) {
             if (enumConstantDeclaration.DocumentationLength > 0) {
-                var fieldBuilder = enumConstantDeclaration.getUserData(typeof(JvmFieldBuilder));
+                var fieldBuilder = enumConstantDeclaration.getUserData(typeof(FieldBuilder));
                 documentationBuilder.buildFieldDocumentation(fieldBuilder, enumConstantDeclaration);
             }
         }
         
         private void buildConstructorDocumentation(ConstructorDeclarationNode constructorDeclaration) {
             if (constructorDeclaration.DocumentationLength > 0) {
-                var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = constructorDeclaration.getUserData(typeof(MethodBuilder));
                 documentationBuilder.buildMethodDocumentation(methodBuilder, constructorDeclaration);
             }
         }
         
         private void buildDestructorDocumentation(DestructorDeclarationNode destructorDeclaration) {
             if (destructorDeclaration.DocumentationLength > 0) {
-                var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = destructorDeclaration.getUserData(typeof(MethodBuilder));
                 documentationBuilder.buildMethodDocumentation(methodBuilder, destructorDeclaration);
             }
         }
         
         private void buildMethodDocumentation(MethodDeclarationNode methodDeclaration) {
             if (methodDeclaration.DocumentationLength > 0) {
-                var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
                 documentationBuilder.buildMethodDocumentation(methodBuilder, methodDeclaration);
             }
         }
@@ -3500,8 +3499,8 @@ package stab.tools.compiler {
             if (indexerDeclaration.DocumentationLength > 0) {
                 var get = indexerDeclaration.GetAccessor;
                 var set = indexerDeclaration.SetAccessor;
-                var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-                var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
+                var getBuilder = (get == null) ? null : get.getUserData(typeof(MethodBuilder));
+                var setBuilder = (set == null) ? null : set.getUserData(typeof(MethodBuilder));
                 documentationBuilder.buildIndexerDocumentation(getBuilder ?? setBuilder, indexerDeclaration);
             }
         }
@@ -3510,8 +3509,8 @@ package stab.tools.compiler {
             if (propertyDeclaration.DocumentationLength > 0) {
                 var get = propertyDeclaration.GetAccessor;
                 var set = propertyDeclaration.SetAccessor;
-                var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-                var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
+                var getBuilder = (get == null) ? null : get.getUserData(typeof(MethodBuilder));
+                var setBuilder = (set == null) ? null : set.getUserData(typeof(MethodBuilder));
                 var name = propertyDeclaration.getUserData(typeof(MemberInfo)).Name;
                 documentationBuilder.buildPropertyDocumentation(getBuilder ?? setBuilder, name, propertyDeclaration);
             }
@@ -3520,12 +3519,12 @@ package stab.tools.compiler {
         ///////////////////////////////////////////////////////////////////////////////////////////
         
         private class PartialTypeInfo {
-            JvmTypeBuilder typeBuilder;
-            HashMap<JvmMethodBuilder, PartialMethodInfo> partialMethods;
+            TypeBuilder typeBuilder;
+            HashMap<MethodBuilder, PartialMethodInfo> partialMethods;
             
-            PartialTypeInfo(JvmTypeBuilder typeBuilder) {
+            PartialTypeInfo(TypeBuilder typeBuilder) {
                 this.typeBuilder = typeBuilder;
-                this.partialMethods = new HashMap<JvmMethodBuilder, PartialMethodInfo>();
+                this.partialMethods = new HashMap<MethodBuilder, PartialMethodInfo>();
             }
         }
         

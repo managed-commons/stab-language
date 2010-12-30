@@ -15,18 +15,18 @@
    limitations under the License.
  */
 using java.lang;
-using stab.tools.bytecode;
+using stab.reflection;
 
 package stab.tools.compiler {
 
     public class ExpressionInfo {
-        ExpressionInfo(JvmTypeInfo type) {
+        ExpressionInfo(TypeInfo type) {
             this.Type = type;
             this.BoxingKind = BoxingKind.None;
             this.Negate = true;
         }
     
-        ExpressionInfo(JvmTypeInfo type, Object value) {
+        ExpressionInfo(TypeInfo type, Object value) {
             this.Type = type;
             this.Value = value;
             this.IsConstant = true;
@@ -34,7 +34,7 @@ package stab.tools.compiler {
             this.Negate = true;
         }
         
-        public JvmTypeInfo Type {
+        public TypeInfo Type {
             get;
             set;
         }
@@ -54,12 +54,12 @@ package stab.tools.compiler {
             set;
         }
         
-        JvmMethodInfo BoxingMethod {
+        MethodInfo BoxingMethod {
             get;
             set;
         }
         
-        JvmTypeInfo OriginalType {
+        TypeInfo OriginalType {
             get;
             set;
         }
@@ -74,12 +74,12 @@ package stab.tools.compiler {
             set;
         }
         
-        Iterable<JvmMethodInfo> ExtensionMethods {
+        Iterable<MethodInfo> ExtensionMethods {
             get;
             set;
         }
         
-        public JvmMethodInfo Method {
+        public MethodInfo Method {
             get;
             set;
         }

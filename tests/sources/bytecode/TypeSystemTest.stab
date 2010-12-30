@@ -21,14 +21,14 @@ using org.junit;
 using stab.query;
 using stab.tools.helpers;
 
-package stab.tools.bytecode.test {
+package stab.reflection.test {
 
 	public class TypeSystemTest {
 		private String bin = System.getProperty("user.dir") + "/tests/tests.jar";
 		
 		[Test]
 		public void testObjectMethods() {
-			var typeSystem = new JvmTypeSystem(new String[] {});
+			var typeSystem = new Library(new String[] {});
 			var typeInfo = typeSystem.getType("java/lang/Object");
 			var names = Query.asIterable(new String[] { 
 				"<init>", "equals", "getClass", "hashCode", "notify", "notifyAll", "toString", "wait", "wait", "wait" });
@@ -37,9 +37,9 @@ package stab.tools.bytecode.test {
 		
 		[Test]
 		public void testBaseTypes() {
-			var typeSystem = new JvmTypeSystem(new String[] {});
+			var typeSystem = new Library(new String[] {});
 			var stringType = typeSystem.getType("java/lang/String");
-			var types = Query.asIterable(new JvmTypeInfo[] {
+			var types = Query.asIterable(new TypeInfo[] {
 				typeSystem.getType("java/lang/Object"),
 				typeSystem.getType("java/io/Serializable"),
 				typeSystem.getType("java/lang/CharSequence"),
@@ -62,9 +62,9 @@ package stab.tools.bytecode.test {
 		
 		[Test]
 		public void testConstructedGenericClass() {
-			var typeSystem = new JvmTypeSystem(new String[] { bin });
+			var typeSystem = new Library(new String[] { bin });
 			var typeInfo = typeSystem.getType("stab/bytecode/test/classes/GenericClass");
-			var args = new ArrayList<JvmTypeInfo>();
+			var args = new ArrayList<TypeInfo>();
 			args.add(typeSystem.getType("java/lang/String"));
 			doTest("ConstructedGenericClass", typeSystem.getGenericType(typeInfo, args));
 		}
@@ -100,12 +100,12 @@ package stab.tools.bytecode.test {
 		}
 		
 		private void doTest(String test) {
-			var typeSystem = new JvmTypeSystem(new String[] { bin });
+			var typeSystem = new Library(new String[] { bin });
 			var typeInfo = typeSystem.getType("stab/bytecode/test/classes/" + test);
 			doTest(test, typeInfo);
 		}
 		
-		private void doTest(String test, JvmTypeInfo typeInfo) {
+		private void doTest(String test, TypeInfo typeInfo) {
 			String result = typeToString(typeInfo, "");
 			
 			var userDir = System.getProperty("user.dir");
@@ -136,7 +136,7 @@ package stab.tools.bytecode.test {
 			}
 		}
 		
-		private String typeToString(JvmTypeInfo typeInfo, String indent) {
+		private String typeToString(TypeInfo typeInfo, String indent) {
 			var sb = new StringBuilder();
 			sb.append(indent).append("// ").append(typeInfo.Descriptor).append(" / ").append(typeInfo.Signature).append("\n");
 			annotations(typeInfo.Annotations, indent, sb);
@@ -283,7 +283,7 @@ package stab.tools.bytecode.test {
 			return sb.toString();
 		}
 
-		private void annotations(Iterable<JvmAnnotationValue> annotations, String indent, StringBuilder sb) {
+		private void annotations(Iterable<AnnotationValue> annotations, String indent, StringBuilder sb) {
 			foreach (var a in annotations) {
 				sb.append(indent).append("[");
 				annotation(a, indent, sb);
@@ -291,7 +291,7 @@ package stab.tools.bytecode.test {
 			}
 		}
 
-		private void annotation(JvmAnnotationValue a, String indent, StringBuilder sb) {
+		private void annotation(AnnotationValue a, String indent, StringBuilder sb) {
 			sb.append(a.Type.FullName);
 			if (a.ArgumentNames.any()) {
 				sb.append("(");
@@ -306,7 +306,7 @@ package stab.tools.bytecode.test {
 					sb.append(arg.Name).append(" = ");
 					switch (arg.AnnotationArgumentKind) {
 					case Annotation:
-						annotation((JvmAnnotationValue)arg, indent, sb);
+						annotation((AnnotationValue)arg, indent, sb);
 						break;
 						
 					case Boolean:
@@ -321,7 +321,7 @@ package stab.tools.bytecode.test {
 			}
 		}
 	
-		private void typeName(JvmTypeInfo typeInfo, StringBuilder sb) {
+		private void typeName(TypeInfo typeInfo, StringBuilder sb) {
 			sb.append(typeInfo.FullName);
 			if (typeInfo.GenericArguments.any()) {
 				sb.append("<");

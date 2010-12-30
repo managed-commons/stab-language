@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 
 package stab.tools.compiler {
@@ -25,13 +25,13 @@ package stab.tools.compiler {
     public class TypeFinder {
         private Node root;
         
-        public TypeFinder(JvmTypeSystem typeSystem) {
+        public TypeFinder(Library typeSystem) {
             this.TypeSystem = typeSystem;
             this.root = new Node();
             initialize();
         }
 
-        public JvmTypeSystem TypeSystem {
+        public Library TypeSystem {
             get;
             private set;
         }

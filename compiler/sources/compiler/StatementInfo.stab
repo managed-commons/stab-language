@@ -14,7 +14,7 @@
    See the License for the specific language governing permissions and
    limitations under the License.
  */
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
@@ -39,17 +39,17 @@ package stab.tools.compiler {
             set;
         }
         
-        JvmLabelMarker BeginLabel {
+        LabelMarker BeginLabel {
             get;
             set;
         }
         
-        JvmLabelMarker ContinueLabel {
+        LabelMarker ContinueLabel {
             get;
             set;
         }
         
-        JvmLabelMarker EndLabel {
+        LabelMarker EndLabel {
             get;
             set;
         }

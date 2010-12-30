@@ -25,7 +25,7 @@ using org.eclipse.swt;
 using org.eclipse.swt.custom;
 using org.eclipse.swt.graphics;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
@@ -194,17 +194,17 @@ package stab.tools.eclipse.editors {
 			private set;
 		}
 		
-		public JvmTypeSystem TypeSystem {
+		public Library TypeSystem {
 			get;
 			private set;
 		}
 		
-		public JvmTypeSystem AnnotatedTypeSystem {
+		public Library AnnotatedTypeSystem {
 			get;
 			private set;
 		}
 		
-		public void update(char[] text, CompilationUnitNode compilationUnit, JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem) {
+		public void update(char[] text, CompilationUnitNode compilationUnit, Library typeSystem, Library annotatedTypeSystem) {
 			if (text != this.Text) {
 				return;
 			}

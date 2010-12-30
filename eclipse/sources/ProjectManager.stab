@@ -20,7 +20,7 @@ using java.util;
 using org.eclipse.core.resources;
 using org.eclipse.ui;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.eclipse.helpers;
 using stab.tools.syntaxtree;
 
@@ -98,12 +98,12 @@ package stab.tools.eclipse {
 			set;
 		}
 
-		public JvmTypeSystem TypeSystem {
+		public Library TypeSystem {
 			get;
 			set;
 		}
 
-		public JvmTypeSystem AnnotatedTypeSystem {
+		public Library AnnotatedTypeSystem {
 			get;
 			set;
 		}

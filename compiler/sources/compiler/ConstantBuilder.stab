@@ -15,7 +15,7 @@
    limitations under the License.
  */
 using java.lang;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
 
@@ -2129,7 +2129,7 @@ package stab.tools.compiler {
             case Character: {
                 char cvalue = ParserHelper.unescapeChar(context.Text, literal.ValueOffset + 1, literal.ValueLength - 2);
                 info.Value = Character.valueOf((negative) ? (char)-cvalue : cvalue);
-                info.Type = JvmTypeInfo.CHAR;
+                info.Type = context.TypeSystem.CharType;
                 break;
             }
             case String: {
@@ -2147,12 +2147,12 @@ package stab.tools.compiler {
                 try {
                     int ivalue = (negative) ? Integer.parseInt("-" + value) : Integer.parseInt(value);
                     info.Value = Integer.valueOf(ivalue);
-                    info.Type = JvmTypeInfo.INT;
+                    info.Type = context.TypeSystem.IntType;
                 } catch (NumberFormatException e1) {
                     try {
                         long lvalue = (negative) ? Long.parseLong("-" + value) : Long.parseLong(value);
                         info.Value = Long.valueOf(lvalue);
-                        info.Type = JvmTypeInfo.LONG;
+                        info.Type = context.TypeSystem.LongType;
                     } catch (NumberFormatException e2) {
                         throw context.error(CompileErrorId.IntegralConstantTooLarge, literal);
                     }
@@ -2164,12 +2164,12 @@ package stab.tools.compiler {
                 try {
                     int ivalue = ParserHelper.decodeHexadecimalInteger(value);
                     info.Value = Integer.valueOf((negative) ? -ivalue : ivalue);
-                    info.Type = JvmTypeInfo.INT;
+                    info.Type = context.TypeSystem.IntType;
                 } catch (NumberFormatException e) {
                     try {
                         long lvalue = ParserHelper.decodeHexadecimalLong(value);
                         info.Value = Long.valueOf((negative) ? -lvalue : lvalue);
-                        info.Type = JvmTypeInfo.LONG;
+                        info.Type = context.TypeSystem.LongType;
                     } catch (NumberFormatException e2) {
                         throw context.error(CompileErrorId.IntegralConstantTooLarge, literal);
                     }
@@ -2181,7 +2181,7 @@ package stab.tools.compiler {
                 try {
                     long lvalue = (negative) ? Long.parseLong("-" + value) : Long.parseLong(value);
                     info.Value = Long.valueOf(lvalue);
-                    info.Type = JvmTypeInfo.LONG;
+                    info.Type = context.TypeSystem.LongType;
                 } catch (NumberFormatException e2) {
                     throw context.error(CompileErrorId.IntegralConstantTooLarge, literal);
                 }
@@ -2192,7 +2192,7 @@ package stab.tools.compiler {
                 try {
                     long lvalue = ParserHelper.decodeHexadecimalLong(value);
                     info.Value = Long.valueOf((negative) ? -lvalue : lvalue);
-                    info.Type = JvmTypeInfo.LONG;
+                    info.Type = context.TypeSystem.LongType;
                 } catch (NumberFormatException e) {
                     throw context.error(CompileErrorId.IntegralConstantTooLarge, literal);
                 }
@@ -2206,7 +2206,7 @@ package stab.tools.compiler {
                     }
                     float fvalue = Float.parseFloat(value);
                     info.Value = Float.valueOf((negative) ? -fvalue : fvalue);
-                    info.Type = JvmTypeInfo.FLOAT;
+                    info.Type = context.TypeSystem.FloatType;
                 } catch (NumberFormatException e2) {
                     throw new IllegalStateException("Internal error: float parsing failed");
                 }
@@ -2220,7 +2220,7 @@ package stab.tools.compiler {
                     }
                     double dvalue = Double.parseDouble(value);
                     info.Value = Double.valueOf((negative) ? -dvalue : dvalue);
-                    info.Type = JvmTypeInfo.DOUBLE;
+                    info.Type = context.TypeSystem.DoubleType;
                 } catch (NumberFormatException e2) {
                     throw new IllegalStateException("Internal error: double parsing failed");
                 }
@@ -2234,7 +2234,7 @@ package stab.tools.compiler {
                     }
                     double dvalue = Double.parseDouble(value);
                     info.Value = Double.valueOf((negative) ? -dvalue : dvalue);
-                    info.Type = JvmTypeInfo.DOUBLE;
+                    info.Type = context.TypeSystem.DoubleType;
                 } catch (NumberFormatException e1) {
                     throw new IllegalStateException("Internal error: double parsing failed");
                 }
@@ -2245,12 +2245,12 @@ package stab.tools.compiler {
             }
             case True: {
                 info.Value = Boolean.TRUE;
-                info.Type = JvmTypeInfo.BOOLEAN;
+                info.Type = context.TypeSystem.BooleanType;
                 break;
             }
             case False: {
                 info.Value = Boolean.FALSE;
-                info.Type = JvmTypeInfo.BOOLEAN;
+                info.Type = context.TypeSystem.BooleanType;
                 break;
             }
             default:

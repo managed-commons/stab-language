@@ -23,7 +23,7 @@ using org.eclipse.jface.text.source;
 using org.eclipse.ui.progress;
 using org.eclipse.ui.texteditor;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.eclipse.helpers;
 using stab.tools.syntaxtree;
 
@@ -232,11 +232,11 @@ package stab.tools.eclipse.editors {
 			private SourceEditor editor;
 			private char[] text;
 			private CompilationUnitNode compilationUnit;
-			private JvmTypeSystem typeSystem;
-			private JvmTypeSystem annotatedTypeSystem;
+			private Library typeSystem;
+			private Library annotatedTypeSystem;
 		
 			HighlightJob(SourceEditor editor, char[] text, CompilationUnitNode compilationUnit,
-					JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem)
+					Library typeSystem, Library annotatedTypeSystem)
 					: super("Semantic Highlight") {
 				this.editor = editor;
 				this.text = text;

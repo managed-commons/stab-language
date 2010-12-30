@@ -18,12 +18,15 @@ using java.lang;
 using java.io;
 using java.util;
 using javax.xml.xpath;
-using org.w3c.dom;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
+
+using Document = org.w3c.dom.Document;
+using Element = org.w3c.dom.Element;
+using Node = org.w3c.dom.Node;
  
 package stab.tools.compiler {
 
@@ -31,9 +34,9 @@ package stab.tools.compiler {
         private CompilerContext context;
         private Document document;
         private Element members;
-        private JvmTypeInfo type;
-        private JvmFieldInfo field;
-        private JvmMethodInfo method;
+        private TypeInfo type;
+        private FieldInfo field;
+        private MethodInfo method;
         private MemberKind memberKind;
         private SyntaxNode node;
         
@@ -51,7 +54,7 @@ package stab.tools.compiler {
             appendDocumentation("N:" + packageName, comment);
         }
 
-        void buildTypeDocumentation(JvmTypeInfo type, TypeMemberNode typeDeclaration) {
+        void buildTypeDocumentation(TypeInfo type, TypeMemberNode typeDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, typeDeclaration.DocumentationOffset,
                     typeDeclaration.DocumentationLength);
             memberKind = MemberKind.Type;
@@ -60,7 +63,7 @@ package stab.tools.compiler {
             appendDocumentation(getIdString(type), comment);
         }
 
-        void buildFieldDocumentation(JvmFieldInfo field, TypeMemberNode fieldDeclaration) {
+        void buildFieldDocumentation(FieldInfo field, TypeMemberNode fieldDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, fieldDeclaration.DocumentationOffset,
                     fieldDeclaration.DocumentationLength);
             memberKind = MemberKind.Field;
@@ -69,7 +72,7 @@ package stab.tools.compiler {
             appendDocumentation(getIdString(field), comment);
         }
 
-        void buildMethodDocumentation(JvmMethodInfo method, TypeMemberNode methodDeclaration) {
+        void buildMethodDocumentation(MethodInfo method, TypeMemberNode methodDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, methodDeclaration.DocumentationOffset,
                     methodDeclaration.DocumentationLength);
             memberKind = MemberKind.Method;
@@ -78,7 +81,7 @@ package stab.tools.compiler {
             appendDocumentation(getIdString(method), comment);
         }
 
-        void buildIndexerDocumentation(JvmMethodInfo method, TypeMemberNode indexerDeclaration) {
+        void buildIndexerDocumentation(MethodInfo method, TypeMemberNode indexerDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, indexerDeclaration.DocumentationOffset,
                     indexerDeclaration.DocumentationLength);
             memberKind = MemberKind.Indexer;
@@ -87,7 +90,7 @@ package stab.tools.compiler {
             appendDocumentation(getIdString(method), comment);
         }
 
-        void buildPropertyDocumentation(JvmMethodInfo method, String name, TypeMemberNode propertyDeclaration) {
+        void buildPropertyDocumentation(MethodInfo method, String name, TypeMemberNode propertyDeclaration) {
             var comment = ParserHelper.decodeDocumentation(context.Text, propertyDeclaration.DocumentationOffset,
                     propertyDeclaration.DocumentationLength);
             memberKind = MemberKind.Property;
@@ -96,16 +99,16 @@ package stab.tools.compiler {
             appendDocumentation(getIdString(method), comment);
         }
         
-        private static String getIdString(JvmTypeInfo type) {
+        private static String getIdString(TypeInfo type) {
             return "T:" + getIdName(type);
         }
         
-        private static String getIdString(JvmFieldInfo field) {
+        private static String getIdString(FieldInfo field) {
             return "F:" + getIdName(field.DeclaringType) + "." + field.Name;
         }
         
-        private static String getIdString(JvmMethodInfo method) {
-            var p = method.getUserData(typeof(PropertyInfo));
+        private static String getIdString(MethodInfo method) {
+            var p = method.getUserData(typeof(PropertyMemberInfo));
             var sb = new StringBuilder();
             if (p != null) {
                 sb.append("P:");
@@ -113,11 +116,11 @@ package stab.tools.compiler {
                 sb.append(p.Name);
                 return sb.toString();
             }
-            var i = method.getUserData(typeof(IndexerInfo));
+            var i = method.getUserData(typeof(IndexerMemberInfo));
             int nparams = method.Parameters.count();
             if (i != null) {
                 sb.append("P:");
-                if (method.ReturnType == JvmTypeInfo.VOID) {
+                if (method.ReturnType == method.ReturnType.Library.VoidType) {
                     nparams--;
                 }
             } else {
@@ -141,7 +144,7 @@ package stab.tools.compiler {
             return sb.toString();
         }
  
-        private static String getIdName(JvmTypeInfo type) {
+        private static String getIdName(TypeInfo type) {
             switch (type.TypeKind) {
             case Boolean:
                 return "boolean";
@@ -314,7 +317,7 @@ package stab.tools.compiler {
                     name = cref.substring(0, idx);
                     cref = cref.substring(idx + 1);
                 }
-                var members = context.MemberResolver.resolveName(context.CurrentType, name, Query.empty<JvmTypeInfo>()).toList();
+                var members = context.MemberResolver.resolveName(context.CurrentType, name, Query.empty<TypeInfo>()).toList();
                 if (!members.any()) {
                     if (cref == null) {
                         context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
@@ -364,7 +367,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void replaceCref(Element element, boolean exception, JvmTypeInfo type, String suffix, String arguments) {
+        private void replaceCref(Element element, boolean exception, TypeInfo type, String suffix, String arguments) {
             if (suffix == null) {
                 if (arguments != null) {
                     context.addWarning(CompileErrorId.UnresolvedCref, node, element.getAttribute("cref"));
@@ -439,7 +442,7 @@ package stab.tools.compiler {
                         element.setAttribute("cref", getIdString(member.Method));
                         return;
                     } else if (arguments != null && arguments.endsWith(")")) {
-                        var args = new ArrayList<JvmTypeInfo>();
+                        var args = new ArrayList<TypeInfo>();
                         if (arguments.length() > 2) {
                             arguments = arguments.substring(1, arguments.length() - 1);
                             int idx;
@@ -479,38 +482,38 @@ package stab.tools.compiler {
             }
         }
 
-        private JvmTypeInfo getType(String name) {
+        private TypeInfo getType(String name) {
             name = name.trim();
             int dimensions = 0;
             while (name.endsWith("[]")) {
                 dimensions++;
                 name = name.substring(0, name.length() - 2);
             }
-            JvmTypeInfo result;
+            TypeInfo result;
             switch (name) {
             case "boolean":
-                result = JvmTypeInfo.BOOLEAN;
+                result = context.TypeSystem.BooleanType;
                 break;
             case "byte":
-                result = JvmTypeInfo.BYTE;
+                result = context.TypeSystem.ByteType;
                 break;
             case "char":
-                result = JvmTypeInfo.CHAR;
+                result = context.TypeSystem.CharType;
                 break;
             case "short":
-                result = JvmTypeInfo.SHORT;
+                result = context.TypeSystem.ShortType;
                 break;
             case "int":
-                result = JvmTypeInfo.INT;
+                result = context.TypeSystem.IntType;
                 break;
             case "long":
-                result = JvmTypeInfo.LONG;
+                result = context.TypeSystem.LongType;
                 break;
             case "float":
-                result = JvmTypeInfo.FLOAT;
+                result = context.TypeSystem.FloatType;
                 break;
             case "double":
-                result = JvmTypeInfo.DOUBLE;
+                result = context.TypeSystem.DoubleType;
                 break;
             default:
                 int idx = name.indexOf(".");
@@ -522,7 +525,7 @@ package stab.tools.compiler {
                     prefix = name.substring(0, idx);
                     name = name.substring(idx + 1);
                 }
-                var members = context.MemberResolver.resolveName(context.CurrentType, prefix, Query.empty<JvmTypeInfo>()).toList();
+                var members = context.MemberResolver.resolveName(context.CurrentType, prefix, Query.empty<TypeInfo>()).toList();
                 if (!members.any()) {
                     if (name == null) {
                         return null;

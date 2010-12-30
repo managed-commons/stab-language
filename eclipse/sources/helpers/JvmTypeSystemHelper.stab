@@ -16,14 +16,14 @@
  */
 using java.lang;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 
 package stab.tools.eclipse.helpers {
 
 	public class JvmTypeSystemHelper {
 	
-		public static boolean isStructurallyEqual(JvmTypeInfo oldType, JvmTypeInfo newType) {
+		public static boolean isStructurallyEqual(TypeInfo oldType, TypeInfo newType) {
 			if (oldType.IsNestedPrivate) {
 				return true;
 			}
@@ -118,8 +118,8 @@ package stab.tools.eclipse.helpers {
 			return true;
 		}
 		
-		public static JvmTypeInfo getType(JvmTypeSystem typeSystem, String fullName) {
-			JvmTypeInfo result = null;
+		public static TypeInfo getType(Library typeSystem, String fullName) {
+			TypeInfo result = null;
 			int index;
 			while ((index = fullName.indexOf('$')) != -1) {
 				String prefix = fullName.substring(0, index);
@@ -138,20 +138,20 @@ package stab.tools.eclipse.helpers {
 			return result;
 		}
 		
-		public static void cloneTypes(Iterable<JvmTypeInfo> types, JvmTypeSystem targetTypeSystem) {
+		public static void cloneTypes(Iterable<TypeInfo> types, Library targetTypeSystem) {
 			var t0 = System.nanoTime();
 			
 			foreach (var type in types) {
 				defineType(type, targetTypeSystem, null);
 			}
 			foreach (var type in types) {
-				declareType(type, targetTypeSystem, (JvmTypeBuilder)targetTypeSystem.getType(type.FullName), new Scope<String, JvmTypeInfo>());
+				declareType(type, targetTypeSystem, (TypeBuilder)targetTypeSystem.getType(type.FullName), new Scope<String, TypeInfo>());
 			}
 			
 			Environment.trace(targetTypeSystem, types.count() + " types cloned in " + ((System.nanoTime() - t0) / 1e6) + "ms");
 		}
 
-		private static boolean sameMethods(JvmMethodInfo oldMethod, JvmMethodInfo newMethod) {
+		private static boolean sameMethods(MethodInfo oldMethod, MethodInfo newMethod) {
 			if (!oldMethod.Name.equals(newMethod.Name)) {
 				return false;
 			}
@@ -168,7 +168,7 @@ package stab.tools.eclipse.helpers {
 			return true;
 		}
 
-		private static boolean sameTypes(JvmTypeInfo oldType, JvmTypeInfo newType) {
+		private static boolean sameTypes(TypeInfo oldType, TypeInfo newType) {
 			switch (oldType.TypeKind) {
 			case Boolean:
 			case Byte:
@@ -180,7 +180,7 @@ package stab.tools.eclipse.helpers {
 			case Short:
 			case Void:
 			case UnboundedWildcard:
-				return oldType == newType;
+				return oldType.TypeKind == newType.TypeKind;
 				
 			case Array:
 				if (newType.TypeKind != TypeKind.Array) {
@@ -224,11 +224,11 @@ package stab.tools.eclipse.helpers {
 			}
 		}
 		
-		private static void defineType(JvmTypeInfo type, JvmTypeSystem targetTypeSystem, JvmTypeBuilder declaringType) {
+		private static void defineType(TypeInfo type, Library targetTypeSystem, TypeBuilder declaringType) {
 			if (type.IsSynthetic) {
 				return;
 			}
-			JvmTypeBuilder clone;
+			TypeBuilder clone;
 			if (declaringType == null) {
 				clone = targetTypeSystem.defineType(type.FullName);
 			} else {
@@ -262,7 +262,7 @@ package stab.tools.eclipse.helpers {
 			}
 		}
 		
-		private static void declareType(JvmTypeInfo type, JvmTypeSystem targetTypeSystem, JvmTypeBuilder clone, Scope<String, JvmTypeInfo> genericArgs) {
+		private static void declareType(TypeInfo type, Library targetTypeSystem, TypeBuilder clone, Scope<String, TypeInfo> genericArgs) {
 			if (type.IsSynthetic) {
 				return;
 			}
@@ -334,19 +334,19 @@ package stab.tools.eclipse.helpers {
 			}
 			
 			foreach (var nt in type.NestedTypes) {
-				declareType(nt, targetTypeSystem, (JvmTypeBuilder)clone.getNestedType(nt.Name), genericArgs);
+				declareType(nt, targetTypeSystem, (TypeBuilder)clone.getNestedType(nt.Name), genericArgs);
 			}
 			
 			genericArgs.leaveScope();
 		}
 
-		private static void cloneAnnotationValue(JvmAnnotationValue value, JvmTypeSystem targetTypeSystem,
-				JvmAnnotationValueBuilder builder, Scope<String, JvmTypeInfo> genericArgs) {
+		private static void cloneAnnotationValue(AnnotationValue value, Library targetTypeSystem,
+				AnnotationValueBuilder builder, Scope<String, TypeInfo> genericArgs) {
 			foreach (var s in value.ArgumentNames) {
 				var a = value.getArgument(s);
 				switch (a.AnnotationArgumentKind) {
 				case Annotation:
-					cloneAnnotationValue((JvmAnnotationValue)a, targetTypeSystem,
+					cloneAnnotationValue((AnnotationValue)a, targetTypeSystem,
 							builder.setAnnotationArgument(s, a.Type, a.IsRuntimeVisible), genericArgs);
 					break;
 				case Array:
@@ -392,11 +392,11 @@ package stab.tools.eclipse.helpers {
 			}
 		}
 	
-		private static void cloneAnnotationArgument(JvmAnnotationArgument arg, JvmTypeSystem targetTypeSystem,
-				JvmAnnotationArrayValueBuilder builder, Scope<String, JvmTypeInfo> genericArgs) {
+		private static void cloneAnnotationArgument(AnnotationArgument arg, Library targetTypeSystem,
+				AnnotationArrayValueBuilder builder, Scope<String, TypeInfo> genericArgs) {
 			switch (arg.AnnotationArgumentKind) {
 			case Annotation:
-				cloneAnnotationValue((JvmAnnotationValue)arg, targetTypeSystem,
+				cloneAnnotationValue((AnnotationValue)arg, targetTypeSystem,
 						builder.addAnnotationArgument(arg.Type, arg.IsRuntimeVisible), genericArgs);
 				break;
 			case Array:
@@ -441,7 +441,7 @@ package stab.tools.eclipse.helpers {
 			}
 		}
 		
-		private static JvmTypeInfo getType(JvmTypeSystem typeSystem, JvmTypeInfo type, Scope<String, JvmTypeInfo> genericArgs) {
+		private static TypeInfo getType(Library typeSystem, TypeInfo type, Scope<String, TypeInfo> genericArgs) {
 			switch (type.TypeKind) {
 			case Boolean:
 			case Byte:
@@ -452,10 +452,10 @@ package stab.tools.eclipse.helpers {
 			case Long:
 			case Short:
 			case Void:
-				return type;
+				return typeSystem.getPrimitiveType(type.TypeKind);
 				
 			case Reference:
-				JvmTypeInfo result;
+				TypeInfo result;
 				if (type.DeclaringType == null) {
 					result = typeSystem.getType(type.OriginalTypeDefinition.FullName);
 				} else {
@@ -470,7 +470,7 @@ package stab.tools.eclipse.helpers {
 				return result;
 				
 			case UnboundedWildcard:
-				return type;
+				return typeSystem.UnboundedWildcard;
 				
 			case LowerBoundedWildcard:
 				return getType(typeSystem, type.WildcardBound, genericArgs).LowerBoundedWildcard;

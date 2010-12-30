@@ -17,16 +17,16 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
 
     class TargetLabels {
-        JvmLabelMarker ifTrue;
-        JvmLabelMarker ifFalse;
+        LabelMarker ifTrue;
+        LabelMarker ifFalse;
         
-        TargetLabels(JvmLabelMarker ifTrue, JvmLabelMarker ifFalse) {
+        TargetLabels(LabelMarker ifTrue, LabelMarker ifFalse) {
             this.ifTrue = ifTrue;
             this.ifFalse = ifFalse;
         }
@@ -54,7 +54,7 @@ package stab.tools.compiler {
             }            
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info == null) {
-                generator.emit(JvmOpcode.Aconst_Null);
+                generator.emit(Opcode.Aconst_Null);
                 return null;
             }
             if (!info.IsConstant) {
@@ -63,13 +63,13 @@ package stab.tools.compiler {
             var value = info.Value;
             if (info.Type.IsBoolean) {
                 if (((Boolean)value).booleanValue()) {
-                    generator.emit(JvmOpcode.Iconst_1);
+                    generator.emit(Opcode.Iconst_1);
                 } else {
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                 }
                 emitBoxing(expression);
                 if (labels != null) {
-                    generator.emit((info.Negate) ? JvmOpcode.Ifeq : JvmOpcode.Ifne, labels.ifFalse);
+                    generator.emit((info.Negate) ? Opcode.Ifeq : Opcode.Ifne, labels.ifFalse);
                 }
             } else {
                 switch (info.Type.NumericTypeKind) {
@@ -93,7 +93,7 @@ package stab.tools.compiler {
                     break;
 
                 default:
-                    generator.emit(JvmOpcode.Ldc, value);
+                    generator.emit(Opcode.Ldc, value);
                     break;
                 }
                 emitBoxing(expression);
@@ -108,21 +108,21 @@ package stab.tools.compiler {
             CompilerHelper.initializeAnonymousType(context, type);
             
             var constructor = type.Methods.where(p => p.Name.equals("<init>")).first();
-            generator.emit(JvmOpcode.New, type);
+            generator.emit(Opcode.New, type);
             if (nested) {
-                generator.emit(JvmOpcode.Dup);
+                generator.emit(Opcode.Dup);
             }
             foreach (var decl in anonymousObject.MemberDeclarators) {
                 handleExpression(decl.Value, null, true);
             }
-            generator.emit(JvmOpcode.Invokespecial, constructor);
+            generator.emit(Opcode.Invokespecial, constructor);
             return null;
         }
         
         protected override Void handleArrayCreation(ArrayCreationExpressionNode arrayCreation, TargetLabels labels, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             foreach (var e in arrayCreation.DimensionExpressions) {
-                emitNestedExpression(e, JvmTypeInfo.INT);
+                emitNestedExpression(e, context.TypeSystem.IntType);
             }
             var type = arrayCreation.getUserData(typeof(ExpressionInfo)).Type;
             var initializer = arrayCreation.Initializer;
@@ -167,9 +167,9 @@ package stab.tools.compiler {
                 if (info.Type == stringType) {
                     var isBuildingString = context.MethodGenerationContext.IsBuildingString;
                     if (!isBuildingString) {
-                        generator.emit(JvmOpcode.New, context.StringBuilderType);
-                        generator.emit(JvmOpcode.Dup);
-                        generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
+                        generator.emit(Opcode.New, context.StringBuilderType);
+                        generator.emit(Opcode.Dup);
+                        generator.emit(Opcode.Invokespecial, context.StringBuilderConstructor);
                     }
                     var isString = li != null && li.Type == stringType;
                     var isStringAdd = left.ExpressionKind == ExpressionKind.Binary && isString;
@@ -186,7 +186,7 @@ package stab.tools.compiler {
                         BytecodeGenerator.emitStringBuilderAppend(context, ri);
                     }
                     if (!isBuildingString) {
-                        generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
+                        generator.emit(Opcode.Invokevirtual, context.ObjectToStringMethod);
                     }
                     context.MethodGenerationContext.IsBuildingString = isBuildingString;
                 } else {
@@ -196,23 +196,23 @@ package stab.tools.compiler {
                     case Char:
                     case Short:
                     case Int:
-                        generator.emit(JvmOpcode.Iadd);
+                        generator.emit(Opcode.Iadd);
                         break;
                     case Long:
-                        generator.emit(JvmOpcode.Ladd);
+                        generator.emit(Opcode.Ladd);
                         break;
                     case Float:
-                        generator.emit(JvmOpcode.Fadd);
+                        generator.emit(Opcode.Fadd);
                         break;
                     case Double:
-                        generator.emit(JvmOpcode.Dadd);
+                        generator.emit(Opcode.Dadd);
                         break;
                     default:
                         if (BytecodeHelper.isDelegateType(info.Type)) {
                             var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-                            var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
-                            generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
-                            generator.emit(JvmOpcode.Checkcast, info.Type);
+                            var argTypes = new ArrayList<TypeInfo> { delegateType, delegateType };
+                            generator.emit(Opcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                            generator.emit(Opcode.Checkcast, info.Type);
                         } else {
                             throw new Exception("Internal error");
                         }
@@ -229,23 +229,23 @@ package stab.tools.compiler {
                 case Char:
                 case Short:
                 case Int:
-                    generator.emit(JvmOpcode.Isub);
+                    generator.emit(Opcode.Isub);
                     break;
                 case Long:
-                    generator.emit(JvmOpcode.Lsub);
+                    generator.emit(Opcode.Lsub);
                     break;
                 case Float:
-                    generator.emit(JvmOpcode.Fsub);
+                    generator.emit(Opcode.Fsub);
                     break;
                 case Double:
-                    generator.emit(JvmOpcode.Dsub);
+                    generator.emit(Opcode.Dsub);
                     break;
                 default:
                     if (BytecodeHelper.isDelegateType(info.Type)) {
                         var delegateType = context.getTypeSystem().getType("stab/lang/Delegate");
-                        var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
-                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
-                        generator.emit(JvmOpcode.Checkcast, info.Type);
+                        var argTypes = new ArrayList<TypeInfo> { delegateType, delegateType };
+                        generator.emit(Opcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                        generator.emit(Opcode.Checkcast, info.Type);
                     } else {
                         throw new RuntimeException("Internal error");
                     }
@@ -256,22 +256,22 @@ package stab.tools.compiler {
 
             case Multiply:
                 emitOperands(left, false, right, false);
-                JvmOpcode opcode;
+                Opcode opcode;
                 switch (info.Type.NumericTypeKind) {
                 case Byte:
                 case Char:
                 case Short:
                 case Int:
-                    opcode = JvmOpcode.Imul;
+                    opcode = Opcode.Imul;
                     break;
                 case Long:
-                    opcode = JvmOpcode.Lmul;
+                    opcode = Opcode.Lmul;
                     break;
                 case Float:
-                    opcode = JvmOpcode.Fmul;
+                    opcode = Opcode.Fmul;
                     break;
                 case Double:
-                    opcode = JvmOpcode.Dmul;
+                    opcode = Opcode.Dmul;
                     break;
                 default:
                     throw new Exception("Internal error");
@@ -287,16 +287,16 @@ package stab.tools.compiler {
                 case Char:
                 case Short:
                 case Int:
-                    opcode = JvmOpcode.Idiv;
+                    opcode = Opcode.Idiv;
                     break;
                 case Long:
-                    opcode = JvmOpcode.Ldiv;
+                    opcode = Opcode.Ldiv;
                     break;
                 case Float:
-                    opcode = JvmOpcode.Fdiv;
+                    opcode = Opcode.Fdiv;
                     break;
                 case Double:
-                    opcode = JvmOpcode.Ddiv;
+                    opcode = Opcode.Ddiv;
                     break;
                 default:
                     throw new Exception("Internal error");
@@ -312,16 +312,16 @@ package stab.tools.compiler {
                 case Char:
                 case Short:
                 case Int:
-                    opcode = JvmOpcode.Irem;
+                    opcode = Opcode.Irem;
                     break;
                 case Long:
-                    opcode = JvmOpcode.Lrem;
+                    opcode = Opcode.Lrem;
                     break;
                 case Float:
-                    opcode = JvmOpcode.Frem;
+                    opcode = Opcode.Frem;
                     break;
                 case Double:
-                    opcode = JvmOpcode.Drem;
+                    opcode = Opcode.Drem;
                     break;
                 default:
                     throw new RuntimeException("Internal error");
@@ -333,17 +333,17 @@ package stab.tools.compiler {
             case And:
                 emitOperands(left, false, right, false);
                 if (info.Type.IsBoolean) {
-                    opcode = JvmOpcode.Iand;
+                    opcode = Opcode.Iand;
                 } else {
                     switch (info.Type.NumericTypeKind) {
                     case Byte:
                     case Char:
                     case Short:
                     case Int:
-                        opcode = JvmOpcode.Iand;
+                        opcode = Opcode.Iand;
                         break;
                     case Long:
-                        opcode = JvmOpcode.Land;
+                        opcode = Opcode.Land;
                         break;
                     default:
                         throw new Exception("Internal error");
@@ -356,17 +356,17 @@ package stab.tools.compiler {
             case Or:
                 emitOperands(left, false, right, false);
                 if (info.Type.IsBoolean) {
-                    opcode = JvmOpcode.Ior;
+                    opcode = Opcode.Ior;
                 } else {
                     switch (info.Type.NumericTypeKind) {
                     case Byte:
                     case Char:
                     case Short:
                     case Int:
-                        opcode = JvmOpcode.Ior;
+                        opcode = Opcode.Ior;
                         break;
                     case Long:
-                        opcode = JvmOpcode.Lor;
+                        opcode = Opcode.Lor;
                         break;
                     default:
                         throw new Exception("Internal error");
@@ -379,17 +379,17 @@ package stab.tools.compiler {
             case Xor:
                 emitOperands(left, false, right, false);
                 if (info.Type.IsBoolean) {
-                    opcode = JvmOpcode.Ixor;
+                    opcode = Opcode.Ixor;
                 } else {
                     switch (info.Type.NumericTypeKind) {
                     case Byte:
                     case Char:
                     case Short:
                     case Int:
-                        opcode = JvmOpcode.Ixor;
+                        opcode = Opcode.Ixor;
                         break;
                     case Long:
-                        opcode = JvmOpcode.Lxor;
+                        opcode = Opcode.Lxor;
                         break;
                     default:
                         throw new Exception("Internal error");
@@ -402,22 +402,22 @@ package stab.tools.compiler {
             case LessThan:
                 if (labels != null) {
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifle, JvmOpcode.Ifge, JvmOpcode.If_icmpge, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifle, Opcode.Ifge, Opcode.If_icmpge, labels.ifFalse);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifgt, JvmOpcode.Iflt, JvmOpcode.If_icmplt, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifgt, Opcode.Iflt, Opcode.If_icmplt, labels.ifFalse);
                     }
                 } else {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifle, JvmOpcode.Ifge, JvmOpcode.If_icmpge, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifle, Opcode.Ifge, Opcode.If_icmpge, elseLabel);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifgt, JvmOpcode.Iflt, JvmOpcode.If_icmplt, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifgt, Opcode.Iflt, Opcode.If_icmplt, elseLabel);
                     }
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -426,22 +426,22 @@ package stab.tools.compiler {
             case LessThanOrEqual:
                 if (labels != null) {
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Iflt, JvmOpcode.Ifgt, JvmOpcode.If_icmpgt, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Iflt, Opcode.Ifgt, Opcode.If_icmpgt, labels.ifFalse);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifge, JvmOpcode.Ifle, JvmOpcode.If_icmple, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifge, Opcode.Ifle, Opcode.If_icmple, labels.ifFalse);
                     }
                 } else {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Iflt, JvmOpcode.Ifgt, JvmOpcode.If_icmpgt, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Iflt, Opcode.Ifgt, Opcode.If_icmpgt, elseLabel);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifge, JvmOpcode.Ifle, JvmOpcode.If_icmple, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifge, Opcode.Ifle, Opcode.If_icmple, elseLabel);
                     }
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -450,22 +450,22 @@ package stab.tools.compiler {
             case GreaterThan:
                 if (labels != null) {
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifge, JvmOpcode.Ifle, JvmOpcode.If_icmple, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifge, Opcode.Ifle, Opcode.If_icmple, labels.ifFalse);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Iflt, JvmOpcode.Ifgt, JvmOpcode.If_icmpgt, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Iflt, Opcode.Ifgt, Opcode.If_icmpgt, labels.ifFalse);
                     }
                 } else {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifge, JvmOpcode.Ifle, JvmOpcode.If_icmple, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifge, Opcode.Ifle, Opcode.If_icmple, elseLabel);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Iflt, JvmOpcode.Ifgt, JvmOpcode.If_icmpgt, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Iflt, Opcode.Ifgt, Opcode.If_icmpgt, elseLabel);
                     }
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -474,22 +474,22 @@ package stab.tools.compiler {
             case GreaterThanOrEqual:
                 if (labels != null) {
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifgt, JvmOpcode.Iflt, JvmOpcode.If_icmplt, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifgt, Opcode.Iflt, Opcode.If_icmplt, labels.ifFalse);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifle, JvmOpcode.Ifge, JvmOpcode.If_icmpge, labels.ifFalse);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifle, Opcode.Ifge, Opcode.If_icmpge, labels.ifFalse);
                     }
                 } else {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
                     if (info.Negate) {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifgt, JvmOpcode.Iflt, JvmOpcode.If_icmplt, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifgt, Opcode.Iflt, Opcode.If_icmplt, elseLabel);
                     } else {
-                        emitComparison(binary, leftIsZero, rightIsZero, JvmOpcode.Ifle, JvmOpcode.Ifge, JvmOpcode.If_icmpge, elseLabel);
+                        emitComparison(binary, leftIsZero, rightIsZero, Opcode.Ifle, Opcode.Ifge, Opcode.If_icmpge, elseLabel);
                     }
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -502,10 +502,10 @@ package stab.tools.compiler {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
                     emitEquality(binary, leftIsZero, rightIsZero, elseLabel, info.Negate);
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -518,10 +518,10 @@ package stab.tools.compiler {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
                     emitEquality(binary, leftIsZero, rightIsZero, elseLabel, !info.Negate);
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -548,10 +548,10 @@ package stab.tools.compiler {
                     handleExpression(left, new TargetLabels(thenLabel, elseLabel), true);
                     handleExpression(right, new TargetLabels(thenLabel, elseLabel), true);
                     generator.markLabel(thenLabel);
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -583,10 +583,10 @@ package stab.tools.compiler {
                     generator.markLabel(then2Label);
                     handleExpression(right, new TargetLabels(thenLabel, elseLabel), true);
                     generator.markLabel(thenLabel);
-                    generator.emit(JvmOpcode.Iconst_1);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Iconst_1);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
+                    generator.emit(Opcode.Iconst_0);
                     generator.markLabel(endLabel);
                 }
                 emitBoxing(binary);
@@ -595,10 +595,10 @@ package stab.tools.compiler {
             case LeftShift:
                 handleExpression(left, null, true);
                 handleExpression(right, null, true);
-                if (info.Type == JvmTypeInfo.INT) {
-                    generator.emit(JvmOpcode.Ishl);
-                } else if (info.Type == JvmTypeInfo.LONG) {
-                    generator.emit(JvmOpcode.Lshl);
+                if (info.Type == context.TypeSystem.IntType) {
+                    generator.emit(Opcode.Ishl);
+                } else if (info.Type == context.TypeSystem.LongType) {
+                    generator.emit(Opcode.Lshl);
                 } else {
                     throw new Exception("Internal error");
                 }
@@ -608,10 +608,10 @@ package stab.tools.compiler {
             case RightShift:
                 handleExpression(left, null, true);
                 handleExpression(right, null, true);
-                if (info.Type == JvmTypeInfo.INT) {
-                    generator.emit(JvmOpcode.Ishr);
-                } else if (info.Type == JvmTypeInfo.LONG) {
-                    generator.emit(JvmOpcode.Lshr);
+                if (info.Type == context.TypeSystem.IntType) {
+                    generator.emit(Opcode.Ishr);
+                } else if (info.Type == context.TypeSystem.LongType) {
+                    generator.emit(Opcode.Lshr);
                 } else {
                     throw new Exception("Internal error");
                 }
@@ -621,10 +621,10 @@ package stab.tools.compiler {
             case UnsignedRightShift:
                 handleExpression(left, null, true);
                 handleExpression(right, null, true);
-                if (info.Type == JvmTypeInfo.INT) {
-                    generator.emit(JvmOpcode.Iushr);
-                } else if (info.Type == JvmTypeInfo.LONG) {
-                    generator.emit(JvmOpcode.Lushr);
+                if (info.Type == context.TypeSystem.IntType) {
+                    generator.emit(Opcode.Iushr);
+                } else if (info.Type == context.TypeSystem.LongType) {
+                    generator.emit(Opcode.Lushr);
                 } else {
                     throw new Exception("Internal error");
                 }
@@ -633,35 +633,35 @@ package stab.tools.compiler {
                 
             case Instanceof:
                 handleExpression(left, null, true);
-                generator.emit(JvmOpcode.Instanceof, ri.Type);
+                generator.emit(Opcode.Instanceof, ri.Type);
                 emitBoxing(binary);
                 if (labels != null) {
-                    generator.emit(JvmOpcode.Ifeq, labels.ifFalse);
+                    generator.emit(Opcode.Ifeq, labels.ifFalse);
                 }
                 break;
                 
             case As: {
                 handleExpression(left, null, true);
-                generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Instanceof, ri.Type);
+                generator.emit(Opcode.Dup);
+                generator.emit(Opcode.Instanceof, ri.Type);
                 var elseLabel = generator.defineLabel();
                 var endLabel = generator.defineLabel();
-                generator.emit(JvmOpcode.Ifne, elseLabel);
-                generator.emit(JvmOpcode.Pop);
-                generator.emit(JvmOpcode.Aconst_Null);
-                generator.emit(JvmOpcode.Goto, endLabel);
+                generator.emit(Opcode.Ifne, elseLabel);
+                generator.emit(Opcode.Pop);
+                generator.emit(Opcode.Aconst_Null);
+                generator.emit(Opcode.Goto, endLabel);
                 generator.markLabel(elseLabel);
-                generator.emit(JvmOpcode.Checkcast, ri.Type);
+                generator.emit(Opcode.Checkcast, ri.Type);
                 generator.markLabel(endLabel);
                 emitBoxing(binary);
                 break;
             }				
             case NullCoalescing: {
                 handleExpression(left, null, true);
-                generator.emit(JvmOpcode.Dup);
+                generator.emit(Opcode.Dup);
                 var endLabel = generator.defineLabel();
-                generator.emit(JvmOpcode.Ifnonnull, endLabel);
-                generator.emit(JvmOpcode.Pop);
+                generator.emit(Opcode.Ifnonnull, endLabel);
+                generator.emit(Opcode.Pop);
                 handleExpression(right, null, true);
                 generator.markLabel(endLabel);
                 emitBoxing(binary);
@@ -683,25 +683,25 @@ package stab.tools.compiler {
                 if (einfo.Type.IsNumeric) {
                     BytecodeHelper.emitNumericConversion(generator, einfo.Type, type);
                 } else if (info.OriginalType != null) {
-                    generator.emit(JvmOpcode.Checkcast, info.OriginalType);
+                    generator.emit(Opcode.Checkcast, info.OriginalType);
                 } else if (info.Type.OriginalTypeDefinition != einfo.Type.OriginalTypeDefinition) {
                     if (!info.Type.IsGenericParameter || info.Type.GenericParameterBounds.any()) {
                         if (type.IsPrimitive) {
                             if (type.TypeKind == TypeKind.Boolean) {
                                 var method = context.TypeSystem.getUnboxingMethod(type);
-                                generator.emit(JvmOpcode.Checkcast, method.DeclaringType);
-                                generator.emit(JvmOpcode.Invokevirtual, method);
+                                generator.emit(Opcode.Checkcast, method.DeclaringType);
+                                generator.emit(Opcode.Invokevirtual, method);
                             } else {
                                 if (einfo.Type.IsPrimitive) {
                                     BytecodeHelper.emitNumericConversion(generator, einfo.Type, type);
                                 } else {
                                     var method = context.TypeSystem.getUnboxingMethod(type);
-                                    generator.emit(JvmOpcode.Checkcast, method.DeclaringType);
-                                    generator.emit(JvmOpcode.Invokevirtual, method);
+                                    generator.emit(Opcode.Checkcast, method.DeclaringType);
+                                    generator.emit(Opcode.Invokevirtual, method);
                                 }
                             }
                         } else {
-                            generator.emit(JvmOpcode.Checkcast, type);
+                            generator.emit(Opcode.Checkcast, type);
                         }
                     }
                 }
@@ -721,7 +721,7 @@ package stab.tools.compiler {
             generator.markLabel(thenLabel);
             handleExpression(conditional.IfTrue, null, true);
             BytecodeGenerator.emitConversion(context, info.Type, conditional.IfTrue);
-            generator.emit(JvmOpcode.Goto, endLabel);
+            generator.emit(Opcode.Goto, endLabel);
             generator.markLabel(elseLabel);
             handleExpression(conditional.IfFalse, null, true);
             BytecodeGenerator.emitConversion(context, info.Type, conditional.IfFalse);
@@ -749,7 +749,7 @@ package stab.tools.compiler {
                 handleExpression(target, null, true);
                 var index = elementAccess.Indexes[0];
                 handleExpression(index, null, true);
-                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
+                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, context.TypeSystem.IntType);
                 generator.emit(BytecodeHelper.getAloadOpcode(ttype.ElementType));
             }
             emitBoxing(elementAccess);
@@ -792,12 +792,12 @@ package stab.tools.compiler {
                 switch (method.ReturnType.TypeKind) {
                 case Long:
                 case Double:
-                    generator.emit(JvmOpcode.Pop2);
+                    generator.emit(Opcode.Pop2);
                     break;
                 case Void:
                     break;
                 default:
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Pop);
                     break;
                 }
             }
@@ -815,7 +815,7 @@ package stab.tools.compiler {
                 return null;
             }
  
-            var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = lambda.getUserData(typeof(MethodBuilder));
             context.MethodGenerationContext.enterLambda(methodBuilder);
             var gen = methodBuilder.CodeGenerator;
             var oldIsLambdaScopeUsed = context.MethodGenerationContext.IsLambdaScopeUsed;
@@ -828,7 +828,7 @@ package stab.tools.compiler {
                 gen.removeThis();
                 methodBuilder.setStatic(true);
                 typeBuilder.undefineMethod(methodBuilder);
-                var currentType = (JvmTypeBuilder)context.MethodGenerationContext.RootMethod.DeclaringType;
+                var currentType = (TypeBuilder)context.MethodGenerationContext.RootMethod.DeclaringType;
                 currentType.defineMethod(methodBuilder);
                 if (typeBuilder.Methods.count() == 1) {
                 	context.TypeBuilders.remove(typeBuilder);
@@ -846,9 +846,9 @@ package stab.tools.compiler {
                 arg = new SimpleNameExpressionNode();
                 var ainfo = new ExpressionInfo(context.MethodGenerationContext.LambdaScope);
                 if (context.MethodGenerationContext.IsInLambda) {
-                    ainfo.Member = new LocalInfo("this", typeBuilder, context.MethodGenerationContext.CurrentMethod, false);
+                    ainfo.Member = new LocalMemberInfo("this", typeBuilder, context.MethodGenerationContext.CurrentMethod, false);
                 } else {
-                    ainfo.Member = new LocalInfo("lambda$scope", typeBuilder, context.MethodGenerationContext.CurrentMethod, false);
+                    ainfo.Member = new LocalMemberInfo("lambda$scope", typeBuilder, context.MethodGenerationContext.CurrentMethod, false);
                 }
                 arg.addUserData(ainfo);
             }
@@ -910,8 +910,8 @@ package stab.tools.compiler {
             if (CompilerHelper.requireAccessor(context, method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
                 var accessor = context.PrivateAccessors[method];
                 if (accessor == null) {
-                    var outerClass = (JvmTypeBuilder)context.CurrentType;
-                    while ((outerClass = (JvmTypeBuilder)outerClass.DeclaringType) != null) {
+                    var outerClass = (TypeBuilder)context.CurrentType;
+                    while ((outerClass = (TypeBuilder)outerClass.DeclaringType) != null) {
                         if (method.DeclaringType.isAssignableFrom(outerClass)) {
                             break;
                         }
@@ -931,13 +931,13 @@ package stab.tools.compiler {
                     }
                     var gen = methodBuilder.CodeGenerator;
                     gen.beginScope();
-                    gen.emit(JvmOpcode.New, method.DeclaringType);
-                    gen.emit(JvmOpcode.Dup);
+                    gen.emit(Opcode.New, method.DeclaringType);
+                    gen.emit(Opcode.Dup);
                     foreach (var p in method.Parameters) {
                         gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
                     }
-                    gen.emit(JvmOpcode.Invokespecial, method);
-                    gen.emit(JvmOpcode.Areturn);
+                    gen.emit(Opcode.Invokespecial, method);
+                    gen.emit(Opcode.Areturn);
                     gen.endScope();
                     accessor = methodBuilder;
                 }
@@ -945,17 +945,17 @@ package stab.tools.compiler {
             }
             if (method != info.Method) {
                 emitArguments(objectCreation.Arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
-                generator.emit(JvmOpcode.Invokestatic, method);
+                generator.emit(Opcode.Invokestatic, method);
                 if (!nested) {
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Pop);
                 }
             } else {
-                generator.emit(JvmOpcode.New, method.DeclaringType);
+                generator.emit(Opcode.New, method.DeclaringType);
                 if (nested) {
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
                 emitArguments(objectCreation.Arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
-                generator.emit(JvmOpcode.Invokespecial, method);
+                generator.emit(Opcode.Invokespecial, method);
             }
             emitBoxing(objectCreation);
             var init = objectCreation.Initializer;
@@ -965,14 +965,14 @@ package stab.tools.compiler {
                     foreach (var mi in initializer.MemberInitializers) {
                         MemberInfo memb = mi.getUserData(typeof(MemberInfo));
                         if (!memb.IsStatic) {
-                            generator.emit(JvmOpcode.Dup);
+                            generator.emit(Opcode.Dup);
                         }
                         handleExpression(mi.Value, null, true);
                         emitBoxing(mi.Value);
                         if (memb.MemberKind == MemberKind.Property) {
                             CompilerHelper.emitPropertyOrIndexerModification(context, memb.SetAccessor);
-                            if (memb.SetAccessor.ReturnType != JvmTypeInfo.VOID) {
-                                generator.emit((memb.SetAccessor.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                            if (memb.SetAccessor.ReturnType != context.TypeSystem.VoidType) {
+                                generator.emit((memb.SetAccessor.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                             }
                         } else {
                             CompilerHelper.emitFieldModification(context, memb.Field);
@@ -980,15 +980,15 @@ package stab.tools.compiler {
                     }
                 } else {
                     var initializer = (CollectionInitializerExpressionNode)init;
-                    var addMethod = initializer.getUserData(typeof(JvmMethodInfo));
+                    var addMethod = initializer.getUserData(typeof(MethodInfo));
                     foreach (var args in initializer.Values) {
-                        generator.emit(JvmOpcode.Dup);
+                        generator.emit(Opcode.Dup);
                         foreach (var e in args) {
                             handleExpression(e, null, true);
                         }
                         CompilerHelper.emitMethodAccess(context, addMethod, false);
-                        if (addMethod.ReturnType != JvmTypeInfo.VOID) {
-                            generator.emit((addMethod.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                        if (addMethod.ReturnType != context.TypeSystem.VoidType) {
+                            generator.emit((addMethod.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                         }
                     }
                 }
@@ -1003,10 +1003,10 @@ package stab.tools.compiler {
             var member = info.Member;
             switch (member.MemberKind) {
             case Local: {
-                var local = (LocalInfo)member;
+                var local = (LocalMemberInfo)member;
                 if (local.IsUsedFromLambda) {
                     BytecodeGenerator.emitLoadLambdaScope(context, generator, local.Method);
-                    generator.emit(JvmOpcode.Getfield, BytecodeGenerator.getLambdaScopeField(context, local));
+                    generator.emit(Opcode.Getfield, BytecodeGenerator.getLambdaScopeField(context, local));
                 } else {
                     generator.emit(BytecodeHelper.getLoadOpcode(local.Type), generator.getLocal(local.Name));
                 }
@@ -1055,7 +1055,7 @@ package stab.tools.compiler {
         protected override Void handleSizeof(SizeofExpressionNode sizeofExpression, TargetLabels labels, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             handleExpression(sizeofExpression.Expression, null, true);
-            generator.emit(JvmOpcode.Arraylength);
+            generator.emit(Opcode.Arraylength);
             return null;
         }
         
@@ -1073,7 +1073,7 @@ package stab.tools.compiler {
         
         protected override Void handleTypeof(TypeofExpressionNode typeofExpression, TargetLabels labels, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
-            var type = typeofExpression.getUserData(typeof(JvmTypeInfo));
+            var type = typeofExpression.getUserData(typeof(TypeInfo));
             BytecodeHelper.emitTypeof(generator, context.TypeSystem, type);
             return null;
         }
@@ -1085,19 +1085,19 @@ package stab.tools.compiler {
             switch (unary.Operator) {
             case Complement: {
                 handleExpression(unary.Operand, null, true);
-                JvmOpcode opcode;
+                Opcode opcode;
                 switch (type.NumericTypeKind) {
                 case Byte:
                 case Char:
                 case Short:
                 case Int:
-                    generator.emit(JvmOpcode.Iconst_M1);
-                    opcode = JvmOpcode.Ixor;
+                    generator.emit(Opcode.Iconst_M1);
+                    opcode = Opcode.Ixor;
                     break;
                     
                 case Long:
-                    generator.emit(JvmOpcode.Ldc, new Long(-1));
-                    opcode = JvmOpcode.Lxor;
+                    generator.emit(Opcode.Ldc, new Long(-1));
+                    opcode = Opcode.Lxor;
                     break;
                     
                 default:
@@ -1109,22 +1109,22 @@ package stab.tools.compiler {
             }
             case Minus: {
                 handleExpression(unary.Operand, null, true);
-                JvmOpcode opcode;
+                Opcode opcode;
                 switch (type.NumericTypeKind) {
                 case Byte:
                 case Char:
                 case Int:
                 case Short:
-                    opcode = JvmOpcode.Ineg;
+                    opcode = Opcode.Ineg;
                     break;
                 case Long:
-                    opcode = JvmOpcode.Lneg;
+                    opcode = Opcode.Lneg;
                     break;
                 case Double:
-                    opcode = JvmOpcode.Dneg;
+                    opcode = Opcode.Dneg;
                     break;
                 case Float:
-                    opcode = JvmOpcode.Fneg;
+                    opcode = Opcode.Fneg;
                     break;
                 default:
                     throw new Exception("Internal error");
@@ -1138,17 +1138,17 @@ package stab.tools.compiler {
                 if (labels == null) {
                     var elseLabel = generator.defineLabel();
                     var endLabel = generator.defineLabel();
-                    generator.emit(JvmOpcode.Ifeq, elseLabel);
-                    generator.emit(JvmOpcode.Iconst_0);
-                    generator.emit(JvmOpcode.Goto, endLabel);
+                    generator.emit(Opcode.Ifeq, elseLabel);
+                    generator.emit(Opcode.Iconst_0);
+                    generator.emit(Opcode.Goto, endLabel);
                     generator.markLabel(elseLabel);
-                    generator.emit(JvmOpcode.Iconst_1);
+                    generator.emit(Opcode.Iconst_1);
                     generator.markLabel(endLabel);
                 } else {
                     if (info.Negate) {
-                        generator.emit(JvmOpcode.Ifne, labels.ifFalse);
+                        generator.emit(Opcode.Ifne, labels.ifFalse);
                     } else {
-                        generator.emit(JvmOpcode.Ifeq, labels.ifFalse);
+                        generator.emit(Opcode.Ifeq, labels.ifFalse);
                     }
                 }
                 emitBoxing(unary);
@@ -1187,7 +1187,7 @@ package stab.tools.compiler {
         private void emitTest(ExpressionInfo info, TargetLabels labels) {
             if (labels != null) {
                 var generator = context.MethodGenerationContext.Generator;
-                generator.emit((info.Negate) ? JvmOpcode.Ifeq : JvmOpcode.Ifne, labels.ifFalse);
+                generator.emit((info.Negate) ? Opcode.Ifeq : Opcode.Ifne, labels.ifFalse);
             }
         }
 
@@ -1195,12 +1195,12 @@ package stab.tools.compiler {
             BytecodeGenerator.emitBoxing(context, expression);
         }
         
-        void emitNestedExpression(ExpressionNode expression, JvmTypeInfo targetType) {
+        void emitNestedExpression(ExpressionNode expression, TypeInfo targetType) {
             handleExpression(expression, null, true);
             BytecodeGenerator.emitConversion(context, targetType, expression);
         }
         
-        void emitArguments(List<ExpressionNode> arguments, Iterable<JvmParameterInfo> parameters, int nparams, boolean varargs) {
+        void emitArguments(List<ExpressionNode> arguments, Iterable<ParameterInfo> parameters, int nparams, boolean varargs) {
             int fixedLength = (varargs) ?  nparams - 1 : nparams;
             var generator = context.MethodGenerationContext.Generator;
             var it1 = parameters.iterator();
@@ -1218,7 +1218,7 @@ package stab.tools.compiler {
                     var e = arguments[i];
                     var ei = e.getUserData(typeof(ExpressionInfo));
                     if (ei == null) {
-                        generator.emit(JvmOpcode.Aconst_Null);
+                        generator.emit(Opcode.Aconst_Null);
                     } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
                         handleExpression(e, null, true);
                         BytecodeGenerator.emitConversion(context, paramType, e);
@@ -1233,7 +1233,7 @@ package stab.tools.compiler {
             }
         }
 
-        void emitDelegateCreation(JvmTypeInfo delegateType, JvmMethodInfo method, ExpressionNode arg, boolean nested) {
+        void emitDelegateCreation(TypeInfo delegateType, MethodInfo method, ExpressionNode arg, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             if (arg != null) {
                 var argType = arg.getUserData(typeof(ExpressionInfo)).Type;
@@ -1244,19 +1244,19 @@ package stab.tools.compiler {
             }
             
             var typeInfo = CompilerHelper.createDelegateType(context, delegateType, method);
-            generator.emit(JvmOpcode.New, typeInfo);
+            generator.emit(Opcode.New, typeInfo);
             if (nested) {
-                generator.emit(JvmOpcode.Dup);
+                generator.emit(Opcode.Dup);
             }
             if (!method.IsStatic) {
                 handleExpression(arg, null, true);
             }
-            generator.emit(JvmOpcode.Invokespecial, typeInfo.Methods.where(p => p.Name.equals("<init>")).first());
+            generator.emit(Opcode.Invokespecial, typeInfo.Methods.where(p => p.Name.equals("<init>")).first());
         }
 
-        private void emitInterfaceCreation(JvmTypeInfo interfaceType, JvmMethodInfo method, ExpressionNode arg, boolean nested) {
+        private void emitInterfaceCreation(TypeInfo interfaceType, MethodInfo method, ExpressionNode arg, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
-            var currentType = (JvmTypeBuilder)context.CurrentType;
+            var currentType = (TypeBuilder)context.CurrentType;
             var prefix = currentType.getFullName() + "$Interface";
             int n = currentType.NestedTypes.count(p => p.FullName.startsWith(prefix));
             var typeBuilder = currentType.defineNestedType("Interface" + n);
@@ -1266,7 +1266,7 @@ package stab.tools.compiler {
             typeBuilder.setBaseType(objectType);
             typeBuilder.addInterface(interfaceType);
 
-            JvmFieldBuilder targetField = null;
+            FieldBuilder targetField = null;
             if (!method.IsStatic) {
                 targetField = typeBuilder.defineField("target", method.DeclaringType);
                 targetField.setPrivate(true);
@@ -1291,13 +1291,13 @@ package stab.tools.compiler {
             var gen = methodBuilder.CodeGenerator;
             gen.beginScope();
             if (!method.IsStatic) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Getfield, targetField);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Getfield, targetField);
             }
             foreach (var p in method.Parameters) {
                 gen.emit(BytecodeHelper.getLoadOpcode(p.getType()), gen.getLocal(p.getName()));
             }
-            gen.emit((method.IsStatic) ? JvmOpcode.Invokestatic : JvmOpcode.Invokevirtual, method);
+            gen.emit((method.IsStatic) ? Opcode.Invokestatic : Opcode.Invokevirtual, method);
             gen.emit(BytecodeHelper.getReturnOpcode(method.ReturnType));
             gen.endScope();
 
@@ -1308,37 +1308,37 @@ package stab.tools.compiler {
             
             // Constructor T(scope)
             methodBuilder = typeBuilder.defineMethod("<init>");
-            methodBuilder.setReturnType(JvmTypeInfo.VOID);
+            methodBuilder.setReturnType(context.TypeSystem.VoidType);
             if (!method.IsStatic) {
                 var parameterBuilder = methodBuilder.addParameter(method.DeclaringType);
                 parameterBuilder.setName("target");
             }
 
-            var baseConstructor = objectType.getMethod("<init>", Query.empty<JvmTypeInfo>());
+            var baseConstructor = objectType.getMethod("<init>", Query.empty<TypeInfo>());
             gen = methodBuilder.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Invokespecial, baseConstructor);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Invokespecial, baseConstructor);
             if (!method.IsStatic) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Aload, gen.getLocal("target"));
-                gen.emit(JvmOpcode.Putfield, targetField);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Aload, gen.getLocal("target"));
+                gen.emit(Opcode.Putfield, targetField);
             }
-            gen.emit(JvmOpcode.Return);
+            gen.emit(Opcode.Return);
             gen.endScope();
             
             //
             // Interface object creation
             //
             
-            generator.emit(JvmOpcode.New, typeBuilder);
+            generator.emit(Opcode.New, typeBuilder);
             if (nested) {
-                generator.emit(JvmOpcode.Dup);
+                generator.emit(Opcode.Dup);
             }
             if (!method.IsStatic) {
                 handleExpression(arg, null, true);
             }
-            generator.emit(JvmOpcode.Invokespecial, methodBuilder);
+            generator.emit(Opcode.Invokespecial, methodBuilder);
         }
         
         private void emitOperands(ExpressionNode left, boolean leftIsZero, ExpressionNode right, boolean rightIsZero) {
@@ -1364,21 +1364,21 @@ package stab.tools.compiler {
                 case Long: {
                     if (!leftIsZero) {
                         handleExpression(left, null, true);
-                        generator.emit(JvmOpcode.I2l);
+                        generator.emit(Opcode.I2l);
                     }
                     break;
                 }
                 case Float: {
                     if (!leftIsZero) {
                         handleExpression(left, null, true);
-                        generator.emit(JvmOpcode.I2f);
+                        generator.emit(Opcode.I2f);
                     }
                     break;
                 }
                 case Double: {
                     if (!leftIsZero) {
                         handleExpression(left, null, true);
-                        generator.emit(JvmOpcode.I2d);
+                        generator.emit(Opcode.I2d);
                     }
                     break;
                 }
@@ -1399,7 +1399,7 @@ package stab.tools.compiler {
                     }
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
-                        generator.emit(JvmOpcode.I2l);
+                        generator.emit(Opcode.I2l);
                     }
                     break;
                 }
@@ -1415,7 +1415,7 @@ package stab.tools.compiler {
                 case Float: {
                     if (!leftIsZero) {
                         handleExpression(left, null, true);
-                        generator.emit(JvmOpcode.L2f);
+                        generator.emit(Opcode.L2f);
                     }
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
@@ -1425,7 +1425,7 @@ package stab.tools.compiler {
                 case Double: {
                     if (!leftIsZero) {
                         handleExpression(left, null, true);
-                        generator.emit(JvmOpcode.L2d);
+                        generator.emit(Opcode.L2d);
                     }
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
@@ -1446,7 +1446,7 @@ package stab.tools.compiler {
                     }
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
-                        generator.emit(JvmOpcode.I2f);
+                        generator.emit(Opcode.I2f);
                     }
                     break;
                 }
@@ -1456,7 +1456,7 @@ package stab.tools.compiler {
                     }
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
-                        generator.emit(JvmOpcode.L2f);
+                        generator.emit(Opcode.L2f);
                     }
                     break;
                 }
@@ -1472,7 +1472,7 @@ package stab.tools.compiler {
                 case Double: {
                     if (!leftIsZero) {
                         handleExpression(left, null, true);
-                        generator.emit(JvmOpcode.F2d);
+                        generator.emit(Opcode.F2d);
                     }
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
@@ -1493,21 +1493,21 @@ package stab.tools.compiler {
                 case Int: {
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
-                        generator.emit(JvmOpcode.I2d);
+                        generator.emit(Opcode.I2d);
                     }
                     break;
                 }
                 case Long: {
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
-                        generator.emit(JvmOpcode.L2d);
+                        generator.emit(Opcode.L2d);
                     }
                     break;
                 }
                 case Float: {
                     if (!rightIsZero) {
                         handleExpression(right, null, true);
-                        generator.emit(JvmOpcode.F2d);
+                        generator.emit(Opcode.F2d);
                     }
                     break;
                 }
@@ -1528,9 +1528,9 @@ package stab.tools.compiler {
         }
         
         private void emitComparison(BinaryExpressionNode binary, boolean leftIsZero, boolean rightIsZero,
-                JvmOpcode ifLeftZero, JvmOpcode ifRightZero, JvmOpcode intOperation, JvmLabelMarker elseLabel) {
+                Opcode ifLeftZero, Opcode ifRightZero, Opcode intOperation, LabelMarker elseLabel) {
             var generator = context.MethodGenerationContext.Generator;
-            switch (binary.getUserData(typeof(JvmTypeInfo)).TypeKind) {
+            switch (binary.getUserData(typeof(TypeInfo)).TypeKind) {
             case Byte:
             case Char:
             case Short:
@@ -1546,35 +1546,35 @@ package stab.tools.compiler {
                 break;
             case Long:
                 if (leftIsZero) {
-                    generator.emit(JvmOpcode.Lconst_0);
+                    generator.emit(Opcode.Lconst_0);
                 }
                 emitOperands(binary.LeftOperand, leftIsZero, binary.RightOperand, rightIsZero);
                 if (rightIsZero) {
-                    generator.emit(JvmOpcode.Lconst_0);
+                    generator.emit(Opcode.Lconst_0);
                 }
-                generator.emit(JvmOpcode.Lcmp);
+                generator.emit(Opcode.Lcmp);
                 generator.emit(ifRightZero, elseLabel);
                 break;
             case Float:
                 if (leftIsZero) {
-                    generator.emit(JvmOpcode.Fconst_0);
+                    generator.emit(Opcode.Fconst_0);
                 }
                 emitOperands(binary.LeftOperand, leftIsZero, binary.RightOperand, rightIsZero);
                 if (rightIsZero) {
-                    generator.emit(JvmOpcode.Fconst_0);
+                    generator.emit(Opcode.Fconst_0);
                 }
-                generator.emit((ifRightZero == JvmOpcode.Ifgt || ifRightZero == JvmOpcode.Ifge) ? JvmOpcode.Fcmpg : JvmOpcode.Fcmpl);
+                generator.emit((ifRightZero == Opcode.Ifgt || ifRightZero == Opcode.Ifge) ? Opcode.Fcmpg : Opcode.Fcmpl);
                 generator.emit(ifRightZero, elseLabel);
                 break;
             case Double:
                 if (leftIsZero) {
-                    generator.emit(JvmOpcode.Dconst_0);
+                    generator.emit(Opcode.Dconst_0);
                 }
                 emitOperands(binary.LeftOperand, leftIsZero, binary.RightOperand, rightIsZero);
                 if (rightIsZero) {
-                    generator.emit(JvmOpcode.Dconst_0);
+                    generator.emit(Opcode.Dconst_0);
                 }
-                generator.emit((ifRightZero == JvmOpcode.Ifgt || ifRightZero == JvmOpcode.Ifge) ? JvmOpcode.Dcmpg : JvmOpcode.Dcmpl);
+                generator.emit((ifRightZero == Opcode.Ifgt || ifRightZero == Opcode.Ifge) ? Opcode.Dcmpg : Opcode.Dcmpl);
                 generator.emit(ifRightZero, elseLabel);
                 break;
             default:
@@ -1582,9 +1582,9 @@ package stab.tools.compiler {
             }
         }
         
-        private void emitEquality(BinaryExpressionNode binary, boolean leftIsZero, boolean rightIsZero, JvmLabelMarker label, boolean negate) {
+        private void emitEquality(BinaryExpressionNode binary, boolean leftIsZero, boolean rightIsZero, LabelMarker label, boolean negate) {
             var generator = context.MethodGenerationContext.Generator;
-            JvmTypeInfo type = binary.getUserData(typeof(JvmTypeInfo));
+            TypeInfo type = binary.getUserData(typeof(TypeInfo));
             switch (type.TypeKind) {
             case Boolean:
             case Byte:
@@ -1593,45 +1593,45 @@ package stab.tools.compiler {
             case Int:
                 emitOperands(binary.getLeftOperand(), leftIsZero, binary.getRightOperand(), rightIsZero);
                 if (leftIsZero || rightIsZero) {
-                    generator.emit((negate) ? JvmOpcode.Ifne : JvmOpcode.Ifeq, label);
+                    generator.emit((negate) ? Opcode.Ifne : Opcode.Ifeq, label);
                 } else {
-                    generator.emit((negate) ? JvmOpcode.If_icmpne : JvmOpcode.If_icmpeq, label);
+                    generator.emit((negate) ? Opcode.If_icmpne : Opcode.If_icmpeq, label);
                 }
                 break;
             case Long:
                 emitOperands(binary.getLeftOperand(), false, binary.getRightOperand(), false);
-                generator.emit(JvmOpcode.Lcmp);
-                generator.emit((negate) ? JvmOpcode.Ifne : JvmOpcode.Ifeq, label);
+                generator.emit(Opcode.Lcmp);
+                generator.emit((negate) ? Opcode.Ifne : Opcode.Ifeq, label);
                 break;
             case Float:
                 emitOperands(binary.getLeftOperand(), false, binary.getRightOperand(), false);
-                generator.emit(JvmOpcode.Fcmpg);
-                generator.emit((negate) ? JvmOpcode.Ifne : JvmOpcode.Ifeq, label);
+                generator.emit(Opcode.Fcmpg);
+                generator.emit((negate) ? Opcode.Ifne : Opcode.Ifeq, label);
                 break;
             case Double:
                 emitOperands(binary.getLeftOperand(), false, binary.getRightOperand(), false);
-                generator.emit(JvmOpcode.Dcmpg);
-                generator.emit((negate) ? JvmOpcode.Ifne : JvmOpcode.Ifeq, label);
+                generator.emit(Opcode.Dcmpg);
+                generator.emit((negate) ? Opcode.Ifne : Opcode.Ifeq, label);
                 break;
             default:
                 var li = binary.getLeftOperand().getUserData(typeof(ExpressionInfo));
                 var ri = binary.getRightOperand().getUserData(typeof(ExpressionInfo));
                 if (li == null) {
                     handleExpression(binary.getRightOperand(), null, true);
-                    generator.emit((negate) ? JvmOpcode.Ifnonnull : JvmOpcode.Ifnull, label);
+                    generator.emit((negate) ? Opcode.Ifnonnull : Opcode.Ifnull, label);
                 } else if (ri == null) {
                     handleExpression(binary.getLeftOperand(), null, true);
-                    generator.emit((negate) ? JvmOpcode.Ifnonnull : JvmOpcode.Ifnull, label);
+                    generator.emit((negate) ? Opcode.Ifnonnull : Opcode.Ifnull, label);
                 } else {
                     handleExpression(binary.getLeftOperand(), null, true);
                     handleExpression(binary.getRightOperand(), null, true);
-                    generator.emit((negate) ? JvmOpcode.If_acmpne : JvmOpcode.If_acmpeq, label);
+                    generator.emit((negate) ? Opcode.If_acmpne : Opcode.If_acmpeq, label);
                 }
                 break;
             }
         }
 
-        void emitArray(int dimensions, JvmTypeInfo type, Iterator<ExpressionNode> values) {
+        void emitArray(int dimensions, TypeInfo type, Iterator<ExpressionNode> values) {
             bytecodeGenerator.emitArray(dimensions, type, values);
         }
     }

@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
@@ -145,7 +145,7 @@ package stab.tools.compiler {
                 return;
             }
             case Local: {
-                var local = (LocalInfo)member;
+                var local = (LocalMemberInfo)member;
                 if (local.IsUsedFromLambda) {
                     var field = BytecodeGenerator.getLambdaScopeField(context, local);
                     emitRightExpression(false, local.Method, field.Type, nested);
@@ -167,13 +167,13 @@ package stab.tools.compiler {
             }
         }
 
-        private void emitRightExpression(boolean isStatic, JvmMethodInfo localMethod, JvmTypeInfo type, boolean nested) {
+        private void emitRightExpression(boolean isStatic, MethodInfo localMethod, TypeInfo type, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             if (isStatic) {
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 BytecodeGenerator.emitConversion(context, type, rightExpression);
                 if (nested) {
-                    generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit((type.IsCategory2) ? Opcode.Dup2 : Opcode.Dup);
                 }
             } else {
                 if (localMethod != null) {
@@ -184,22 +184,22 @@ package stab.tools.compiler {
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 BytecodeGenerator.emitConversion(context, type, rightExpression);
                 if (nested) {
-                    generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                    generator.emit((type.IsCategory2) ? Opcode.Dup2_X1 : Opcode.Dup_X1);
                 }
             }
         }
 
-        private void emitLocalAssign(SimpleNameExpressionNode simpleName, JvmTypeInfo type, JvmLocalInfo local, boolean nested) {
+        private void emitLocalAssign(SimpleNameExpressionNode simpleName, TypeInfo type, LocalInfo local, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             expressionGenerator.handleExpression(rightExpression, null, true);
             BytecodeGenerator.emitConversion(context, local.Type, rightExpression);
             if (nested) {
-                generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                generator.emit((type.IsCategory2) ? Opcode.Dup2 : Opcode.Dup);
             }
-            JvmOpcode opcode;
+            Opcode opcode;
             if (boxingKind == BoxingKind.Box) {
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
-                opcode = JvmOpcode.Astore;
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+                opcode = Opcode.Astore;
             } else {
                 switch (type.TypeKind) {
                 case Boolean:
@@ -207,19 +207,19 @@ package stab.tools.compiler {
                 case Char:
                 case Short:
                 case Int:
-                    opcode = JvmOpcode.Istore;
+                    opcode = Opcode.Istore;
                     break;
                 case Long:
-                    opcode = JvmOpcode.Lstore;
+                    opcode = Opcode.Lstore;
                     break;
                 case Float:
-                    opcode = JvmOpcode.Fstore;
+                    opcode = Opcode.Fstore;
                     break;
                 case Double:
-                    opcode = JvmOpcode.Dstore;
+                    opcode = Opcode.Dstore;
                     break;
                 default:
-                    opcode = JvmOpcode.Astore;
+                    opcode = Opcode.Astore;
                     break;
                 }
             }
@@ -235,7 +235,7 @@ package stab.tools.compiler {
                 var field = member.Field;
                 if (!field.IsStatic) {
                     BytecodeGenerator.emitThisAccess(context, generator);
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
                 emitFieldOperationAssign(field, nested);
                 break;
@@ -244,16 +244,16 @@ package stab.tools.compiler {
                 var method = member.GetAccessor;
                 if (!method.IsStatic) {
                     BytecodeGenerator.emitThisAccess(context, generator);
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
                 emitPropertyOperationAssign(method, member.SetAccessor, nested);
                 break;
             }				
             case Local: {
-                var local = (LocalInfo)member;
+                var local = (LocalMemberInfo)member;
                 if (local.IsUsedFromLambda) {
                     BytecodeGenerator.emitLoadLambdaScope(context, generator, local.Method);
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                     var field = BytecodeGenerator.getLambdaScopeField(context, local);
                     emitFieldOperationAssign(field, nested);
                 } else {
@@ -266,29 +266,29 @@ package stab.tools.compiler {
             }
         }
 
-        private void emitLocalOperationAssign(JvmLocalInfo local, boolean nested) {
+        private void emitLocalOperationAssign(LocalInfo local, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             if (local.Type.IsBoolean) {
-                emitLoad(nested, JvmOpcode.Iload, local, false);
+                emitLoad(nested, Opcode.Iload, local, false);
                 if (rightExpression == null) {
-                    generator.emit(JvmOpcode.Iconst_1);
+                    generator.emit(Opcode.Iconst_1);
                 } else {
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, local.Type);
                 }
                 emitIntOperator();
-                emitStore(nested, JvmOpcode.Istore, local, false);
+                emitStore(nested, Opcode.Istore, local, false);
             } else if (local.Type == context.TypeSystem.StringType) {
-                emitLoad(nested, JvmOpcode.Aload, local, false);
+                emitLoad(nested, Opcode.Aload, local, false);
                 var stringType = context.TypeSystem.StringType;
-                generator.emit(JvmOpcode.New, context.StringBuilderType);
-                generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
+                generator.emit(Opcode.New, context.StringBuilderType);
+                generator.emit(Opcode.Dup);
+                generator.emit(Opcode.Invokespecial, context.StringBuilderConstructor);
                 if (rightInfo.Type.IsCategory2) {
-                    generator.emit(JvmOpcode.Dup_X2);
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Dup_X2);
+                    generator.emit(Opcode.Pop);
                 } else {
-                    generator.emit(JvmOpcode.Swap);
+                    generator.emit(Opcode.Swap);
                 }
                 BytecodeGenerator.emitStringBuilderAppend(context, null);
                 var isString = rightInfo != null && rightInfo.Type == stringType;
@@ -299,27 +299,27 @@ package stab.tools.compiler {
                     BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                 }
                 context.MethodGenerationContext.IsBuildingString = false;
-                generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
-                emitStore(nested, JvmOpcode.Astore, local, false);
+                generator.emit(Opcode.Invokevirtual, context.ObjectToStringMethod);
+                emitStore(nested, Opcode.Astore, local, false);
             } else if (BytecodeHelper.isDelegateType(local.Type)) {
-                emitLoad(nested, JvmOpcode.Aload, local, false);
+                emitLoad(nested, Opcode.Aload, local, false);
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 var delegateType = context.getTypeSystem().getType("stab/lang/Delegate");
-                var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                var argTypes = new ArrayList<TypeInfo> { delegateType, delegateType };
                 if (operator == AssignOperator.Add) {
-                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                    generator.emit(Opcode.Invokestatic, delegateType.getMethod("combine", argTypes));
                 } else {
-                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                    generator.emit(Opcode.Invokestatic, delegateType.getMethod("remove", argTypes));
                 }
-                generator.emit(JvmOpcode.Checkcast, local.Type);
-                emitStore(nested, JvmOpcode.Astore, local, false);
+                generator.emit(Opcode.Checkcast, local.Type);
+                emitStore(nested, Opcode.Astore, local, false);
             } else {
-                JvmTypeInfo rightType;
+                TypeInfo rightType;
                 switch (operator) {
                 case LeftShift:
                 case RightShift:
                 case UnsignedRightShift:
-                    rightType = JvmTypeInfo.INT;
+                    rightType = context.TypeSystem.IntType;
                     break;
                 default:
                     rightType = local.getType();
@@ -327,42 +327,42 @@ package stab.tools.compiler {
                 }
                 switch (local.Type.NumericTypeKind) {
                 case Byte:
-                    emitLoad(nested, JvmOpcode.Iload, local, false);
+                    emitLoad(nested, Opcode.Iload, local, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2b);
-                    emitStore(nested, JvmOpcode.Istore, local, false);
+                    generator.emit(Opcode.I2b);
+                    emitStore(nested, Opcode.Istore, local, false);
                     break;
 
                 case Char:
-                    emitLoad(nested, JvmOpcode.Iload, local, false);
+                    emitLoad(nested, Opcode.Iload, local, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2c);
-                    emitStore(nested, JvmOpcode.Istore, local, false);
+                    generator.emit(Opcode.I2c);
+                    emitStore(nested, Opcode.Istore, local, false);
                     break;
 
                 case Short:
-                    emitLoad(nested, JvmOpcode.Iload, local, false);
+                    emitLoad(nested, Opcode.Iload, local, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2s);
-                    emitStore(nested, JvmOpcode.Istore, local, false);
+                    generator.emit(Opcode.I2s);
+                    emitStore(nested, Opcode.Istore, local, false);
                     break;
 
                 case Int:
@@ -370,63 +370,63 @@ package stab.tools.compiler {
                      && rightInfo.IsConstant
                      && (operator == AssignOperator.Add || operator == AssignOperator.Subtract)) {
                         if (nested && postAssign) {
-                            generator.emit(JvmOpcode.Iload, local);
+                            generator.emit(Opcode.Iload, local);
                         }
                         if (operator == AssignOperator.Add) {
-                            generator.emit(JvmOpcode.Iinc, local, ((Integer)rightInfo.Value).intValue());
+                            generator.emit(Opcode.Iinc, local, ((Integer)rightInfo.Value).intValue());
                         } else {
-                            generator.emit(JvmOpcode.Iinc, local, -((Integer)rightInfo.Value).intValue());
+                            generator.emit(Opcode.Iinc, local, -((Integer)rightInfo.Value).intValue());
                         }
                         if (nested && !postAssign) {
-                            generator.emit(JvmOpcode.Iload, local);
+                            generator.emit(Opcode.Iload, local);
                         }
                     } else {
-                        emitLoad(nested, JvmOpcode.Iload, local, false);
+                        emitLoad(nested, Opcode.Iload, local, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        emitStore(nested, JvmOpcode.Istore, local, false);
+                        emitStore(nested, Opcode.Istore, local, false);
                     }
                     break;
 
                 case Long:
-                    emitLoad(nested, JvmOpcode.Lload, local, true);
+                    emitLoad(nested, Opcode.Lload, local, true);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Lconst_1);
+                        generator.emit(Opcode.Lconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitLongOperator();
-                    emitStore(nested, JvmOpcode.Lstore, local, true);
+                    emitStore(nested, Opcode.Lstore, local, true);
                     break;
 
                 case Float:
-                    emitLoad(nested, JvmOpcode.Fload, local, false);
+                    emitLoad(nested, Opcode.Fload, local, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Fconst_1);
+                        generator.emit(Opcode.Fconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitFloatOperator();
-                    emitStore(nested, JvmOpcode.Fstore, local, false);
+                    emitStore(nested, Opcode.Fstore, local, false);
                     break;
 
                 case Double:
-                    emitLoad(nested, JvmOpcode.Dload, local, true);
+                    emitLoad(nested, Opcode.Dload, local, true);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Dconst_1);
+                        generator.emit(Opcode.Dconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitDoubleOperator();
-                    emitStore(nested, JvmOpcode.Dstore, local, true);
+                    emitStore(nested, Opcode.Dstore, local, true);
                     break;
 
                 default:
@@ -447,20 +447,20 @@ package stab.tools.compiler {
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
 					if (boxingKind == BoxingKind.Box) {
-						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+						generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
 					}
                     if (nested) {
-                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                        generator.emit((type.IsCategory2) ? Opcode.Dup2 : Opcode.Dup);
                     }
                 } else {
                     expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
 					if (boxingKind == BoxingKind.Box) {
-						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+						generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
 					}
 					if (nested) {
-                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                        generator.emit((type.IsCategory2) ? Opcode.Dup2_X1 : Opcode.Dup_X1);
                     }
                 }
                 CompilerHelper.emitFieldModification(context, field);
@@ -473,20 +473,20 @@ package stab.tools.compiler {
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
 					if (boxingKind == BoxingKind.Box) {
-						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+						generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
 					}
                     if (nested) {
-                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                        generator.emit((type.IsCategory2) ? Opcode.Dup2 : Opcode.Dup);
                     }
                 } else {
                     expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeGenerator.emitConversion(context, type, rightExpression);
 					if (boxingKind == BoxingKind.Box) {
-						generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
+						generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod((type.IsObject) ? rightInfo.Type : type));
 					}
                     if (nested) {
-                        generator.emit((type.IsCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                        generator.emit((type.IsCategory2) ? Opcode.Dup2_X1 : Opcode.Dup_X1);
                     }
                 }
                 CompilerHelper.emitPropertyOrIndexerModification(context, method);
@@ -506,7 +506,7 @@ package stab.tools.compiler {
                 var field = member.Field;
                 if (!field.IsStatic) {
                     expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
                 emitFieldOperationAssign(field, nested);
                 break;
@@ -515,7 +515,7 @@ package stab.tools.compiler {
                 var method = member.GetAccessor;
                 if (!method.IsStatic) {
                     expressionGenerator.handleExpression(memberAccess.TargetObject, null, true);
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
                 emitPropertyOperationAssign(method, member.SetAccessor, nested);
                 break;
@@ -525,7 +525,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void emitFieldOperationAssign(JvmFieldInfo field, boolean nested) {
+        private void emitFieldOperationAssign(FieldInfo field, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             CompilerHelper.emitFieldAccess(context, field);
             BytecodeGenerator.emitGenericCast(context, field.Type, field.DeclaringType.OriginalTypeDefinition.getField(field.Name).Type);
@@ -533,7 +533,7 @@ package stab.tools.compiler {
             CompilerHelper.emitFieldModification(context, field);
         }
         
-        private void emitPropertyOperationAssign(JvmMethodInfo getMethod, JvmMethodInfo setMethod, boolean nested) {
+        private void emitPropertyOperationAssign(MethodInfo getMethod, MethodInfo setMethod, boolean nested) {
             var generator = context.MethodGenerationContext.Generator;
             CompilerHelper.emitPropertyAccess(context, getMethod);
             BytecodeGenerator.emitGenericCast(context, getMethod.ReturnType, getMethod.OriginalMethodDefinition.ReturnType);
@@ -541,29 +541,29 @@ package stab.tools.compiler {
             CompilerHelper.emitPropertyOrIndexerModification(context, setMethod);
         }
 
-        private void emitFieldOrPropertyOperation(JvmCodeGenerator generator, JvmTypeInfo type, boolean nested, boolean isStatic) {
+        private void emitFieldOrPropertyOperation(CodeGenerator generator, TypeInfo type, boolean nested, boolean isStatic) {
             if (type.IsBoolean) {
-                emitUnbox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
+                emitUnbox(nested, context.TypeSystem.BooleanType, isStatic, false);
                 if (rightExpression == null) {
-                    generator.emit(JvmOpcode.Iconst_1);
+                    generator.emit(Opcode.Iconst_1);
                 } else {
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, type);
                 }
                 emitIntOperator();
-                generator.emit(JvmOpcode.I2b);
-                emitBox(nested, JvmTypeInfo.BOOLEAN, isStatic, false);
+                generator.emit(Opcode.I2b);
+                emitBox(nested, context.TypeSystem.BooleanType, isStatic, false);
             } else if (type == context.TypeSystem.StringType) {
                 emitUnbox(nested, type, isStatic, false);
                 var stringType = context.TypeSystem.StringType;
-                generator.emit(JvmOpcode.New, context.StringBuilderType);
-                generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
+                generator.emit(Opcode.New, context.StringBuilderType);
+                generator.emit(Opcode.Dup);
+                generator.emit(Opcode.Invokespecial, context.StringBuilderConstructor);
                 if (rightInfo.Type.IsCategory2) {
-                    generator.emit(JvmOpcode.Dup_X2);
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Dup_X2);
+                    generator.emit(Opcode.Pop);
                 } else {
-                    generator.emit(JvmOpcode.Swap);
+                    generator.emit(Opcode.Swap);
                 }
                 BytecodeGenerator.emitStringBuilderAppend(context, null);
                 var isString = rightInfo != null && rightInfo.Type == stringType;
@@ -574,27 +574,27 @@ package stab.tools.compiler {
                     BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                 }
                 context.MethodGenerationContext.IsBuildingString = false;
-                generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
+                generator.emit(Opcode.Invokevirtual, context.ObjectToStringMethod);
                 emitBox(nested, type, isStatic, false);
             } else if (BytecodeHelper.isDelegateType(type)) {
                 emitUnbox(nested, type, isStatic, false);
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-                var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                var argTypes = new ArrayList<TypeInfo> { delegateType, delegateType };
                 if (operator == AssignOperator.Add) {
-                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                    generator.emit(Opcode.Invokestatic, delegateType.getMethod("combine", argTypes));
                 } else {
-                    generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                    generator.emit(Opcode.Invokestatic, delegateType.getMethod("remove", argTypes));
                 }
-                generator.emit(JvmOpcode.Checkcast, type);
+                generator.emit(Opcode.Checkcast, type);
                 emitBox(nested, type, isStatic, false);
             } else {
-                JvmTypeInfo rightType;
+                TypeInfo rightType;
                 switch (operator) {
                 case LeftShift:
                 case RightShift:
                 case UnsignedRightShift:
-                    rightType = JvmTypeInfo.INT;
+                    rightType = context.TypeSystem.IntType;
                     break;
                 default:
                     rightType = type;
@@ -602,90 +602,90 @@ package stab.tools.compiler {
                 }
                 switch (type.NumericTypeKind) {
                 case Byte:
-                    emitUnbox(nested, JvmTypeInfo.BYTE, isStatic, false);
+                    emitUnbox(nested, context.TypeSystem.ByteType, isStatic, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2b);
-                    emitBox(nested, JvmTypeInfo.BYTE, isStatic, false);
+                    generator.emit(Opcode.I2b);
+                    emitBox(nested, context.TypeSystem.ByteType, isStatic, false);
                     break;
 
                 case Char:
-                    emitUnbox(nested, JvmTypeInfo.CHAR, isStatic, false);
+                    emitUnbox(nested, context.TypeSystem.CharType, isStatic, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2c);
-                    emitBox(nested, JvmTypeInfo.CHAR, isStatic, false);
+                    generator.emit(Opcode.I2c);
+                    emitBox(nested, context.TypeSystem.CharType, isStatic, false);
                     break;
 
                 case Double:
-                    emitUnbox(nested, JvmTypeInfo.DOUBLE, isStatic, true);
+                    emitUnbox(nested, context.TypeSystem.DoubleType, isStatic, true);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Dconst_1);
+                        generator.emit(Opcode.Dconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitDoubleOperator();
-                    emitBox(nested, JvmTypeInfo.DOUBLE, isStatic, true);
+                    emitBox(nested, context.TypeSystem.DoubleType, isStatic, true);
                     break;
 
                 case Float:
-                    emitUnbox(nested, JvmTypeInfo.FLOAT, isStatic, false);
+                    emitUnbox(nested, context.TypeSystem.FloatType, isStatic, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Fconst_1);
+                        generator.emit(Opcode.Fconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitFloatOperator();
-                    emitBox(nested, JvmTypeInfo.FLOAT, isStatic, false);
+                    emitBox(nested, context.TypeSystem.FloatType, isStatic, false);
                     break;
 
                 case Int:
-                    emitUnbox(nested, JvmTypeInfo.INT, isStatic, false);
+                    emitUnbox(nested, context.TypeSystem.IntType, isStatic, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    emitBox(nested, JvmTypeInfo.INT, isStatic, false);
+                    emitBox(nested, context.TypeSystem.IntType, isStatic, false);
                     break;
 
                 case Long:
-                    emitUnbox(nested, JvmTypeInfo.LONG, isStatic, true);
+                    emitUnbox(nested, context.TypeSystem.LongType, isStatic, true);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Lconst_1);
+                        generator.emit(Opcode.Lconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitLongOperator();
-                    emitBox(nested, JvmTypeInfo.LONG, isStatic, true);
+                    emitBox(nested, context.TypeSystem.LongType, isStatic, true);
                     break;
 
                 case Short:
-                    emitUnbox(nested, JvmTypeInfo.SHORT, isStatic, false);
+                    emitUnbox(nested, context.TypeSystem.ShortType, isStatic, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2s);
-                    emitBox(nested, JvmTypeInfo.SHORT, isStatic, false);
+                    generator.emit(Opcode.I2s);
+                    emitBox(nested, context.TypeSystem.ShortType, isStatic, false);
                     break;
 
                 default:
@@ -712,30 +712,30 @@ package stab.tools.compiler {
                 var type = member.Type;
                 BytecodeGenerator.emitConversion(context, type, rightExpression);
                 if (boxingKind == BoxingKind.Box) {
-                    JvmTypeInfo rtype;
+                    TypeInfo rtype;
                     if (type.IsObject) {
                         var rinfo = rightExpression.getUserData(typeof(ExpressionInfo));
                         rtype = rinfo.Type;
                     } else {
                         rtype = type;
                     }
-                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
+                    generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
                 }
                 if (nested) {
                     var isCategory2 = type.IsCategory2;
                     if (requireLocal) {
                         generator.beginScope();
-                        generator.emit((isCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                        generator.emit((isCategory2) ? Opcode.Dup2 : Opcode.Dup);
                         generator.emit(BytecodeHelper.getStoreOpcode(type), generator.declareLocal(type, "elementValue$0"));
                     } else if (method.IsStatic) {
-                        generator.emit((isCategory2) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup_X1);
+                        generator.emit((isCategory2) ? Opcode.Dup2_X1 : Opcode.Dup_X1);
                     } else {
-                        generator.emit((isCategory2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                        generator.emit((isCategory2) ? Opcode.Dup2_X2 : Opcode.Dup_X2);
                     }
                 }
                 CompilerHelper.emitPropertyOrIndexerModification(context, method);
-                if (method.ReturnType != JvmTypeInfo.VOID) {
-                    generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                if (method.ReturnType != context.TypeSystem.VoidType) {
+                    generator.emit((method.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                 }
                 if (nested && requireLocal) {
                     generator.emit(BytecodeHelper.getLoadOpcode(type), generator.getLocal("elementValue$0"));
@@ -745,7 +745,7 @@ package stab.tools.compiler {
                 expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
                 var index = elementAccess.Indexes[0];
                 expressionGenerator.handleExpression(index, null, true);
-                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
+                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, context.TypeSystem.IntType);
                 expressionGenerator.handleExpression(rightExpression, null, true);
                 BytecodeGenerator.emitConversion(context, ttype.ElementType, rightExpression);
                 if (boxingKind == BoxingKind.Box) {
@@ -754,57 +754,57 @@ package stab.tools.compiler {
 		                var rinfo = rightExpression.getUserData(typeof(ExpressionInfo));
                         rtype = rinfo.Type;
                     }
-                    generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
+                    generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(rtype));
                 }
                 switch (ttype.ElementType.TypeKind) {
                 case Boolean:
                 case Byte:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Bastore);
+                    generator.emit(Opcode.Bastore);
                     break;
                 case Char:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Castore);
+                    generator.emit(Opcode.Castore);
                     break;
                 case Float:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Fastore);
+                    generator.emit(Opcode.Fastore);
                     break;
                 case Double:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup2_X2);
+                        generator.emit(Opcode.Dup2_X2);
                     }
-                    generator.emit(JvmOpcode.Dastore);
+                    generator.emit(Opcode.Dastore);
                     break;
                 case Int:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Iastore);
+                    generator.emit(Opcode.Iastore);
                     break;
                 case Long:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup2_X2);
+                        generator.emit(Opcode.Dup2_X2);
                     }
-                    generator.emit(JvmOpcode.Lastore);
+                    generator.emit(Opcode.Lastore);
                     break;
                 case Short:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Sastore);
+                    generator.emit(Opcode.Sastore);
                     break;
                 default:
                     if (nested) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Aastore);
+                    generator.emit(Opcode.Aastore);
                     break;
                 }
             }
@@ -825,8 +825,8 @@ package stab.tools.compiler {
                 if (requireLocals) {
                     generator.beginScope();
                     if (!isStatic) {
-                        generator.emit(JvmOpcode.Dup);
-                        generator.emit(JvmOpcode.Astore, generator.declareLocal(ttype, "elementTarget$0"));
+                        generator.emit(Opcode.Dup);
+                        generator.emit(Opcode.Astore, generator.declareLocal(ttype, "elementTarget$0"));
                     }
                 }
                 var arguments = elementAccess.Indexes;
@@ -842,7 +842,7 @@ package stab.tools.compiler {
                     var e = it2.next();
                     expressionGenerator.emitNestedExpression(e, p.Type);
                     if (requireLocals) {
-                        generator.emit((p.Type.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                        generator.emit((p.Type.IsCategory2) ? Opcode.Dup2 : Opcode.Dup);
                         generator.emit(BytecodeHelper.getStoreOpcode(p.Type), generator.declareLocal(p.Type, "elementIndex$" + i));
                     }
                 }
@@ -853,7 +853,7 @@ package stab.tools.compiler {
                         var e = arguments[i];
                         var ei = e.getUserData(typeof(ExpressionInfo));
                         if (ei == null) {
-                            generator.emit(JvmOpcode.Aconst_Null);
+                            generator.emit(Opcode.Aconst_Null);
                         } else if (ei.Type.IsArray && paramType.isAssignableFrom(ei.Type)) {
                             expressionGenerator.handleExpression(e, null, true);
                             BytecodeGenerator.emitConversion(context, paramType, e);
@@ -866,49 +866,49 @@ package stab.tools.compiler {
                         expressionGenerator.emitArray(1, paramType, it2);
                     }
                     if (requireLocals) {
-                        generator.emit(JvmOpcode.Dup);
+                        generator.emit(Opcode.Dup);
                         generator.emit(BytecodeHelper.getStoreOpcode(paramType), generator.declareLocal(paramType, "elementIndex$" + i));
                     }
                 }
                 if (!requireLocals) {
-                    generator.emit((isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup2);
+                    generator.emit((isStatic) ? Opcode.Dup : Opcode.Dup2);
                 }
                 CompilerHelper.emitIndexerAccess(context, method);
                 if (requireLocals && nested && postAssign) {
-                    generator.emit((method.ReturnType.IsCategory2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit((method.ReturnType.IsCategory2) ? Opcode.Dup2 : Opcode.Dup);
                     generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
                         generator.declareLocal(method.ReturnType, "elementResult$0"));
                 }
                 if (method.ReturnType.IsBoolean) {
                     if (!requireLocals && nested && postAssign) {
-                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                     }
-                    emitUnbox(false, JvmTypeInfo.BOOLEAN, false, false);
+                    emitUnbox(false, context.TypeSystem.BooleanType, false, false);
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                         BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, method.ReturnType);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2b);
-                    emitBox(false, JvmTypeInfo.BOOLEAN, false, false);
+                    generator.emit(Opcode.I2b);
+                    emitBox(false, context.TypeSystem.BooleanType, false, false);
                     if (!requireLocals && nested && !postAssign) {
-                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                     }
                 } else if (method.ReturnType == context.TypeSystem.StringType) {
                     if (!requireLocals && nested && postAssign) {
-                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                     }
                     var stringType = context.TypeSystem.StringType;
-                    generator.emit(JvmOpcode.New, context.StringBuilderType);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
+                    generator.emit(Opcode.New, context.StringBuilderType);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Invokespecial, context.StringBuilderConstructor);
                     if (rightInfo.Type.IsCategory2) {
-                        generator.emit(JvmOpcode.Dup_X2);
-                        generator.emit(JvmOpcode.Pop);
+                        generator.emit(Opcode.Dup_X2);
+                        generator.emit(Opcode.Pop);
                     } else {
-                        generator.emit(JvmOpcode.Swap);
+                        generator.emit(Opcode.Swap);
                     }
                     BytecodeGenerator.emitStringBuilderAppend(context, null);
                     var isString = rightInfo != null && rightInfo.Type == stringType;
@@ -919,33 +919,33 @@ package stab.tools.compiler {
                         BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                     }
                     context.MethodGenerationContext.IsBuildingString = false;
-                    generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
+                    generator.emit(Opcode.Invokevirtual, context.ObjectToStringMethod);
                     if (!requireLocals && nested && !postAssign) {
-                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                     }
                 } else if (BytecodeHelper.isDelegateType(method.ReturnType)) {
                     if (!requireLocals && nested && postAssign) {
-                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                     }
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-                    var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                    var argTypes = new ArrayList<TypeInfo> { delegateType, delegateType };
                     if (operator == AssignOperator.Add) {
-                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                        generator.emit(Opcode.Invokestatic, delegateType.getMethod("combine", argTypes));
                     } else {
-                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                        generator.emit(Opcode.Invokestatic, delegateType.getMethod("remove", argTypes));
                     }
-                    generator.emit(JvmOpcode.Checkcast, method.ReturnType);
+                    generator.emit(Opcode.Checkcast, method.ReturnType);
                     if (!requireLocals && nested && !postAssign) {
-                        generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                        generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                     }
                 } else {
-                    JvmTypeInfo rightType;
+                    TypeInfo rightType;
                     switch (operator) {
                     case LeftShift:
                     case RightShift:
                     case UnsignedRightShift:
-                        rightType = JvmTypeInfo.INT;
+                        rightType = context.TypeSystem.IntType;
                         break;
                     default:
                         rightType = method.ReturnType;
@@ -954,130 +954,130 @@ package stab.tools.compiler {
                     switch (method.ReturnType.NumericTypeKind) {
                     case Byte:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.BYTE, false, false);
+                        emitUnbox(false, context.TypeSystem.ByteType, false, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        generator.emit(JvmOpcode.I2b);
-                        emitBox(false, JvmTypeInfo.BYTE, false, false);
+                        generator.emit(Opcode.I2b);
+                        emitBox(false, context.TypeSystem.ByteType, false, false);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
                         break;
 
                     case Char:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.CHAR, false, false);
+                        emitUnbox(false, context.TypeSystem.CharType, false, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        generator.emit(JvmOpcode.I2c);
-                        emitBox(false, JvmTypeInfo.CHAR, false, false);
+                        generator.emit(Opcode.I2c);
+                        emitBox(false, context.TypeSystem.CharType, false, false);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
                         break;
 
                     case Double:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                            generator.emit((isStatic) ? Opcode.Dup2_X1 : Opcode.Dup2_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.DOUBLE, false, true);
+                        emitUnbox(false, context.TypeSystem.DoubleType, false, true);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Dconst_1);
+                            generator.emit(Opcode.Dconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitDoubleOperator();
-                        emitBox(false, JvmTypeInfo.DOUBLE, false, true);
+                        emitBox(false, context.TypeSystem.DoubleType, false, true);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                            generator.emit((isStatic) ? Opcode.Dup2_X1 : Opcode.Dup2_X2);
                         }
                         break;
 
                     case Float:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.FLOAT, false, false);
+                        emitUnbox(false, context.TypeSystem.FloatType, false, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Fconst_1);
+                            generator.emit(Opcode.Fconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitFloatOperator();
-                        emitBox(false, JvmTypeInfo.FLOAT, false, false);
+                        emitBox(false, context.TypeSystem.FloatType, false, false);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
                         break;
 
                     case Int:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.INT, false, false);
+                        emitUnbox(false, context.TypeSystem.IntType, false, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        emitBox(false, JvmTypeInfo.INT, false, false);
+                        emitBox(false, context.TypeSystem.IntType, false, false);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
                         break;
 
                     case Long:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                            generator.emit((isStatic) ? Opcode.Dup2_X1 : Opcode.Dup2_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.LONG, false, true);
+                        emitUnbox(false, context.TypeSystem.LongType, false, true);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Lconst_1);
+                            generator.emit(Opcode.Lconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitLongOperator();
-                        emitBox(false, JvmTypeInfo.LONG, false, true);
+                        emitBox(false, context.TypeSystem.LongType, false, true);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup2_X1 : JvmOpcode.Dup2_X2);
+                            generator.emit((isStatic) ? Opcode.Dup2_X1 : Opcode.Dup2_X2);
                         }
                         break;
 
                     case Short:
                         if (!requireLocals && nested && postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
-                        emitUnbox(false, JvmTypeInfo.SHORT, false, false);
+                        emitUnbox(false, context.TypeSystem.ShortType, false, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.getType(), rightType);
                         }
                         emitIntOperator();
-                        generator.emit(JvmOpcode.I2s);
-                        emitBox(false, JvmTypeInfo.SHORT, false, false);
+                        generator.emit(Opcode.I2s);
+                        emitBox(false, context.TypeSystem.ShortType, false, false);
                         if (!requireLocals && nested && !postAssign) {
-                            generator.emit((isStatic) ? JvmOpcode.Dup_X1 : JvmOpcode.Dup_X2);
+                            generator.emit((isStatic) ? Opcode.Dup_X1 : Opcode.Dup_X2);
                         }
                         break;
 
@@ -1089,7 +1089,7 @@ package stab.tools.compiler {
                     generator.emit(BytecodeHelper.getStoreOpcode(method.ReturnType),
                         generator.declareLocal(method.ReturnType, "elementValue$0"));
                     if (!isStatic) {
-                        generator.emit(JvmOpcode.Aload, generator.getLocal("elementTarget$0"));
+                        generator.emit(Opcode.Aload, generator.getLocal("elementTarget$0"));
                     }
                     int n = 0;
                     foreach (var p in method.Parameters) {
@@ -1112,39 +1112,39 @@ package stab.tools.compiler {
                 expressionGenerator.handleExpression(elementAccess.TargetObject, null, true);
                 var index = elementAccess.Indexes[0];
                 expressionGenerator.handleExpression(index, null, true);
-                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, JvmTypeInfo.INT);
+                BytecodeHelper.emitNumericConversion(generator, index.getUserData(typeof(ExpressionInfo)).Type, context.TypeSystem.IntType);
                 
-                generator.emit(JvmOpcode.Dup2);
+                generator.emit(Opcode.Dup2);
                 if (ttype.ElementType.IsBoolean) {
-                    generator.emit(JvmOpcode.Baload);
+                    generator.emit(Opcode.Baload);
                     if (nested && postAssign) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
                     if (rightExpression == null) {
-                        generator.emit(JvmOpcode.Iconst_1);
+                        generator.emit(Opcode.Iconst_1);
                     } else {
                         expressionGenerator.handleExpression(rightExpression, null, true);
                     }
                     emitIntOperator();
-                    generator.emit(JvmOpcode.I2b);
+                    generator.emit(Opcode.I2b);
                     if (nested && !postAssign) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Bastore);
+                    generator.emit(Opcode.Bastore);
                 } else if (ttype.ElementType == context.TypeSystem.StringType) {
-                    generator.emit(JvmOpcode.Aaload);
+                    generator.emit(Opcode.Aaload);
                     if (nested && postAssign) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
                     var stringType = context.TypeSystem.StringType;
-                    generator.emit(JvmOpcode.New, context.StringBuilderType);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Invokespecial, context.StringBuilderConstructor);
+                    generator.emit(Opcode.New, context.StringBuilderType);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Invokespecial, context.StringBuilderConstructor);
                     if (rightInfo.getType().IsCategory2) {
-                        generator.emit(JvmOpcode.Dup_X2);
-                        generator.emit(JvmOpcode.Pop);
+                        generator.emit(Opcode.Dup_X2);
+                        generator.emit(Opcode.Pop);
                     } else {
-                        generator.emit(JvmOpcode.Swap);
+                        generator.emit(Opcode.Swap);
                     }
                     BytecodeGenerator.emitStringBuilderAppend(context, null);
                     var isString = rightInfo != null && rightInfo.getType() == stringType;
@@ -1155,36 +1155,36 @@ package stab.tools.compiler {
                         BytecodeGenerator.emitStringBuilderAppend(context, rightExpression.getUserData(typeof(ExpressionInfo)));
                     }
                     context.MethodGenerationContext.IsBuildingString = false;
-                    generator.emit(JvmOpcode.Invokevirtual, context.ObjectToStringMethod);
+                    generator.emit(Opcode.Invokevirtual, context.ObjectToStringMethod);
                     if (nested && !postAssign) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Bastore);
+                    generator.emit(Opcode.Bastore);
                 } else if (BytecodeHelper.isDelegateType(ttype.ElementType)) {
-                    generator.emit(JvmOpcode.Aaload);
+                    generator.emit(Opcode.Aaload);
                     if (nested && postAssign) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
                     expressionGenerator.handleExpression(rightExpression, null, true);
                     var delegateType = context.TypeSystem.getType("stab/lang/Delegate");
-                    var argTypes = new ArrayList<JvmTypeInfo> { delegateType, delegateType };
+                    var argTypes = new ArrayList<TypeInfo> { delegateType, delegateType };
                     if (operator == AssignOperator.Add) {
-                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("combine", argTypes));
+                        generator.emit(Opcode.Invokestatic, delegateType.getMethod("combine", argTypes));
                     } else {
-                        generator.emit(JvmOpcode.Invokestatic, delegateType.getMethod("remove", argTypes));
+                        generator.emit(Opcode.Invokestatic, delegateType.getMethod("remove", argTypes));
                     }
-                    generator.emit(JvmOpcode.Checkcast, ttype);
+                    generator.emit(Opcode.Checkcast, ttype);
                     if (nested && !postAssign) {
-                        generator.emit(JvmOpcode.Dup_X2);
+                        generator.emit(Opcode.Dup_X2);
                     }
-                    generator.emit(JvmOpcode.Bastore);
+                    generator.emit(Opcode.Bastore);
                 } else {
-                    JvmTypeInfo rightType;
+                    TypeInfo rightType;
                     switch (operator) {
                     case LeftShift:
                     case RightShift:
                     case UnsignedRightShift:
-                        rightType = JvmTypeInfo.INT;
+                        rightType = context.TypeSystem.IntType;
                         break;
                     default:
                         rightType = ttype.ElementType;
@@ -1192,84 +1192,84 @@ package stab.tools.compiler {
                     }
                     switch (ttype.ElementType.NumericTypeKind) {
                     case Byte:
-                        emitAload(nested, JvmOpcode.Baload, JvmTypeInfo.BYTE, false);
+                        emitAload(nested, Opcode.Baload, context.TypeSystem.ByteType, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        generator.emit(JvmOpcode.I2b);
-                        emitAstore(nested, JvmOpcode.Bastore, JvmTypeInfo.BYTE, false);
+                        generator.emit(Opcode.I2b);
+                        emitAstore(nested, Opcode.Bastore, context.TypeSystem.ByteType, false);
                         break;
                     case Char:
-                        emitAload(nested, JvmOpcode.Caload, JvmTypeInfo.CHAR, false);
+                        emitAload(nested, Opcode.Caload, context.TypeSystem.CharType, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        generator.emit(JvmOpcode.I2c);
-                        emitAstore(nested, JvmOpcode.Castore, JvmTypeInfo.CHAR, false);
+                        generator.emit(Opcode.I2c);
+                        emitAstore(nested, Opcode.Castore, context.TypeSystem.CharType, false);
                         break;
                     case Float:
-                        emitAload(nested, JvmOpcode.Faload, JvmTypeInfo.FLOAT, false);
+                        emitAload(nested, Opcode.Faload, context.TypeSystem.FloatType, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Fconst_1);
+                            generator.emit(Opcode.Fconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitFloatOperator();
-                        emitAstore(nested, JvmOpcode.Fastore, JvmTypeInfo.FLOAT, false);
+                        emitAstore(nested, Opcode.Fastore, context.TypeSystem.FloatType, false);
                         break;
                     case Double:
-                        emitAload(nested, JvmOpcode.Daload, JvmTypeInfo.DOUBLE, true);
+                        emitAload(nested, Opcode.Daload, context.TypeSystem.DoubleType, true);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Dconst_1);
+                            generator.emit(Opcode.Dconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitDoubleOperator();
-                        emitAstore(nested, JvmOpcode.Dastore, JvmTypeInfo.DOUBLE, true);
+                        emitAstore(nested, Opcode.Dastore, context.TypeSystem.DoubleType, true);
                         break;
                     case Int:
-                        emitAload(nested, JvmOpcode.Iaload, JvmTypeInfo.INT, false);
+                        emitAload(nested, Opcode.Iaload, context.TypeSystem.IntType, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        emitAstore(nested, JvmOpcode.Iastore, JvmTypeInfo.INT, false);
+                        emitAstore(nested, Opcode.Iastore, context.TypeSystem.IntType, false);
                         break;
                     case Long:
-                        emitAload(nested, JvmOpcode.Laload, JvmTypeInfo.LONG, true);
+                        emitAload(nested, Opcode.Laload, context.TypeSystem.LongType, true);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Lconst_1);
+                            generator.emit(Opcode.Lconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitLongOperator();
-                        emitAstore(nested, JvmOpcode.Lastore, JvmTypeInfo.LONG, true);
+                        emitAstore(nested, Opcode.Lastore, context.TypeSystem.LongType, true);
                         break;
                     case Short:
-                        emitAload(nested, JvmOpcode.Saload, JvmTypeInfo.SHORT, false);
+                        emitAload(nested, Opcode.Saload, context.TypeSystem.ShortType, false);
                         if (rightExpression == null) {
-                            generator.emit(JvmOpcode.Iconst_1);
+                            generator.emit(Opcode.Iconst_1);
                         } else {
                             expressionGenerator.handleExpression(rightExpression, null, true);
                             BytecodeHelper.emitNumericConversion(generator, rightInfo.Type, rightType);
                         }
                         emitIntOperator();
-                        generator.emit(JvmOpcode.I2s);
-                        emitAstore(nested, JvmOpcode.Sastore, JvmTypeInfo.SHORT, false);
+                        generator.emit(Opcode.I2s);
+                        emitAstore(nested, Opcode.Sastore, context.TypeSystem.ShortType, false);
                         break;
                     default:
                         throw new IllegalStateException();
@@ -1278,150 +1278,150 @@ package stab.tools.compiler {
             }
         }
 
-        private void emitUnbox(boolean nested, JvmTypeInfo type, boolean isStatic, boolean category2) {
+        private void emitUnbox(boolean nested, TypeInfo type, boolean isStatic, boolean category2) {
             var generator = context.MethodGenerationContext.Generator;
             switch (boxingKind) {
             case Box:
                 if (nested && postAssign) {
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                generator.emit(Opcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
                 break;
             case Unbox:
                 if (nested && postAssign) {
-                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                    generator.emit((category2) ? (isStatic) ? Opcode.Dup2 : Opcode.Dup2_X1 : (isStatic) ? Opcode.Dup : Opcode.Dup_X1);
                 }
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
                 break;
             default:
                 if (nested && postAssign) {
-                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                    generator.emit((category2) ? (isStatic) ? Opcode.Dup2 : Opcode.Dup2_X1 : (isStatic) ? Opcode.Dup : Opcode.Dup_X1);
                 }
                 break;
             }
         }
 
-        private void emitBox(boolean nested, JvmTypeInfo type, boolean isStatic, boolean category2) {
+        private void emitBox(boolean nested, TypeInfo type, boolean isStatic, boolean category2) {
             var generator = context.MethodGenerationContext.Generator;
             switch (boxingKind) {
             case Box:
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
                 if (nested && !postAssign) {
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
                 break;
             case Unbox:
                 if (nested && !postAssign) {
-                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                    generator.emit((category2) ? (isStatic) ? Opcode.Dup2 : Opcode.Dup2_X1 : (isStatic) ? Opcode.Dup : Opcode.Dup_X1);
                 }
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                generator.emit(Opcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
                 break;
             default:
                 if (nested && !postAssign) {
-                    generator.emit((category2) ? (isStatic) ? JvmOpcode.Dup2 : JvmOpcode.Dup2_X1 : (isStatic) ? JvmOpcode.Dup : JvmOpcode.Dup_X1);
+                    generator.emit((category2) ? (isStatic) ? Opcode.Dup2 : Opcode.Dup2_X1 : (isStatic) ? Opcode.Dup : Opcode.Dup_X1);
                 }
                 break;
             }
         }
         
-        private void emitAload(boolean nested, JvmOpcode opcode, JvmTypeInfo type, boolean category2) {
+        private void emitAload(boolean nested, Opcode opcode, TypeInfo type, boolean category2) {
             var generator = context.MethodGenerationContext.Generator;
             switch (boxingKind) {
             case Box:
-                generator.emit(JvmOpcode.Aaload);
+                generator.emit(Opcode.Aaload);
                 if (nested && postAssign) {
-                    generator.emit(JvmOpcode.Dup_X2);
+                    generator.emit(Opcode.Dup_X2);
                 }
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                generator.emit(Opcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
                 break;
             case Unbox:
                 generator.emit(opcode);
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
                 if (nested && postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                    generator.emit((category2) ? Opcode.Dup2_X2 : Opcode.Dup_X2);
                 }
                 break;
             default:
                 generator.emit(opcode);
                 if (nested && postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                    generator.emit((category2) ? Opcode.Dup2_X2 : Opcode.Dup_X2);
                 }
                 break;
             }
         }
         
-        private void emitAstore(boolean nested, JvmOpcode opcode, JvmTypeInfo type, boolean category2) {
+        private void emitAstore(boolean nested, Opcode opcode, TypeInfo type, boolean category2) {
             var generator = context.MethodGenerationContext.Generator;
             switch (boxingKind) {
             case Box:
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(type));
                 if (nested && !postAssign) {
-                    generator.emit(JvmOpcode.Dup_X2);
+                    generator.emit(Opcode.Dup_X2);
                 }
-                generator.emit(JvmOpcode.Aastore);
+                generator.emit(Opcode.Aastore);
                 break;
             case Unbox:
                 if (nested && !postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                    generator.emit((category2) ? Opcode.Dup2_X2 : Opcode.Dup_X2);
                 }
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
+                generator.emit(Opcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(type));
                 generator.emit(opcode);
                 break;
             default:
                 if (nested && !postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2_X2 : JvmOpcode.Dup_X2);
+                    generator.emit((category2) ? Opcode.Dup2_X2 : Opcode.Dup_X2);
                 }
                 generator.emit(opcode);
                 break;
             }
         }
 
-        private void emitLoad(boolean nested, JvmOpcode opcode, JvmLocalInfo local, boolean category2) {
+        private void emitLoad(boolean nested, Opcode opcode, LocalInfo local, boolean category2) {
             var generator = context.MethodGenerationContext.Generator;
             switch (boxingKind) {
             case Box:
-                generator.emit(JvmOpcode.Aload, local);
+                generator.emit(Opcode.Aload, local);
                 if (nested && postAssign) {
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
+                generator.emit(Opcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
                 break;
             case Unbox:
                 generator.emit(opcode, local);
                 if (nested && postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit((category2) ? Opcode.Dup2 : Opcode.Dup);
                 }
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
                 break;
             default:
                 generator.emit(opcode, local);
                 if (nested && postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit((category2) ? Opcode.Dup2 : Opcode.Dup);
                 }
                 break;
             }
         }
         
-        private void emitStore(boolean nested, JvmOpcode opcode, JvmLocalInfo local, boolean category2) {
+        private void emitStore(boolean nested, Opcode opcode, LocalInfo local, boolean category2) {
             var generator = context.MethodGenerationContext.Generator;
             switch (boxingKind) {
             case Box:
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod(local.Type));
                 if (nested && !postAssign) {
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                 }
-                generator.emit(JvmOpcode.Astore, local);
+                generator.emit(Opcode.Astore, local);
                 break;
             case Unbox:
                 if (nested && !postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit((category2) ? Opcode.Dup2 : Opcode.Dup);
                 }
-                generator.emit(JvmOpcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
+                generator.emit(Opcode.Invokevirtual, context.TypeSystem.getUnboxingMethod(local.Type));
                 generator.emit(opcode, local);
                 break;
             default:
                 if (nested && !postAssign) {
-                    generator.emit((category2) ? JvmOpcode.Dup2 : JvmOpcode.Dup);
+                    generator.emit((category2) ? Opcode.Dup2 : Opcode.Dup);
                 }
                 generator.emit(opcode, local);
                 break;
@@ -1432,47 +1432,47 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             switch (operator) {
             case Add:
-                generator.emit(JvmOpcode.Iadd);
+                generator.emit(Opcode.Iadd);
                 break;
 
             case Divide:
-                generator.emit(JvmOpcode.Idiv);
+                generator.emit(Opcode.Idiv);
                 break;
                 
             case And:
-                generator.emit(JvmOpcode.Iand);
+                generator.emit(Opcode.Iand);
                 break;
                 
             case LeftShift:
-                generator.emit(JvmOpcode.Ishl);
+                generator.emit(Opcode.Ishl);
                 break;
                 
             case Modulo:
-                generator.emit(JvmOpcode.Irem);
+                generator.emit(Opcode.Irem);
                 break;
                 
             case Multiply:
-                generator.emit(JvmOpcode.Imul);
+                generator.emit(Opcode.Imul);
                 break;
                 
             case Or:
-                generator.emit(JvmOpcode.Ior);
+                generator.emit(Opcode.Ior);
                 break;
                 
             case RightShift:
-                generator.emit(JvmOpcode.Ishr);
+                generator.emit(Opcode.Ishr);
                 break;
                 
             case Subtract:
-                generator.emit(JvmOpcode.Isub);
+                generator.emit(Opcode.Isub);
                 break;
                 
             case UnsignedRightShift:
-                generator.emit(JvmOpcode.Iushr);
+                generator.emit(Opcode.Iushr);
                 break;
                 
             case Xor:
-                generator.emit(JvmOpcode.Ixor);
+                generator.emit(Opcode.Ixor);
                 break;
                 
             default:
@@ -1484,47 +1484,47 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             switch (operator) {
             case Add:
-                generator.emit(JvmOpcode.Ladd);
+                generator.emit(Opcode.Ladd);
                 break;
 
             case Divide:
-                generator.emit(JvmOpcode.Ldiv);
+                generator.emit(Opcode.Ldiv);
                 break;
                 
             case And:
-                generator.emit(JvmOpcode.Land);
+                generator.emit(Opcode.Land);
                 break;
                 
             case LeftShift:
-                generator.emit(JvmOpcode.Lshl);
+                generator.emit(Opcode.Lshl);
                 break;
                 
             case Modulo:
-                generator.emit(JvmOpcode.Lrem);
+                generator.emit(Opcode.Lrem);
                 break;
                 
             case Multiply:
-                generator.emit(JvmOpcode.Lmul);
+                generator.emit(Opcode.Lmul);
                 break;
                 
             case Or:
-                generator.emit(JvmOpcode.Lor);
+                generator.emit(Opcode.Lor);
                 break;
                 
             case RightShift:
-                generator.emit(JvmOpcode.Lshr);
+                generator.emit(Opcode.Lshr);
                 break;
                 
             case Subtract:
-                generator.emit(JvmOpcode.Lsub);
+                generator.emit(Opcode.Lsub);
                 break;
                 
             case UnsignedRightShift:
-                generator.emit(JvmOpcode.Lushr);
+                generator.emit(Opcode.Lushr);
                 break;
                 
             case Xor:
-                generator.emit(JvmOpcode.Lxor);
+                generator.emit(Opcode.Lxor);
                 break;
                 
             default:
@@ -1536,23 +1536,23 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             switch (operator) {
             case Add:
-                generator.emit(JvmOpcode.Fadd);
+                generator.emit(Opcode.Fadd);
                 break;
 
             case Divide:
-                generator.emit(JvmOpcode.Fdiv);
+                generator.emit(Opcode.Fdiv);
                 break;
                 
             case Modulo:
-                generator.emit(JvmOpcode.Frem);
+                generator.emit(Opcode.Frem);
                 break;
                 
             case Multiply:
-                generator.emit(JvmOpcode.Fmul);
+                generator.emit(Opcode.Fmul);
                 break;
                 
             case Subtract:
-                generator.emit(JvmOpcode.Fsub);
+                generator.emit(Opcode.Fsub);
                 break;
                 
             default:
@@ -1564,23 +1564,23 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             switch (operator) {
             case Add:
-                generator.emit(JvmOpcode.Dadd);
+                generator.emit(Opcode.Dadd);
                 break;
 
             case Divide:
-                generator.emit(JvmOpcode.Ddiv);
+                generator.emit(Opcode.Ddiv);
                 break;
                 
             case Modulo:
-                generator.emit(JvmOpcode.Drem);
+                generator.emit(Opcode.Drem);
                 break;
                 
             case Multiply:
-                generator.emit(JvmOpcode.Dmul);
+                generator.emit(Opcode.Dmul);
                 break;
                 
             case Subtract:
-                generator.emit(JvmOpcode.Dsub);
+                generator.emit(Opcode.Dsub);
                 break;
                 
             default:

@@ -16,9 +16,9 @@
  */
 using org.objectweb.asm;
 
-package stab.tools.bytecode {
+package stab.reflection {
 
-    public enum JvmOpcode {
+    public enum Opcode {
         Aaload(Opcodes.AALOAD),
         Aastore(Opcodes.AASTORE),
         Aconst_Null(Opcodes.ACONST_NULL),
@@ -180,7 +180,7 @@ package stab.tools.bytecode {
         
         private int value;
         
-        private JvmOpcode(int value) {
+        private Opcode(int value) {
             this.value = value;
         }
         

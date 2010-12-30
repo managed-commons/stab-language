@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
@@ -31,12 +31,12 @@ package stab.tools.compiler {
             this.context = context;
         }
 
-        JvmMethodInfo resolveMethod(Iterable<JvmMethodInfo> methods, Iterable<ExpressionNode> arguments, JvmTypeInfo returnType) {
+        MethodInfo resolveMethod(Iterable<MethodInfo> methods, Iterable<ExpressionNode> arguments, TypeInfo returnType) {
             return resolveMethod(methods, arguments, returnType, false);
         }
         
-        JvmMethodInfo resolveMethod(Iterable<JvmMethodInfo> methods, Iterable<ExpressionNode> arguments,
-                JvmTypeInfo returnType, boolean extensionMethods) {
+        MethodInfo resolveMethod(Iterable<MethodInfo> methods, Iterable<ExpressionNode> arguments,
+                TypeInfo returnType, boolean extensionMethods) {
             var candidates = new ArrayList<CandidateMethodInfo>();
             var hasLambda = false;
             
@@ -52,11 +52,11 @@ package stab.tools.compiler {
                 }
                 var fixedArgumentCount = (method.IsVarargs) ? parameterCount - 1 : parameterCount;
                 var isCompatible = true;
-                var parameterTypes = new JvmTypeInfo[argumentCount];
+                var parameterTypes = new TypeInfo[argumentCount];
                 var expandedForm = method.IsVarargs;
 
                 if (!method.IsClosed) {
-                    var typeVariableInfos = new HashMap<JvmTypeInfo, TypeVariableInfo>();
+                    var typeVariableInfos = new HashMap<TypeInfo, TypeVariableInfo>();
                     foreach (var t in method.GenericArguments) {
                         typeVariableInfos[t] = new TypeVariableInfo(t);
                     }
@@ -135,7 +135,7 @@ package stab.tools.compiler {
                         }
                     }
 
-                    if (closedParams && returnType != null && returnType != JvmTypeInfo.VOID) {
+                    if (closedParams && returnType != null && returnType != context.TypeSystem.VoidType) {
                         makeLowerBoundInference(returnType, method.ReturnType, typeVariableInfos);
                     }
                     
@@ -161,7 +161,7 @@ package stab.tools.compiler {
                                 if (e.Value.fixedType != null) {
                                     continue;
                                 }
-                                if (hasUnfixedTypeVariablesDependingOn(e.Key, typeVariableInfos, new HashSet<JvmTypeInfo>())) {
+                                if (hasUnfixedTypeVariablesDependingOn(e.Key, typeVariableInfos, new HashSet<TypeInfo>())) {
                                     if (!e.Value.bounds.isEmpty()) {
                                         if (fixTypeVariable(e.Value)) {
                                             varFixed = true;
@@ -179,7 +179,7 @@ package stab.tools.compiler {
                             break;
                         }
                         var mit = method.Parameters.iterator();
-                        JvmTypeInfo paramType = null;
+                        TypeInfo paramType = null;
                         foreach (var e in arguments) {
                             if (mit.hasNext()) {
                                 paramType = mit.next().Type;
@@ -205,7 +205,7 @@ package stab.tools.compiler {
                         }
                     }
 
-                    var typeArguments = new ArrayList<JvmTypeInfo>();
+                    var typeArguments = new ArrayList<TypeInfo>();
                     foreach (var t in method.GenericArguments) {
                         typeArguments.add(typeVariableInfos[t].fixedType);
                     }
@@ -274,7 +274,7 @@ package stab.tools.compiler {
                 int argumentCount = arguments.count();
                 int fixedArgumentCount = (result.method.IsVarargs) ? parameterCount - 1 : parameterCount;
 
-                var parameterTypes = new JvmTypeInfo[argumentCount];
+                var parameterTypes = new TypeInfo[argumentCount];
                 var pit = result.method.getParameters().iterator();
                 int i;
                 for (i = 0; i < fixedArgumentCount; i++) {
@@ -299,7 +299,7 @@ package stab.tools.compiler {
             return result.method;
         }
         
-        boolean resolveDelegate(JvmTypeInfo type, ExpressionNode arg, ExpressionInfo targetInfo, SyntaxNode node) {
+        boolean resolveDelegate(TypeInfo type, ExpressionNode arg, ExpressionInfo targetInfo, SyntaxNode node) {
             var invokeMethod = getInvokeMethod(type);
             int nparams = invokeMethod.Parameters.count();
             var ainfo = arg.getUserData(typeof(ExpressionInfo));
@@ -389,7 +389,7 @@ package stab.tools.compiler {
             }
         }
         
-        private boolean isArgumentCompatible(ExpressionNode argNode, JvmTypeInfo paramType) {
+        private boolean isArgumentCompatible(ExpressionNode argNode, TypeInfo paramType) {
             var ainfo = argNode.getUserData(typeof(ExpressionInfo));
             var cleanInfo = false;
             if (ainfo == null && argNode.ExpressionKind == ExpressionKind.Lambda) {
@@ -426,7 +426,7 @@ package stab.tools.compiler {
             return true;
         }
 
-        private VarargCompatible isVarargCompatible(ExpressionNode argNode, JvmTypeInfo paramType, boolean first) {
+        private VarargCompatible isVarargCompatible(ExpressionNode argNode, TypeInfo paramType, boolean first) {
             var ainfo = argNode.getUserData(typeof(ExpressionInfo));
             if (ainfo == null) {
                 if (!expressionValidator.handleExpressionNoError(argNode, paramType, true)) {
@@ -461,7 +461,7 @@ package stab.tools.compiler {
         // Type inference
         //
         
-        private boolean hasUnfixedTypeVariables(JvmTypeInfo type, HashMap<JvmTypeInfo, TypeVariableInfo> typeVariableInfos) {
+        private boolean hasUnfixedTypeVariables(TypeInfo type, HashMap<TypeInfo, TypeVariableInfo> typeVariableInfos) {
             var tv = typeVariableInfos.get(type);
             if (tv != null) {
                 return tv.fixedType == null;
@@ -477,7 +477,7 @@ package stab.tools.compiler {
             return false;
         }
     
-        private boolean containsUnfixedVariables(Iterable<JvmTypeInfo> types, HashMap<JvmTypeInfo, TypeVariableInfo> typeVariableInfos) {
+        private boolean containsUnfixedVariables(Iterable<TypeInfo> types, HashMap<TypeInfo, TypeVariableInfo> typeVariableInfos) {
             foreach (var type in types) {
                 var tv = typeVariableInfos[type];
                 if (tv.fixedType == null) {
@@ -487,8 +487,8 @@ package stab.tools.compiler {
             return false;
         }
 
-        private boolean hasUnfixedTypeVariablesDependingOn(JvmTypeInfo type, HashMap<JvmTypeInfo, TypeVariableInfo> typeVariableInfos,
-                HashSet<JvmTypeInfo> visited) {
+        private boolean hasUnfixedTypeVariablesDependingOn(TypeInfo type, HashMap<TypeInfo, TypeVariableInfo> typeVariableInfos,
+                HashSet<TypeInfo> visited) {
             if (visited.contains(type)) {
                 return false;
             }
@@ -509,8 +509,8 @@ package stab.tools.compiler {
             return false;
         }
 
-        private void makeExplicitParameterTypeInference(ExpressionNode expression, JvmTypeInfo toType,
-                HashMap<JvmTypeInfo, TypeVariableInfo> typeVariableInfos) {
+        private void makeExplicitParameterTypeInference(ExpressionNode expression, TypeInfo toType,
+                HashMap<TypeInfo, TypeVariableInfo> typeVariableInfos) {
             var method = getInvokeMethod(toType);
             if (method == null) {
                 return;
@@ -536,7 +536,7 @@ package stab.tools.compiler {
 
             if (expression.ExpressionKind == ExpressionKind.Lambda) {
                 var lambda = (LambdaExpressionNode)expression;
-                var fromTypes = new ArrayList<JvmTypeInfo>();
+                var fromTypes = new ArrayList<TypeInfo>();
                 var pit = method.Parameters.iterator();
                 foreach (var p in lambda.Parameters) {
                     var ptype = pit.next().Type;
@@ -572,7 +572,7 @@ package stab.tools.compiler {
                 if (info == null) {
                     return;
                 }
-                var paramTypes = new ArrayList<JvmTypeInfo>();
+                var paramTypes = new ArrayList<TypeInfo>();
                 foreach (var p in method.Parameters) {
                     paramTypes.add(p.Type);
                 }
@@ -589,12 +589,12 @@ package stab.tools.compiler {
             }
         }
 
-        private Iterable<JvmTypeInfo> bindGenericParameters(HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables,
-                Iterable<JvmTypeInfo> types) {
+        private Iterable<TypeInfo> bindGenericParameters(HashMap<TypeInfo, TypeVariableInfo> typeVariables,
+                Iterable<TypeInfo> types) {
             return types.select(p => bindGenericParameters(typeVariables, p)).toList();
         }
         
-        private JvmTypeInfo bindGenericParameters(HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables, JvmTypeInfo typeInfo) {
+        private TypeInfo bindGenericParameters(HashMap<TypeInfo, TypeVariableInfo> typeVariables, TypeInfo typeInfo) {
             if (typeVariables.containsKey(typeInfo)) {
                 return typeVariables[typeInfo].fixedType;
             } else if (typeInfo.IsArray) {
@@ -611,11 +611,11 @@ package stab.tools.compiler {
         }
 
         
-        private void makeOutputTypeInference(ExpressionNode expression, JvmTypeInfo toType, HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables) {
+        private void makeOutputTypeInference(ExpressionNode expression, TypeInfo toType, HashMap<TypeInfo, TypeVariableInfo> typeVariables) {
             if (expression.ExpressionKind == ExpressionKind.Lambda
                     || BytecodeHelper.isDelegateType(toType)
                     || BytecodeHelper.isExpressionTreeType(toType)) {
-                JvmMethodInfo method = getInvokeMethod(toType);
+                MethodInfo method = getInvokeMethod(toType);
                 if (method == null) {
                     return;
                 }
@@ -625,7 +625,7 @@ package stab.tools.compiler {
 	                	return;
 	                }
 	            }
-                var paramTypes = new ArrayList<JvmTypeInfo>();
+                var paramTypes = new ArrayList<TypeInfo>();
                 foreach (var p in method.Parameters) {
                     TypeVariableInfo pinfo = typeVariables[p.Type];
                     if (pinfo != null) {
@@ -676,8 +676,8 @@ package stab.tools.compiler {
             }
         }
         
-        private static void makeLowerBoundInference(JvmTypeInfo fromType, JvmTypeInfo toType,
-                HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables) {
+        private static void makeLowerBoundInference(TypeInfo fromType, TypeInfo toType,
+                HashMap<TypeInfo, TypeVariableInfo> typeVariables) {
             if (isExcludedFromInference(fromType)) {
                 return;
             }
@@ -688,7 +688,7 @@ package stab.tools.compiler {
             } else if (fromType.IsArray && toType.IsArray) {
                 makeLowerBoundInference(fromType.ElementType, toType.ElementType, typeVariables);
             } else {
-                var t = fromType.getImplicitConversion(toType);
+                var t = BytecodeHelper.getImplicitConversion(fromType, toType);
                 if (t != null) {
                     var fit = t.GenericArguments.iterator();
                     var tit = toType.GenericArguments.iterator();
@@ -699,7 +699,7 @@ package stab.tools.compiler {
             }
         }
 
-        private static void makeExactInference(JvmTypeInfo fromType, JvmTypeInfo toType, HashMap<JvmTypeInfo, TypeVariableInfo> typeVariables) {
+        private static void makeExactInference(TypeInfo fromType, TypeInfo toType, HashMap<TypeInfo, TypeVariableInfo> typeVariables) {
             if (isExcludedFromInference(fromType)) {
                 return;
             }
@@ -718,8 +718,8 @@ package stab.tools.compiler {
             }
         }
 
-        private JvmMethodInfo resolveMethodGroup(ExpressionInfo info, JvmMethodInfo method, ArrayList<JvmTypeInfo> paramTypes) {
-            JvmMethodInfo result = null;
+        private MethodInfo resolveMethodGroup(ExpressionInfo info, MethodInfo method, ArrayList<TypeInfo> paramTypes) {
+            MethodInfo result = null;
             foreach (var mi in info.Members) {
                 if (mi.MemberKind != MemberKind.Method) {
                     return null;
@@ -756,11 +756,11 @@ package stab.tools.compiler {
             return info.fixedType != null;
         }
 
-        static JvmTypeInfo getFixedType(JvmTypeSystem typeSystem, Collection<JvmTypeInfo> bounds) {
-            var filteredBounds = new HashSet<JvmTypeInfo>(bounds);
+        static TypeInfo getFixedType(Library typeSystem, Collection<TypeInfo> bounds) {
+            var filteredBounds = new HashSet<TypeInfo>(bounds);
             foreach (var ti in bounds) {
                 foreach (var tj in bounds) {
-                    if (!JvmTypeInfo.hasImplicitConversion(ti, tj)) {
+                    if (!BytecodeHelper.hasImplicitConversion(ti, tj)) {
                         filteredBounds.remove(tj);
                     }
                 }
@@ -777,7 +777,7 @@ package stab.tools.compiler {
             }
         }
 
-        private static boolean isExcludedFromInference(JvmTypeInfo type) {
+        private static boolean isExcludedFromInference(TypeInfo type) {
             switch (type.TypeKind) {
             case Boolean:
             case Byte:
@@ -808,7 +808,7 @@ package stab.tools.compiler {
                 // Filter the methods from base types and outer types
                 //
 
-                JvmTypeInfo mostNestedType = null;
+                TypeInfo mostNestedType = null;
                 foreach (var i in methodInfos) {
                     var type = i.method.DeclaringType;
                     if (mostNestedType == null) {
@@ -904,7 +904,7 @@ package stab.tools.compiler {
             }
         }
 
-        private JvmMethodInfo getMethodWithMostSpecificParameters(JvmMethodInfo m1, JvmMethodInfo m2) {
+        private MethodInfo getMethodWithMostSpecificParameters(MethodInfo m1, MethodInfo m2) {
             if (m1 == m2) {
                 return m1;
             } else {
@@ -935,7 +935,7 @@ package stab.tools.compiler {
             }
         }
 
-        private JvmTypeInfo getMostSpecificType(JvmTypeInfo t1, JvmTypeInfo t2) {
+        private TypeInfo getMostSpecificType(TypeInfo t1, TypeInfo t2) {
             if (t1.IsGenericParameter && !t2.IsGenericParameter) {
                 return t2;
             }
@@ -1023,7 +1023,7 @@ package stab.tools.compiler {
             }
         }
 
-        private BetterConversionResult getBetterConversionFromExpression(JvmTypeInfo leftType, JvmTypeInfo rightType, ExpressionNode expression) {
+        private BetterConversionResult getBetterConversionFromExpression(TypeInfo leftType, TypeInfo rightType, ExpressionNode expression) {
             if (leftType == rightType) {
                 return BetterConversionResult.Neither;
             }
@@ -1035,7 +1035,7 @@ package stab.tools.compiler {
 
                 var lit = leftMethod.Parameters.iterator();
                 var rit = rightMethod.Parameters.iterator();
-                List<JvmTypeInfo> paramTypes = null;
+                List<TypeInfo> paramTypes = null;
                 while (lit.hasNext()) {
                     var lt = lit.next().Type;
                     var rt = rit.next().Type;
@@ -1043,14 +1043,14 @@ package stab.tools.compiler {
                         return BetterConversionResult.Neither;
                     }
                     if (paramTypes == null) {
-                        paramTypes = new ArrayList<JvmTypeInfo>();
+                        paramTypes = new ArrayList<TypeInfo>();
                     }
                     paramTypes.add(lt);
                 }
                 if (paramTypes != null) {
                     context.CodeValidationContext.pushLambdaParameters(paramTypes);
                 } else {
-                    context.CodeValidationContext.pushLambdaParameters(Collections.emptyList<JvmTypeInfo>());
+                    context.CodeValidationContext.pushLambdaParameters(Collections.emptyList<TypeInfo>());
                 }
                 expressionValidator.handleExpressionNoError(expression, null, true);
                 context.CodeValidationContext.popLambdaParameters();
@@ -1058,10 +1058,10 @@ package stab.tools.compiler {
                 var info = expression.getUserData(typeof(ExpressionInfo));
                 expression.removeUserData(typeof(ExpressionInfo));
                 if (info != null) {
-                    if (leftReturnType == JvmTypeInfo.VOID) {
+                    if (leftReturnType == context.TypeSystem.VoidType) {
                         return BetterConversionResult.RightIsBetter;
                     }
-                    if (rightReturnType == JvmTypeInfo.VOID) {
+                    if (rightReturnType == context.TypeSystem.VoidType) {
                         return BetterConversionResult.LeftIsBetter;
                     }
                     return getBetterConversionFromType(leftReturnType, rightReturnType, context.CodeValidationContext.LambdaReturnType);
@@ -1076,7 +1076,7 @@ package stab.tools.compiler {
             }
         }
 
-        private BetterConversionResult getBetterConversionFromType(JvmTypeInfo leftType, JvmTypeInfo rightType, JvmTypeInfo fromType) {
+        private BetterConversionResult getBetterConversionFromType(TypeInfo leftType, TypeInfo rightType, TypeInfo fromType) {
             if (leftType == rightType) {
                 return BetterConversionResult.Neither;
             }
@@ -1095,7 +1095,7 @@ package stab.tools.compiler {
             return BetterConversionResult.Neither;
         }
 
-        private static JvmMethodInfo getInvokeMethod(JvmTypeInfo type) {
+        private static MethodInfo getInvokeMethod(TypeInfo type) {
             if (BytecodeHelper.isDelegateType(type)) {
                 return type.Methods.where(p => p.Name.equals("invoke")).firstOrDefault();
             } if (BytecodeHelper.isExpressionTreeType(type)) {
@@ -1118,25 +1118,25 @@ package stab.tools.compiler {
         }
         
         private class TypeVariableInfo {
-            JvmTypeInfo genericParameterType;
-            HashSet<JvmTypeInfo> bounds;
-            HashSet<JvmTypeInfo> dependencies;
-            JvmTypeInfo fixedType;
+            TypeInfo genericParameterType;
+            HashSet<TypeInfo> bounds;
+            HashSet<TypeInfo> dependencies;
+            TypeInfo fixedType;
             
-            TypeVariableInfo(JvmTypeInfo genericParameterType) {
+            TypeVariableInfo(TypeInfo genericParameterType) {
                 this.genericParameterType = genericParameterType;
-                this.bounds = new HashSet<JvmTypeInfo>();
-                this.dependencies = new HashSet<JvmTypeInfo>();
+                this.bounds = new HashSet<TypeInfo>();
+                this.dependencies = new HashSet<TypeInfo>();
             }
         }
 
         private class CandidateMethodInfo {
-            JvmMethodInfo method;
-            JvmTypeInfo[] parameterTypes;
+            MethodInfo method;
+            TypeInfo[] parameterTypes;
             Iterable<ExpressionNode> arguments;
             boolean expandedForm;
 
-            CandidateMethodInfo(JvmMethodInfo method, JvmTypeInfo[] parameterTypes, Iterable<ExpressionNode> arguments, boolean expandedForm) {
+            CandidateMethodInfo(MethodInfo method, TypeInfo[] parameterTypes, Iterable<ExpressionNode> arguments, boolean expandedForm) {
                 this.method = method;
                 this.parameterTypes = parameterTypes;
                 this.arguments = arguments;

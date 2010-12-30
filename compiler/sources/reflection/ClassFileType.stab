@@ -26,7 +26,7 @@ using stab.tools.helpers;
 
 using AsmType = org.objectweb.asm.Type;
 
-package stab.tools.bytecode {
+package stab.reflection {
 
     class ClassFileType : ClassType {
         private static HashMap<String, NumericTypeKind> TypeKinds;
@@ -41,20 +41,20 @@ package stab.tools.bytecode {
             TypeKinds["java/lang/Double"] = NumericTypeKind.Double;
         }
     
-        private JvmTypeSystem typeSystem;
+        private Library typeSystem;
         private int modifiers;
         private int nestedModifiers;
         private String descriptor;
         private NumericTypeKind numericTypeKind;
-        private List<JvmAnnotationValue> annotations;
-        private ClassInfo classInfo;
-        private Scope<String, JvmTypeInfo> genericsScope;
+        private List<AnnotationValue> annotations;
+        private RawClassInfo classInfo;
+        private Scope<String, TypeInfo> genericsScope;
         
-        JvmMethodInfo boxingMethod;
-        JvmMethodInfo unboxingMethod;
+        MethodInfo boxingMethod;
+        MethodInfo unboxingMethod;
 
-        ClassFileType(JvmTypeSystem typeSystem, String name, byte[] bytes)
-            	: super(name) {
+        ClassFileType(Library typeSystem, String name, byte[] bytes)
+            	: super(typeSystem, name) {
             this.typeSystem = typeSystem;
             this.descriptor = "L" + name + ";";
             numericTypeKind = TypeKinds[name];
@@ -63,7 +63,7 @@ package stab.tools.bytecode {
             }
             new ClassReader(bytes).accept(new OutlineVisitor(this), ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
             
-            this.genericsScope = new Scope<String, JvmTypeInfo>();
+            this.genericsScope = new Scope<String, TypeInfo>();
             this.genericsScope.enterScope();
         }
 
@@ -79,7 +79,7 @@ package stab.tools.bytecode {
             }
         }
         
-        public override Iterable<JvmAnnotationValue> Annotations {
+        public override Iterable<AnnotationValue> Annotations {
             get {
                 initializeBaseTypes();
                 return annotations;
@@ -98,7 +98,7 @@ package stab.tools.bytecode {
             }
         }
         
-		private static boolean hasGenericArguments(JvmTypeInfo type) {
+		private static boolean hasGenericArguments(TypeInfo type) {
 			if (type instanceof ClassFileType) {
 				var classInfo = ((ClassFileType)type).classInfo;
 				if (classInfo != null && classInfo.name != null) {
@@ -114,20 +114,20 @@ package stab.tools.bytecode {
             }
             classInfo.name = null;
 
-            BytecodeHelper.declareEnclosingGenericParameters(genericsScope, this);
+            ReflectionHelper.declareEnclosingGenericParameters(genericsScope, this);
             if (classInfo.signature == null) {
                 genericArguments = Query.empty();
                 if (classInfo.superName != null) {
                     baseType = typeSystem.getType(classInfo.superName);
 					if (hasGenericArguments(baseType)) {
-                        baseType = baseType.RawGenericType;
+                        baseType = baseType.RawType;
                     }
                     if (classInfo.interfaces != null) {
-                        var ints = new ArrayList<JvmTypeInfo>(sizeof(classInfo.interfaces));
+                        var ints = new ArrayList<TypeInfo>(sizeof(classInfo.interfaces));
                         foreach (var s in classInfo.interfaces) {
                             var t = typeSystem.getType(s);
 							if (hasGenericArguments(t)) {
-                                t = t.RawGenericType;
+                                t = t.RawType;
                             }
                             ints.add(t);
                         }
@@ -140,9 +140,9 @@ package stab.tools.bytecode {
                 }
             } else {
                 if (classInfo.signature.FormalTypeParameters.any()) {
-                    var genArgs = new ArrayList<JvmTypeInfo>();
+                    var genArgs = new ArrayList<TypeInfo>();
                     foreach (var t in classInfo.signature.FormalTypeParameters) {
-                        var tp = new GenericParameterType(t.Name, null);
+                        var tp = new GenericParameterType(this.Library, t.Name, null);
                         genArgs.add(tp);
                         genericsScope.declareBinding(t.Name, tp);
                     }
@@ -164,7 +164,7 @@ package stab.tools.bytecode {
                 }
                 int n = classInfo.signature.Superinterfaces.count();
                 if (n > 0) {
-                    var ints = new ArrayList<JvmTypeInfo>(n);
+                    var ints = new ArrayList<TypeInfo>(n);
                     foreach (var t in classInfo.signature.Superinterfaces) {
                         ints.add(getTypeInfo(t));
                     }
@@ -189,7 +189,7 @@ package stab.tools.bytecode {
             initializeBaseTypes();
 
             foreach (var f in classInfo.fields) {
-                var field = new JvmFieldInfo(this, f.modifiers, f.name, f.value);
+                var field = new FieldInfo(this, f.modifiers, f.name, f.value);
                 fields.add(field);
                 if (f.signature == null) {
                     field.type = getTypeInfo(f.type);
@@ -224,7 +224,7 @@ package stab.tools.bytecode {
                     method.returnType = getTypeInfo(m.returnType);
                     int i = 0;
                     foreach (var p in m.parameters) {
-                        var pi = new JvmParameterInfo(i++, getTypeInfo(p.type));
+                        var pi = new ParameterInfo(i++, getTypeInfo(p.type));
                         method.parameters.add(pi);
                         if (p.annotations == null) {
                             pi.annotations = Collections.emptyList();
@@ -235,11 +235,11 @@ package stab.tools.bytecode {
                     if (m.exceptions == null) {
                         method.exceptions = Collections.emptyList();
                     } else {
-                        var ex = new ArrayList<JvmTypeInfo>();
+                        var ex = new ArrayList<TypeInfo>();
                         foreach (var s in  m.exceptions) {
                             var t = typeSystem.getType(s);
 							if (hasGenericArguments(t)) {
-                                t = t.RawGenericType;
+                                t = t.RawType;
                             }
                             ex.add(t);
                         }
@@ -248,9 +248,9 @@ package stab.tools.bytecode {
                     method.genericArguments = Collections.emptyList();
                 } else {
                     genericsScope.enterScope();
-                    var genArgs = new ArrayList<JvmTypeInfo>();
+                    var genArgs = new ArrayList<TypeInfo>();
                     foreach (var t in m.signature.FormalTypeParameters) {
-                        var tp = new GenericParameterType(t.Name, null);
+                        var tp = new GenericParameterType(this.Library, t.Name, null);
                         genArgs.add(tp);
                         genericsScope.declareBinding(t.Name, tp);
                     }
@@ -268,7 +268,7 @@ package stab.tools.bytecode {
                     i = 0;
                     foreach (var param in m.signature.Parameters) {
                         var annotations = m.parameters[i].annotations;
-                        var pi = new JvmParameterInfo(i++, getTypeInfo(param));
+                        var pi = new ParameterInfo(i++, getTypeInfo(param));
                         method.parameters.add(pi);
                         if (annotations == null) {
                             pi.annotations = Collections.emptyList();
@@ -276,7 +276,7 @@ package stab.tools.bytecode {
                             pi.annotations = buildAnnotationValues(annotations);
                         }
                     }
-                    var excepts = new ArrayList<JvmTypeInfo>();
+                    var excepts = new ArrayList<TypeInfo>();
                     foreach (var t in m.signature.Exceptions) {
                         excepts.add(getTypeInfo(t));
                     }
@@ -303,19 +303,19 @@ package stab.tools.bytecode {
         protected override void initializeNestedTypes() {
         }
         
-        private ArrayList<JvmAnnotationValue> buildAnnotationValues(ArrayList<AnnotationValue> annotations) {
-            var result = new ArrayList<JvmAnnotationValue>();
+        private ArrayList<AnnotationValue> buildAnnotationValues(ArrayList<RawAnnotationValue> annotations) {
+            var result = new ArrayList<AnnotationValue>();
             foreach (var av in annotations) {
-                var b = new JvmAnnotationValueBuilder(getTypeInfo(av.Type), av.IsRuntimeVisible);
+                var b = new AnnotationValueBuilder(getTypeInfo(av.Type), av.IsRuntimeVisible);
                 buildAnnotationArgument(b, av);
                 result.add(b);
             }
             return result;
         }
         
-        private void buildAnnotationArgument(JvmAnnotationValueBuilder b, AnnotationArgument annotation) {
-            foreach (var s in annotation.ArgumentNames) {
-                var arg = annotation.getArgument(s);
+        private void buildAnnotationArgument(AnnotationValueBuilder b, RawAnnotationArgument RawAnnotation) {
+            foreach (var s in RawAnnotation.ArgumentNames) {
+                var arg = RawAnnotation.getArgument(s);
                 switch (arg.AnnotationArgumentKind) {
                 case Boolean:
                     b.setBooleanArgument(s, (Boolean)arg.Value);
@@ -364,7 +364,7 @@ package stab.tools.bytecode {
             }
         }
 
-        private JvmAnnotationArgument buildAnnotationArrayElement(AnnotationArgument arg) {
+        private AnnotationArgument buildAnnotationArrayElement(RawAnnotationArgument arg) {
             switch (arg.AnnotationArgumentKind) {
             case Boolean:
             case Byte:
@@ -375,25 +375,25 @@ package stab.tools.bytecode {
             case Float:
             case Double:
             case String:
-                return new JvmAnnotationArgument.SimpleValue(arg.AnnotationArgumentKind, arg.Value);
+                return new SimpleAnnotationArgument(arg.AnnotationArgumentKind, arg.Value);
             case Enum:
-                return new JvmAnnotationArgument.EnumValue(getTypeInfo(arg.Type), arg.Name);
+                return new EnumAnnotationArgument(getTypeInfo(arg.Type), arg.Name);
             case Type:
-                return new JvmAnnotationArgument.TypeValue(getTypeInfo(arg.Type));
+                return new TypeAnnotationArgument(getTypeInfo(arg.Type));
             case Array:
-                var ab = new JvmAnnotationArrayValueBuilder();
+                var ab = new AnnotationArrayValueBuilder();
                 foreach (var e in arg.Elements) {
                     buildAnnotationArrayElement(ab, e);
                 }
                 return ab;
             default:
-                var vb = new JvmAnnotationValueBuilder(getTypeInfo(arg.Type), arg.IsRuntimeVisible);
+                var vb = new AnnotationValueBuilder(getTypeInfo(arg.Type), arg.IsRuntimeVisible);
                 buildAnnotationArgument(vb, arg);
                 return vb;
             }
         }
 
-        private void buildAnnotationArrayElement(JvmAnnotationArrayValueBuilder b, AnnotationArgument arg) {
+        private void buildAnnotationArrayElement(AnnotationArrayValueBuilder b, RawAnnotationArgument arg) {
             switch (arg.AnnotationArgumentKind) {
             case Boolean:
                 b.addBooleanArgument((Boolean)arg.Value);
@@ -441,7 +441,7 @@ package stab.tools.bytecode {
             }
         }
 
-        private JvmTypeInfo getTypeInfo(AsmType type) {
+        private TypeInfo getTypeInfo(AsmType type) {
             switch (type.getSort()) {
             case AsmType.ARRAY:
                 var elt = getTypeInfo(type.getElementType());
@@ -451,62 +451,62 @@ package stab.tools.bytecode {
                 return elt;
                 
             case AsmType.BOOLEAN:
-                return JvmTypeInfo.BOOLEAN;
+                return this.Library.BooleanType;
                 
             case AsmType.BYTE:
-                return JvmTypeInfo.BYTE;
+                return this.Library.ByteType;
 
             case AsmType.CHAR:
-                return JvmTypeInfo.CHAR;
+                return this.Library.CharType;
                 
             case AsmType.DOUBLE:
-                return JvmTypeInfo.DOUBLE;
+                return this.Library.DoubleType;
                 
             case AsmType.FLOAT:
-                return JvmTypeInfo.FLOAT;
+                return this.Library.FloatType;
                 
             case AsmType.INT:
-                return JvmTypeInfo.INT;
+                return this.Library.IntType;
                 
             case AsmType.LONG:
-                return JvmTypeInfo.LONG;
+                return this.Library.LongType;
                 
             case AsmType.SHORT:
-                return JvmTypeInfo.SHORT;
+                return this.Library.ShortType;
                 
             case AsmType.VOID:
-                return JvmTypeInfo.VOID;
+                return this.Library.VoidType;
 
             default:
                 var result = typeSystem.getType(type.getInternalName());
 				if (hasGenericArguments(result)) {
-					result = result.RawGenericType;
+					result = result.RawType;
 				}
                 return result;
             }
         }
         
-        static AnnotationArgument buildAnnotationArgument(Object value) {
+        static RawAnnotationArgument buildAnnotationArgument(Object value) {
             if (value instanceof Integer) {
-                return new SimpleValue(AnnotationArgumentKind.Int, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Int, value);
             } else if (value instanceof String) {
-                return new SimpleValue(AnnotationArgumentKind.String, value);
+                return new RawSimpleValue(AnnotationArgumentKind.String, value);
             } else if (value instanceof Boolean) {
-                return new SimpleValue(AnnotationArgumentKind.Boolean, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Boolean, value);
             } else if (value instanceof AsmType) {
-                return new TypeValue((AsmType)value);
+                return new RawTypeValue((AsmType)value);
             } else if (value instanceof Character) {
-                return new SimpleValue(AnnotationArgumentKind.Char, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Char, value);
             } else if (value instanceof Short) {
-                return new SimpleValue(AnnotationArgumentKind.Short, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Short, value);
             } else if (value instanceof Long) {
-                return new SimpleValue(AnnotationArgumentKind.Long, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Long, value);
             } else if (value instanceof Float) {
-                return new SimpleValue(AnnotationArgumentKind.Float, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Float, value);
             } else if (value instanceof Double) {
-                return new SimpleValue(AnnotationArgumentKind.Double, value);
+                return new RawSimpleValue(AnnotationArgumentKind.Double, value);
             } else {
-                var array = new ArrayValue();
+                var array = new RawArrayValue();
                 int len = Array.getLength(value);
                 for (int i = 0; i < len; i++) {
                     array.elements.add(buildAnnotationArgument(Array.get(value, i)));
@@ -515,14 +515,14 @@ package stab.tools.bytecode {
             }
         }
         
-        private JvmTypeInfo getTypeInfo(TypeSignature signature) {
-            JvmTypeInfo result;
+        private TypeInfo getTypeInfo(TypeSignature signature) {
+            TypeInfo result;
             switch (signature.TypeSignatureKind) {
             case ClassType:
                 var name = signature.Name.substring(1, signature.Name.length() - 1);
                 result = typeSystem.getType(name);
                 if (signature.TypeArguments.any()) {
-                    var typeArgs = new ArrayList<JvmTypeInfo>();
+                    var typeArgs = new ArrayList<TypeInfo>();
                     foreach (var sig in signature.TypeArguments) {
                         typeArgs.add(getTypeInfo(sig));
                     }
@@ -535,43 +535,43 @@ package stab.tools.bytecode {
                 break;
 
             case Boolean:
-                result = JvmTypeInfo.BOOLEAN;
+                result = this.Library.BooleanType;
                 break;
                 
             case Byte:
-                result = JvmTypeInfo.BYTE;
+                result = this.Library.ByteType;
                 break;
                 
             case Char:
-                result = JvmTypeInfo.CHAR;
+                result = this.Library.CharType;
                 break;
                 
             case Double:
-                result = JvmTypeInfo.DOUBLE;
+                result = this.Library.DoubleType;
                 break;
                 
             case Float:
-                result = JvmTypeInfo.FLOAT;
+                result = this.Library.FloatType;
                 break;
                 
             case Int:
-                result = JvmTypeInfo.INT;
+                result = this.Library.IntType;
                 break;
                 
             case Long:
-                result = JvmTypeInfo.LONG;
+                result = this.Library.LongType;
                 break;
                 
             case Short:
-                result = JvmTypeInfo.SHORT;
+                result = this.Library.ShortType;
                 break;
                 
             case Void:
-                result = JvmTypeInfo.VOID;
+                result = this.Library.VoidType;
                 break;
                 
             case UnboundedWildcardType:
-                result = JvmTypeInfo.UNBOUNDED_WILDCARD;
+                result = this.Library.UnboundedWildcard;
                 break;
                 
             case UpperBoundedWildcardType:
@@ -605,7 +605,7 @@ package stab.tools.bytecode {
         
             public void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
                 classFileType.modifiers = access;
-                var classInfo = new ClassInfo();
+                var classInfo = new RawClassInfo();
                 classFileType.classInfo = classInfo;
                 classInfo.name = name;
                 if (signature == null) {
@@ -618,16 +618,16 @@ package stab.tools.bytecode {
             }
             
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), visible);
                 if (classFileType.classInfo.annotations == null) {
-                	classFileType.classInfo.annotations = new ArrayList<AnnotationValue>();
+                	classFileType.classInfo.annotations = new ArrayList<RawAnnotationValue>();
                 }
                 classFileType.classInfo.annotations.add(annotation);
-                return new AnnotationValueBuilder(annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
             
             public FieldVisitor visitField(int access, String name, String desc, String signature, Object value) {
-                var field = new FieldInfo();
+                var field = new RawFieldInfo();
                 field.modifiers = access;
                 field.name = name;
                 field.value = value;
@@ -643,7 +643,7 @@ package stab.tools.bytecode {
             }
             
             public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
-                var method = new MethodInfo();
+                var method = new RawMethodInfo();
                 method.modifiers = access;
                 method.name = name;
                 method.descriptor = desc;
@@ -652,7 +652,7 @@ package stab.tools.bytecode {
                 if (signature == null) {
                     method.returnType = AsmType.getReturnType(desc);
                     foreach (var t in AsmType.getArgumentTypes(desc)) {
-                        var p = new ParameterInfo();
+                        var p = new RawParameterInfo();
                         p.type = t;
                         method.parameters.add(p);
                     }
@@ -661,7 +661,7 @@ package stab.tools.bytecode {
                     var parser = new SignatureParser(signature);
                     method.signature = parser.parseMethodTypeSignature();
                     foreach (var s in method.signature.Parameters) {
-                        method.parameters.add(new ParameterInfo());
+                        method.parameters.add(new RawParameterInfo());
                     }
                 }
                 
@@ -687,18 +687,18 @@ package stab.tools.bytecode {
             public void visitSource(String source, String debug) {}
         }
         
-        private class ClassInfo {
+        private class RawClassInfo {
             String name;
             String superName;
             String[] interfaces;
             ClassSignature signature;
-            ArrayList<AnnotationValue> annotations;
-            ArrayList<FieldInfo> fields = new ArrayList<FieldInfo>();
-            ArrayList<MethodInfo> methods = new ArrayList<MethodInfo>();
+            ArrayList<RawAnnotationValue> annotations;
+            ArrayList<RawFieldInfo> fields = new ArrayList<RawFieldInfo>();
+            ArrayList<RawMethodInfo> methods = new ArrayList<RawMethodInfo>();
         }
 
-        private class FieldInfo {
-            ArrayList<AnnotationValue> annotations;
+        private class RawFieldInfo {
+            ArrayList<RawAnnotationValue> annotations;
             int modifiers;
             String name;
             Object value;
@@ -706,10 +706,10 @@ package stab.tools.bytecode {
             TypeSignature signature;
         }
 
-        private class MethodInfo {
-            ArrayList<AnnotationValue> annotations;
-            ArrayList<ParameterInfo> parameters = new ArrayList<ParameterInfo>();
-            AnnotationArgument defaultValue;
+        private class RawMethodInfo {
+            ArrayList<RawAnnotationValue> annotations;
+            ArrayList<RawParameterInfo> parameters = new ArrayList<RawParameterInfo>();
+            RawAnnotationArgument defaultValue;
             int modifiers;
             String name;
             String descriptor;
@@ -718,21 +718,21 @@ package stab.tools.bytecode {
             MethodTypeSignature signature;
         }
 
-        private class ParameterInfo {
-            ArrayList<AnnotationValue> annotations;
+        private class RawParameterInfo {
+            ArrayList<RawAnnotationValue> annotations;
             AsmType type;
         }
 
         private class FieldInfoBuilder : FieldVisitor {
-            FieldInfo field;
+            RawFieldInfo field;
 
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), visible);
                 if (field.annotations == null) {
-                	field.annotations = new ArrayList<AnnotationValue>();
+                	field.annotations = new ArrayList<RawAnnotationValue>();
                 }
                 field.annotations.add(annotation);
-                return new AnnotationValueBuilder(annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
 
             public void visitAttribute(Attribute attr) {}
@@ -740,29 +740,29 @@ package stab.tools.bytecode {
         }
         
         private class MethodInfoBuilder : MethodVisitor {
-            MethodInfo method;
+            RawMethodInfo method;
             
             public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), visible);
                 if (method.annotations == null) {
-                	method.annotations = new ArrayList<AnnotationValue>();
+                	method.annotations = new ArrayList<RawAnnotationValue>();
                 }
                 method.annotations.add(annotation);
-                return new AnnotationValueBuilder(annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
 
             public AnnotationVisitor visitAnnotationDefault() {
-                return new AnnotationDefaultValueBuilder(method);
+                return new RawAnnotationDefaultValueBuilder(method);
             }
 
             public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), visible);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), visible);
                 var par = method.parameters.get(parameter);
                 if (par.annotations == null) {
-                	par.annotations = new ArrayList<AnnotationValue>();
+                	par.annotations = new ArrayList<RawAnnotationValue>();
                 }
                 par.annotations.add(annotation);
-                return new AnnotationValueBuilder(annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
             
             public void visitAttribute(Attribute attr) {}
@@ -789,9 +789,9 @@ package stab.tools.bytecode {
         }
         
         private class ArrayVisitor : AnnotationVisitor {
-            private ArrayValue array;
+            private RawArrayValue array;
             
-            ArrayVisitor(ArrayValue array) {
+            ArrayVisitor(RawArrayValue array) {
                 this.array = array;
             }
 
@@ -800,28 +800,28 @@ package stab.tools.bytecode {
             }
 
             public AnnotationVisitor visitAnnotation(String name, String desc) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), false);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), false);
                 array.elements.add(annotation);
-                return new AnnotationValueBuilder(annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
 
             public AnnotationVisitor visitArray(String name) {
-                var array = new ArrayValue();
+                var array = new RawArrayValue();
                 this.array.elements.add(array);
                 return new ArrayVisitor(array);
             }
 
             public void visitEnum(String name, String desc, String value) {
-                array.elements.add(new EnumValue(AsmType.getType(desc), value));
+                array.elements.add(new RawEnumValue(AsmType.getType(desc), value));
             }
 
             public void visitEnd() {}
         }
 
-        private class AnnotationValueBuilder : AnnotationVisitor {
-            private AnnotationValue annotation;
+        private class RawAnnotationValueBuilder : AnnotationVisitor {
+            private RawAnnotationValue annotation;
             
-            AnnotationValueBuilder(AnnotationValue annotation) {
+            RawAnnotationValueBuilder(RawAnnotationValue annotation) {
                 this.annotation = annotation;
             }
             
@@ -830,28 +830,28 @@ package stab.tools.bytecode {
             }
 
             public AnnotationVisitor visitAnnotation(String name, String desc) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), false);
-                annotation.arguments.put(name, annotation);
-                return new AnnotationValueBuilder(annotation);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), false);
+                this.annotation.arguments.put(name, annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
 
             public AnnotationVisitor visitArray(String name) {
-                var array = new ArrayValue();
+                var array = new RawArrayValue();
                 annotation.arguments.put(name, array);
                 return new ArrayVisitor(array);
             }
 
             public void visitEnum(String name, String desc, String value) {
-                annotation.arguments.put(name, new EnumValue(AsmType.getType(desc), value));
+                annotation.arguments.put(name, new RawEnumValue(AsmType.getType(desc), value));
             }
 
             public void visitEnd() {}
         }
 
-        private class AnnotationDefaultValueBuilder : AnnotationVisitor {
-            private MethodInfo method;
+        private class RawAnnotationDefaultValueBuilder : AnnotationVisitor {
+            private RawMethodInfo method;
             
-            public AnnotationDefaultValueBuilder(MethodInfo method) {
+            public RawAnnotationDefaultValueBuilder(RawMethodInfo method) {
                 this.method = method;
             }
 
@@ -860,27 +860,27 @@ package stab.tools.bytecode {
             }
 
             public AnnotationVisitor visitAnnotation(String name, String desc) {
-                var annotation = new AnnotationValue(AsmType.getType(desc), false);
+                var annotation = new RawAnnotationValue(AsmType.getType(desc), false);
                 this.method.defaultValue = annotation;
-                return new AnnotationValueBuilder(annotation);
+                return new RawAnnotationValueBuilder(annotation);
             }
 
             public AnnotationVisitor visitArray(String name) {
-                var array = new ArrayValue();
+                var array = new RawArrayValue();
                 this.method.defaultValue = array;
                 return new ArrayVisitor(array);
             }
 
             public void visitEnum(String name, String desc, String value) {
-                this.method.defaultValue = new EnumValue(AsmType.getType(desc), value);
+                this.method.defaultValue = new RawEnumValue(AsmType.getType(desc), value);
             }
 
             public void visitEnd() {}
         }
 
-        private abstract class AnnotationArgument {
-            protected AnnotationArgument(AnnotationArgumentKind annotationArgumentKind) {
-                this.AnnotationArgumentKind = annotationArgumentKind;
+        private abstract class RawAnnotationArgument {
+            protected RawAnnotationArgument(AnnotationArgumentKind RawAnnotationArgumentKind) {
+                this.AnnotationArgumentKind = RawAnnotationArgumentKind;
             }
             
             public AnnotationArgumentKind AnnotationArgumentKind {
@@ -894,7 +894,7 @@ package stab.tools.bytecode {
                 }
             }
             
-            public virtual AnnotationArgument getArgument(String name) {
+            public virtual RawAnnotationArgument getArgument(String name) {
                 throw new UnsupportedOperationException();
             }
             
@@ -904,7 +904,7 @@ package stab.tools.bytecode {
                 }
             }
             
-            public virtual Iterable<AnnotationArgument> Elements {
+            public virtual Iterable<RawAnnotationArgument> Elements {
                 get {
                     throw new UnsupportedOperationException();
                 }
@@ -929,10 +929,10 @@ package stab.tools.bytecode {
             }
         }
 
-        private class SimpleValue : AnnotationArgument {
+        private class RawSimpleValue : RawAnnotationArgument {
             private Object value;
             
-            SimpleValue(AnnotationArgumentKind annotationArgumentKind, Object value)
+            RawSimpleValue(AnnotationArgumentKind annotationArgumentKind, Object value)
                 : super(annotationArgumentKind) {
                 this.value = value;
             }
@@ -944,26 +944,26 @@ package stab.tools.bytecode {
             }
         }
         
-        private class ArrayValue : AnnotationArgument {
-            ArrayList<AnnotationArgument> elements;
+        private class RawArrayValue : RawAnnotationArgument {
+            ArrayList<RawAnnotationArgument> elements;
             
-            ArrayValue()
+            RawArrayValue()
                 : super(AnnotationArgumentKind.Array) {
-                elements = new ArrayList<AnnotationArgument>();
+                elements = new ArrayList<RawAnnotationArgument>();
             }
             
-            public override Iterable<AnnotationArgument> Elements {
+            public override Iterable<RawAnnotationArgument> Elements {
                 get {
                     return elements;
                 }
             }
         }
         
-        private class EnumValue : AnnotationArgument {
+        private class RawEnumValue : RawAnnotationArgument {
             private AsmType type;
             private String name;
             
-            EnumValue(AsmType type, String name)
+            RawEnumValue(AsmType type, String name)
                 : super(AnnotationArgumentKind.Enum) {
                 this.type = type;
                 this.name = name;
@@ -982,10 +982,10 @@ package stab.tools.bytecode {
             }
         }
         
-        private class TypeValue : AnnotationArgument {
+        private class RawTypeValue : RawAnnotationArgument {
             private AsmType type;
             
-            TypeValue(AsmType type)
+            RawTypeValue(AsmType type)
                 : super(AnnotationArgumentKind.Type) {
                 this.type = type;
             }
@@ -997,16 +997,16 @@ package stab.tools.bytecode {
             }
         }
 
-        private class AnnotationValue : AnnotationArgument {
+        private class RawAnnotationValue : RawAnnotationArgument {
             private AsmType type;
             private boolean runtimeVisible;
-            HashMap<String, AnnotationArgument> arguments;
+            HashMap<String, RawAnnotationArgument> arguments;
             
-            AnnotationValue(AsmType type, boolean runtimeVisible)
+            RawAnnotationValue(AsmType type, boolean runtimeVisible)
                 : super(AnnotationArgumentKind.Annotation) {
                 this.type = type;
                 this.runtimeVisible = runtimeVisible;
-                this.arguments = new HashMap<String, AnnotationArgument>();
+                this.arguments = new HashMap<String, RawAnnotationArgument>();
             }
 
             public override AsmType Type {
@@ -1021,7 +1021,7 @@ package stab.tools.bytecode {
                 }
             }
             
-            public override AnnotationArgument getArgument(String name) {
+            public override RawAnnotationArgument getArgument(String name) {
                 return arguments.get(name);
             }
             

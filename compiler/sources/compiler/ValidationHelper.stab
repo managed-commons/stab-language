@@ -16,7 +16,7 @@
  */
 using java.lang;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
@@ -28,7 +28,7 @@ package stab.tools.compiler {
     }
     
     class ValidationHelper {
-        static void setArrayInitializerTypes(ArrayInitializerExpressionNode initializer, JvmTypeInfo type) {
+        static void setArrayInitializerTypes(ArrayInitializerExpressionNode initializer, TypeInfo type) {
             initializer.getUserData(typeof(ExpressionInfo)).Type = type;
             foreach (var e in initializer.Values) {
                 if (e.ExpressionKind == ExpressionKind.ArrayInitializer) {
@@ -37,7 +37,7 @@ package stab.tools.compiler {
             }
         }
     
-        static JvmTypeInfo getVariableType(CompilerContext context, JvmTypeInfo type) {
+        static TypeInfo getVariableType(CompilerContext context, TypeInfo type) {
             switch (type.TypeKind) {
             case LowerBoundedWildcard:
             case UnboundedWildcard:
@@ -47,7 +47,7 @@ package stab.tools.compiler {
             }
         }
     
-        static void setBoxing(CompilerContext context, JvmTypeInfo targetType, ExpressionNode expression) {
+        static void setBoxing(CompilerContext context, TypeInfo targetType, ExpressionNode expression) {
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info == null || targetType == null) {
                 return;
@@ -94,7 +94,7 @@ package stab.tools.compiler {
             return true;
         }
         
-        static JvmTypeInfo getType(CompilerContext context, ExpressionNode expression) {
+        static TypeInfo getType(CompilerContext context, ExpressionNode expression) {
             if (ValidationHelper.isMethod(expression)) {
                 throw context.error(CompileErrorId.UnexpectedMethodReference, expression);
             }
@@ -180,12 +180,12 @@ package stab.tools.compiler {
                     case Local:
 						if (context.CodeValidationContext.IsInMethod) {
 	                        var currentMethod = context.CodeValidationContext.CurrentMethod;
-	                      	var currentType = (JvmTypeBuilder)currentMethod.DeclaringType;
+	                      	var currentType = (TypeBuilder)currentMethod.DeclaringType;
 	                        if (currentType.FullName.indexOf('#') == -1 && context.CodeValidationContext.IsInLambda) {
 		                        if (currentMethod != member.Method) {
 		                            member.IsUsedFromLambda = true;
 					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-					                context.getLocalField(typeBuilder, (LocalInfo)member);
+					                context.getLocalField(typeBuilder, (LocalMemberInfo)member);
 		                        }
 	                        }
                         }
@@ -214,7 +214,7 @@ package stab.tools.compiler {
 			return true;
 		}
 		
-        static boolean isAssignable(CompilerContext context, JvmTypeInfo type, ExpressionNode expression) {
+        static boolean isAssignable(CompilerContext context, TypeInfo type, ExpressionNode expression) {
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info == null) {
                 return !type.IsPrimitive;

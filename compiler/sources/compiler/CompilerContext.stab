@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
@@ -25,18 +25,18 @@ using stab.tools.syntaxtree;
 package stab.tools.compiler {
 
     class CompilerContext {
-        HashMap<LocalInfo, JvmFieldInfo> localFields;
+        HashMap<LocalMemberInfo, FieldInfo> localFields;
         private CompileErrorId id;
         private SyntaxNode node;
         private Object[] arguments;
     
         #region Reflection cache
-        private JvmTypeInfo stringBuilderType;
-        private JvmMethodInfo stringBuilderConstructor;
-        private JvmMethodInfo objectToStringMethod;
-        private JvmMethodInfo systemArraycopyMethod;
+        private TypeInfo stringBuilderType;
+        private MethodInfo stringBuilderConstructor;
+        private MethodInfo objectToStringMethod;
+        private MethodInfo systemArraycopyMethod;
         
-        JvmTypeInfo StringBuilderType {
+        TypeInfo StringBuilderType {
             get {
                 if (stringBuilderType == null) {
                     stringBuilderType = this.TypeSystem.getType("java/lang/StringBuilder");
@@ -45,30 +45,30 @@ package stab.tools.compiler {
             }
         }
         
-        JvmMethodInfo StringBuilderConstructor {
+        MethodInfo StringBuilderConstructor {
             get {
                 if (stringBuilderConstructor == null) {
-                    stringBuilderConstructor = this.StringBuilderType.getMethod("<init>", Query.empty<JvmTypeInfo>());
+                    stringBuilderConstructor = this.StringBuilderType.getMethod("<init>", Query.empty<TypeInfo>());
                 }
                 return stringBuilderConstructor;
             }
         }
         
-        JvmMethodInfo ObjectToStringMethod {
+        MethodInfo ObjectToStringMethod {
             get {
                 if (objectToStringMethod == null) {
-                    objectToStringMethod = this.TypeSystem.ObjectType.getMethod("toString", Query.empty<JvmTypeInfo>());
+                    objectToStringMethod = this.TypeSystem.ObjectType.getMethod("toString", Query.empty<TypeInfo>());
                 }
                 return objectToStringMethod;
             }
         }
         
-        JvmMethodInfo SystemArraycopyMethod {
+        MethodInfo SystemArraycopyMethod {
             get {
                 if (systemArraycopyMethod == null) {
                     var objectType = this.TypeSystem.ObjectType;
-                    var intType = JvmTypeInfo.INT;
-                    var parameters = new ArrayList<JvmTypeInfo> { objectType, intType, objectType, intType, intType };
+                    var intType = this.TypeSystem.IntType;
+                    var parameters = new ArrayList<TypeInfo> { objectType, intType, objectType, intType, intType };
                     systemArraycopyMethod = this.TypeSystem.getType("java/lang/System").getMethod("arraycopy", parameters);
                 }
                 return systemArraycopyMethod;
@@ -81,16 +81,16 @@ package stab.tools.compiler {
             this.Parameters = parameters;
             this.Results = results;
             this.CompilationUnits = new ArrayList<CompilationUnitNode>();
-            this.TypeBuilders = new ArrayList<JvmTypeBuilder>();
-            this.Iterables = new HashMap<JvmMethodBuilder, JvmTypeBuilder>();
-            this.ConstructorBuilders = new ArrayList<JvmMethodBuilder>();
+            this.TypeBuilders = new ArrayList<TypeBuilder>();
+            this.Iterables = new HashMap<MethodBuilder, TypeBuilder>();
+            this.ConstructorBuilders = new ArrayList<MethodBuilder>();
             this.CodeValidationContext = new CodeValidationContext(this);
             this.MethodGenerationContext = new MethodGenerationContext();
-            this.LambdaScopes = new HashMap<JvmMethodBuilder, JvmTypeBuilder>();
+            this.LambdaScopes = new HashMap<MethodBuilder, TypeBuilder>();
             this.ConstantBuilder = new ConstantBuilder(this);
-            this.PrivateAccessors = new HashMap<Object, JvmMethodInfo>();
-            this.PrivateMutators = new HashMap<Object, JvmMethodInfo>();
-            this.localFields = new HashMap<LocalInfo, JvmFieldInfo>();
+            this.PrivateAccessors = new HashMap<Object, MethodInfo>();
+            this.PrivateMutators = new HashMap<Object, MethodInfo>();
+            this.localFields = new HashMap<LocalMemberInfo, FieldInfo>();
         }
         
         CompilerParameters Parameters {
@@ -114,12 +114,12 @@ package stab.tools.compiler {
             }
         }
         
-        JvmTypeSystem TypeSystem {
+        Library TypeSystem {
             get;
             set;
         }
         
-        JvmTypeSystem AnnotatedTypeSystem {
+        Library AnnotatedTypeSystem {
             get;
             set;
         }
@@ -139,22 +139,22 @@ package stab.tools.compiler {
             set;
         }
         
-        List<JvmTypeBuilder> TypeBuilders {
+        List<TypeBuilder> TypeBuilders {
             get;
             private set;
         }
         
-        List<JvmMethodBuilder> ConstructorBuilders {
+        List<MethodBuilder> ConstructorBuilders {
             get;
             private set;
         }
         
-        HashMap<JvmMethodBuilder, JvmTypeBuilder> Iterables {
+        HashMap<MethodBuilder, TypeBuilder> Iterables {
             get;
             private set;
         }
         
-        JvmTypeInfo CurrentType {
+        TypeInfo CurrentType {
             get;
             set;
         }
@@ -169,17 +169,17 @@ package stab.tools.compiler {
             private set;
         }
         
-        HashMap<JvmMethodBuilder, JvmTypeBuilder> LambdaScopes {
+        HashMap<MethodBuilder, TypeBuilder> LambdaScopes {
             get;
             private set;
         }
         
-        HashMap<Object, JvmMethodInfo> PrivateAccessors {
+        HashMap<Object, MethodInfo> PrivateAccessors {
             get;
             private set;
         }
         
-        HashMap<Object, JvmMethodInfo> PrivateMutators {
+        HashMap<Object, MethodInfo> PrivateMutators {
             get;
             private set;
         }
@@ -189,7 +189,7 @@ package stab.tools.compiler {
             private set;
         }
         
-        JvmTypeInfo getType(String fullName, SyntaxNode node) {
+        TypeInfo getType(String fullName, SyntaxNode node) {
             if (!this.TypeSystem.typeExists(fullName)) {
                 throw error(CompileErrorId.TypeNotFound, node, fullName.replace('/', '.').replace('$', '.'));
             }
@@ -214,7 +214,7 @@ package stab.tools.compiler {
             ParserHelper.unescapeIdentifier(sb, this.Text, offset, length);
         }
         
-        JvmFieldInfo getLocalField(JvmTypeBuilder lambdaScope, LocalInfo local) {
+        FieldInfo getLocalField(TypeBuilder lambdaScope, LocalMemberInfo local) {
             var result = localFields[local];
             if (result == null) {
             	int n = lambdaScope.Fields.count(p => p.Name.startsWith("local"));
@@ -285,28 +285,28 @@ package stab.tools.compiler {
     
     class CodeValidationContext {
         private CompilerContext context;
-        private ArrayList<JvmMethodBuilder> methods;
-        private ArrayList<ArrayList<JvmTypeInfo>> returnTypes;
-        private ArrayList<List<JvmTypeInfo>> lambdaParameters;
+        private ArrayList<MethodBuilder> methods;
+        private ArrayList<ArrayList<TypeInfo>> returnTypes;
+        private ArrayList<List<TypeInfo>> lambdaParameters;
         
         CodeValidationContext(CompilerContext context) {
             this.context = context;
-            this.methods = new ArrayList<JvmMethodBuilder>();
-            this.returnTypes = new ArrayList<ArrayList<JvmTypeInfo>>();
-            this.lambdaParameters = new ArrayList<List<JvmTypeInfo>>();
+            this.methods = new ArrayList<MethodBuilder>();
+            this.returnTypes = new ArrayList<ArrayList<TypeInfo>>();
+            this.lambdaParameters = new ArrayList<List<TypeInfo>>();
         }
         
-        void enterMethod(JvmMethodBuilder methodBuilder) {
+        void enterMethod(MethodBuilder methodBuilder) {
             context.MemberResolver.enterMethod(methodBuilder);
             this.IsStatic = methodBuilder.IsStatic;
             methods.add(methodBuilder);
             this.YieldCount = 0;
         }
         
-        void enterLambdaMethod(JvmMethodBuilder methodBuilder) {
+        void enterLambdaMethod(MethodBuilder methodBuilder) {
             context.MemberResolver.enterMethod(methodBuilder, true);
             methods.add(methodBuilder);
-            returnTypes.add(new ArrayList<JvmTypeInfo>());
+            returnTypes.add(new ArrayList<TypeInfo>());
         }
 
         void leaveLambdaMethod() {
@@ -349,13 +349,13 @@ package stab.tools.compiler {
             }
         }
         
-        JvmMethodBuilder RootMethod {
+        MethodBuilder RootMethod {
             get {
                 return methods[0];
             }
         }
         
-        JvmMethodBuilder CurrentMethod {
+        MethodBuilder CurrentMethod {
             get {
                 return methods[methods.size() - 1];
             }
@@ -371,7 +371,7 @@ package stab.tools.compiler {
             set;
         }
         
-        void pushLambdaParameters(List<JvmTypeInfo> parameters) {
+        void pushLambdaParameters(List<TypeInfo> parameters) {
             lambdaParameters.add(parameters);
         }
         
@@ -379,44 +379,44 @@ package stab.tools.compiler {
             lambdaParameters.remove(lambdaParameters.size() - 1);
         }
         
-        List<JvmTypeInfo> LambdaParameters {
+        List<TypeInfo> LambdaParameters {
             get {
                 return lambdaParameters[lambdaParameters.size() - 1];
             }
         }
         
-        List<JvmTypeInfo> LambdaReturnTypes {
+        List<TypeInfo> LambdaReturnTypes {
             get {
                 return returnTypes[returnTypes.size() - 1];
             }
         }
         
-        JvmTypeInfo LambdaReturnType {
+        TypeInfo LambdaReturnType {
             get;
             set;
         }
     }
     
     class MethodGenerationContext {
-        private ArrayList<JvmMethodBuilder> methods;
+        private ArrayList<MethodBuilder> methods;
         private boolean destructor;
         private int foreachStatement;
         private int stringSwitch;
         private int generatedLocal;
     
         MethodGenerationContext() {
-            this.methods = new ArrayList<JvmMethodBuilder>();
-            this.YieldLabels = new ArrayList<JvmLabelMarker>();
-            this.ParametersUsedInLambdas = new HashSet<LocalInfo>();
-            this.ParametersUsedInLambda = new ArrayList<LocalInfo>();
-            this.CatchVariables = new ArrayList<JvmLocalInfo>();
-            this.TreeLocals = new HashMap<LocalInfo, JvmLocalInfo>();
-            this.TreeLabels = new HashMap<StatementNode, JvmLocalInfo>();
-            this.LocalFields = new HashMap<LocalInfo, JvmFieldInfo>();
-            this.Labels = new ArrayList<HashMap<Object, JvmLocalInfo>>();
+            this.methods = new ArrayList<MethodBuilder>();
+            this.YieldLabels = new ArrayList<LabelMarker>();
+            this.ParametersUsedInLambdas = new HashSet<LocalMemberInfo>();
+            this.ParametersUsedInLambda = new ArrayList<LocalMemberInfo>();
+            this.CatchVariables = new ArrayList<LocalInfo>();
+            this.TreeLocals = new HashMap<LocalMemberInfo, LocalInfo>();
+            this.TreeLabels = new HashMap<StatementNode, LocalInfo>();
+            this.LocalFields = new HashMap<LocalMemberInfo, FieldInfo>();
+            this.Labels = new ArrayList<HashMap<Object, LocalInfo>>();
         }
         
-        void initialize(JvmMethodBuilder methodBuilder, JvmTypeBuilder lambdaScope) {
+        void initialize(MethodBuilder methodBuilder, TypeBuilder lambdaScope) {
             this.methods.clear();
             this.ParametersUsedInLambdas.clear();
             this.ParametersUsedInLambda.clear();
@@ -441,7 +441,7 @@ package stab.tools.compiler {
             this.generatedLocal = 0;
         }
         
-        void enterLambda(JvmMethodBuilder method) {
+        void enterLambda(MethodBuilder method) {
             this.PreviousLineNumber = 0;
             this.methods.add(method);
             this.Generator = method.CodeGenerator;
@@ -470,13 +470,13 @@ package stab.tools.compiler {
             }
         }
         
-        JvmMethodBuilder RootMethod {
+        MethodBuilder RootMethod {
             get {
                 return methods[0];
             }
         }
         
-        JvmMethodBuilder CurrentMethod {
+        MethodBuilder CurrentMethod {
             get {
                 return methods[methods.size() - 1];
             }
@@ -497,32 +497,32 @@ package stab.tools.compiler {
             set;
         }
         
-        JvmTypeBuilder LambdaScope {
+        TypeBuilder LambdaScope {
             get;
             private set;
         }
         
-        HashSet<LocalInfo> ParametersUsedInLambdas {
+        HashSet<LocalMemberInfo> ParametersUsedInLambdas {
             get;
             private set;
         }
         
-        ArrayList<LocalInfo> ParametersUsedInLambda {
+        ArrayList<LocalMemberInfo> ParametersUsedInLambda {
             get;
             private set;
         }
         
-        JvmCodeGenerator Generator {
+        CodeGenerator Generator {
             get;
             set;
         }
 
-        JvmTypeBuilder Iterable {
+        TypeBuilder Iterable {
             get;
             set;
         }
         
-        List<JvmLabelMarker> YieldLabels {
+        List<LabelMarker> YieldLabels {
             get;
             private set;
         }
@@ -532,7 +532,7 @@ package stab.tools.compiler {
             set;
         }
         
-        List<JvmLocalInfo> CatchVariables {
+        List<LocalInfo> CatchVariables {
             get;
             private set;
         }
@@ -559,22 +559,22 @@ package stab.tools.compiler {
             return generatedLocal++;
         }
         
-        Map<LocalInfo, JvmLocalInfo> TreeLocals {
+        Map<LocalMemberInfo, LocalInfo> TreeLocals {
             get;
             private set;
         }
         
-        Map<StatementNode, JvmLocalInfo> TreeLabels {
+        Map<StatementNode, LocalInfo> TreeLabels {
             get;
             private set;
         }
         
-        HashMap<LocalInfo, JvmFieldInfo> LocalFields {
+        HashMap<LocalMemberInfo, FieldInfo> LocalFields {
         	get;
         	private set;
         }
 
-        List<HashMap<Object, JvmLocalInfo>> Labels {
+        List<HashMap<Object, LocalInfo>> Labels {
         	get;
         	private set;
         }

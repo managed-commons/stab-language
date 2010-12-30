@@ -21,7 +21,7 @@ using org.junit;
 using stab.query;
 using stab.tools.helpers;
 
-package stab.tools.bytecode.test {
+package stab.reflection.test {
 
 	public class TypeBuilderTest {
 		
@@ -31,7 +31,7 @@ package stab.tools.bytecode.test {
 			//     public SimpleClass() {
 			//     }
 			// }
-			var typeSystem = new JvmTypeSystem(new String[0]);
+			var typeSystem = new Library(new String[0]);
 			var typeBuilder = typeSystem.defineType("stab/SimpleClass");
 			typeBuilder.setPublic(true);
 			typeBuilder.setBaseType(typeSystem.getType("java/lang/Object"));
@@ -58,25 +58,25 @@ package stab.tools.bytecode.test {
 			//         field = 123;
 			//     }
 			// }
-			var typeSystem = new JvmTypeSystem(new String[0]);
+			var typeSystem = new Library(new String[0]);
 			var typeBuilder = typeSystem.defineType("stab/ClassWithField");
 			typeBuilder.setPublic(true);
 			typeBuilder.setBaseType(typeSystem.getType("java/lang/Object"));
 
-			var field = typeBuilder.defineField("field", JvmTypeInfo.INT);
+			var field = typeBuilder.defineField("field", typeSystem.IntType);
 			field.setPublic(true);
 
 			var methodBuilder = typeBuilder.defineMethod("<init>");
 			methodBuilder.setPublic(true);
-			methodBuilder.setReturnType(JvmTypeInfo.VOID);
+			methodBuilder.setReturnType(typeSystem.VoidType);
 			var generator = methodBuilder.getCodeGenerator();
 			generator.beginScope();
-			generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-			generator.emit(JvmOpcode.Invokespecial, typeBuilder.BaseType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-			generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-			generator.emit(JvmOpcode.Ldc, (Object)123);
-			generator.emit(JvmOpcode.Putfield, field);
-			generator.emit(JvmOpcode.Return);
+			generator.emit(Opcode.Aload, generator.getLocal("this"));
+			generator.emit(Opcode.Invokespecial, typeBuilder.BaseType.getMethod("<init>", Query.empty<TypeInfo>()));
+			generator.emit(Opcode.Aload, generator.getLocal("this"));
+			generator.emit(Opcode.Ldc, (Object)123);
+			generator.emit(Opcode.Putfield, field);
+			generator.emit(Opcode.Return);
 			generator.endScope();
 			
 			var bytecode = typeBuilder.createType(typeSystem);
@@ -102,12 +102,12 @@ package stab.tools.bytecode.test {
 			//     public ClassWithStaticField() {
 			//     }
 			// }
-			var typeSystem = new JvmTypeSystem(new String[0]);
+			var typeSystem = new Library(new String[0]);
 			var typeBuilder = typeSystem.defineType("stab/ClassWithStaticField");
 			typeBuilder.setPublic(true);
 			typeBuilder.setBaseType(typeSystem.getType("java/lang/Object"));
 
-			var field = typeBuilder.defineField("FIELD", JvmTypeInfo.INT);
+			var field = typeBuilder.defineField("FIELD", typeSystem.IntType);
 			field.setPublic(true);
 			field.setStatic(true);
 			field.setValue(new Integer(123));
@@ -138,7 +138,7 @@ package stab.tools.bytecode.test {
 			//     public StaticInnerClass() {
 			//     }
 			// }
-			var typeSystem = new JvmTypeSystem(new String[0]);
+			var typeSystem = new Library(new String[0]);
 			var typeBuilder = typeSystem.defineType("stab/StaticInnerClass");
 			typeBuilder.setPublic(true);
 			typeBuilder.setBaseType(typeSystem.getType("java/lang/Object"));
@@ -179,7 +179,7 @@ package stab.tools.bytecode.test {
 			//         this.field = t;
 			//     }
 			// }
-			var typeSystem = new JvmTypeSystem(new String[0]);
+			var typeSystem = new Library(new String[0]);
 			var typeBuilder = typeSystem.defineType("stab/GenericClass");
 			typeBuilder.setPublic(true);
 			typeBuilder.setBaseType(typeSystem.getType("java/lang/Object"));
@@ -190,16 +190,16 @@ package stab.tools.bytecode.test {
 
 			var methodBuilder = typeBuilder.defineMethod("<init>");
 			methodBuilder.setPublic(true);
-			methodBuilder.setReturnType(JvmTypeInfo.VOID);
+			methodBuilder.setReturnType(typeSystem.VoidType);
 			methodBuilder.addParameter(t).setName("t");
 			var generator = methodBuilder.getCodeGenerator();
 			generator.beginScope();
-			generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-			generator.emit(JvmOpcode.Invokespecial, typeBuilder.BaseType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-			generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-			generator.emit(JvmOpcode.Aload, generator.getLocal("t"));
-			generator.emit(JvmOpcode.Putfield, field);
-			generator.emit(JvmOpcode.Return);
+			generator.emit(Opcode.Aload, generator.getLocal("this"));
+			generator.emit(Opcode.Invokespecial, typeBuilder.BaseType.getMethod("<init>", Query.empty<TypeInfo>()));
+			generator.emit(Opcode.Aload, generator.getLocal("this"));
+			generator.emit(Opcode.Aload, generator.getLocal("t"));
+			generator.emit(Opcode.Putfield, field);
+			generator.emit(Opcode.Return);
 			generator.endScope();
 
 			var bytecode = typeBuilder.createType(typeSystem);
@@ -215,15 +215,15 @@ package stab.tools.bytecode.test {
 			Assert.assertEquals("TEST", f.get(instance));
 		}
 
-		private void createDefaultConstructor(JvmTypeBuilder typeBuilder) {
+		private void createDefaultConstructor(TypeBuilder typeBuilder) {
 			var methodBuilder = typeBuilder.defineMethod("<init>");
 			methodBuilder.setPublic(true);
-			methodBuilder.setReturnType(JvmTypeInfo.VOID);
+			methodBuilder.setReturnType(typeBuilder.Library.VoidType);
 			var generator = methodBuilder.getCodeGenerator();
 			generator.beginScope();
-			generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-			generator.emit(JvmOpcode.Invokespecial, typeBuilder.BaseType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-			generator.emit(JvmOpcode.Return);
+			generator.emit(Opcode.Aload, generator.getLocal("this"));
+			generator.emit(Opcode.Invokespecial, typeBuilder.BaseType.getMethod("<init>", Query.empty<TypeInfo>()));
+			generator.emit(Opcode.Return);
 			generator.endScope();
 		}
 

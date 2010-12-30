@@ -19,35 +19,25 @@ using java.util;
 using org.objectweb.asm;
 using stab.query;
 
-package stab.tools.bytecode {
+package stab.reflection {
 
-    public class JvmTypeBuilder : JvmTypeInfo {
+    public class TypeBuilder : ObjectTypeInfo {
         boolean created;
         private int modifiers;
         private int nestedModifiers;
-        private ArrayList<JvmTypeInfo> genericArguments;
-        private JvmTypeInfo baseType;
-        private ArrayList<JvmTypeInfo> interfaces;
-        private String descriptor;
-        private String signature;
-        private ArrayList<JvmFieldInfo> fields;
-        private ArrayList<JvmMethodInfo> methods;
-        private ArrayList<JvmAnnotationValue> annotations;
-        private JvmTypeInfo declaringType;
-        private ArrayList<JvmTypeInfo> nestedTypes;
+        private ArrayList<TypeInfo> genericArguments;
+        private TypeInfo baseType;
+        private ArrayList<TypeInfo> interfaces;
+        private ArrayList<AnnotationValue> annotations;
         private String sourceFile;
         private String sourceDebugExtension;
         
-        JvmTypeBuilder(JvmTypeInfo declaringType, String name)
-            : super(TypeKind.Reference, name) {
+        TypeBuilder(Library library, TypeInfo declaringType, String name)
+            : super(library, name) {
             this.declaringType = declaringType;
-            this.genericArguments = new ArrayList<JvmTypeInfo>();
-            this.interfaces = new ArrayList<JvmTypeInfo>();
-            this.descriptor = "L" + name + ";";
-            this.fields = new ArrayList<JvmFieldInfo>();
-            this.methods = new ArrayList<JvmMethodInfo>();
-            this.annotations = new ArrayList<JvmAnnotationValue>();
-            this.nestedTypes = new ArrayList<JvmTypeInfo>();
+            this.genericArguments = new ArrayList<TypeInfo>();
+            this.interfaces = new ArrayList<TypeInfo>();
+            this.annotations = new ArrayList<AnnotationValue>();
         }
 
         public String SourceFile {
@@ -70,37 +60,31 @@ package stab.tools.bytecode {
             this.sourceDebugExtension = sourceDebugExtension;
         }
         
-        public override JvmTypeInfo DeclaringType {
-            get {
-                return declaringType;
-            }
-        }
-
-        public override JvmTypeInfo BaseType {
+        public override TypeInfo BaseType {
             get {
                 return baseType;
             }
         }
 
-        public void setBaseType(JvmTypeInfo baseType) {
+        public void setBaseType(TypeInfo baseType) {
             checkCreated();
             this.baseType = baseType;
         }
         
-        public override Iterable<JvmTypeInfo> GenericArguments {
+        public override Iterable<TypeInfo> GenericArguments {
             get {
                 return genericArguments;
             }
         }
 
-        public JvmTypeInfo addGenericArgument(String name) {
+        public TypeInfo addGenericArgument(String name) {
             checkCreated();
-            var type = new GenericParameterType(name, null);
+            var type = new GenericParameterType(this.Library, name, null);
             genericArguments.add(type);
             return type;
         }
 
-        public void addGenericConstraint(String name, JvmTypeInfo bound) {
+        public void addGenericConstraint(String name, TypeInfo bound) {
             checkCreated();
             foreach (var arg in genericArguments) {
                 if (arg.FullName.equals(name)) {
@@ -111,28 +95,22 @@ package stab.tools.bytecode {
             throw new IllegalStateException("Generic parameter " + name+  " not found");
         }
         
-        public override Iterable<JvmTypeInfo> Interfaces {
+        public override Iterable<TypeInfo> Interfaces {
             get {
                 return interfaces;
             }
         }
 
-        public void addInterface(JvmTypeInfo type) {
+        public void addInterface(TypeInfo type) {
             checkCreated();
             interfaces.add(type);
-        }
-        
-        public override String Descriptor {
-            get {
-                return descriptor;
-            }
         }
         
         public override String Signature {
             get {
                 var result = signature;
                 if (!created || signature == null) {
-                    result = BytecodeHelper.getClassTypeSignature(this, this.GenericArguments);
+                    result = getTypeSignature();
                 }
                 if (created && signature == null) {
                     signature = result;
@@ -141,72 +119,74 @@ package stab.tools.bytecode {
             }
         }
         
-        public override Iterable<JvmAnnotationValue> Annotations {
+        public override Iterable<AnnotationValue> Annotations {
             get {
                 return annotations;
             }
         }
 
-        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+        public AnnotationValueBuilder addAnnotation(TypeInfo type, boolean runtimeVisible) {
             checkCreated();
-            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            var result = new AnnotationValueBuilder(type, runtimeVisible);
             annotations.add(result);
             return result;
         }
         
-        public override Iterable<JvmFieldInfo> Fields {
+        public override Iterable<FieldInfo> Fields {
             get {
                 return fields;
             }
         }
         
-        public JvmFieldBuilder defineField(String name, JvmTypeInfo type) {
+        public FieldBuilder defineField(String name, TypeInfo type) {
             checkCreated();
-            var field = new JvmFieldBuilder(this, name, type);
+            var field = new FieldBuilder(this, name, type);
             fields.add(field);
             return field;
         }
 
-        public override Iterable<JvmMethodInfo> Methods {
+        public override Iterable<MethodInfo> Methods {
             get {
                 return methods;
             }
         }
         
-        public JvmMethodBuilder defineMethod(String name) {
+        public MethodBuilder defineMethod(String name) {
             checkCreated();
-            var method = new JvmMethodBuilder(this, name);
+            var method = new MethodBuilder(this, name);
             methods.add(method);
             return method;
         }
         
-        public void defineMethod(JvmMethodBuilder method) {
+        public void defineMethod(MethodBuilder method) {
             checkCreated();
             method.declaringType = this;
         	methods.add(method);
         }
         
-        public void undefineMethod(JvmMethodBuilder method) {
+        public void undefineMethod(MethodBuilder method) {
             checkCreated();
             methods.remove(method);
         }
         
-        public override Iterable<JvmTypeInfo> NestedTypes {
+        public override Iterable<TypeInfo> NestedTypes {
             get {
                 return nestedTypes;
             }
         }
 
-        public JvmTypeBuilder defineNestedType(String name) {
+        public TypeBuilder defineNestedType(String name) {
             checkCreated();
-            var nestedType = new JvmTypeBuilder(this, this.FullName + "$" + name);
+            var nestedType = new TypeBuilder(this.Library, this, this.FullName + "$" + name);
+            this.Library.defineNestedType(nestedType);
             nestedTypes.add(nestedType);
             return nestedType;
         }
 
-		public void undefineNestedType(JvmTypeBuilder nestedType) {
+		public void undefineNestedType(TypeBuilder nestedType) {
             checkCreated();
 			nestedTypes.remove(nestedType);
+            this.Library.undefineNestedType(nestedType);
 		}
 
         public boolean IsCreated {
@@ -215,11 +195,11 @@ package stab.tools.bytecode {
             }
         }
 
-        public byte[] createType(JvmTypeSystem typeSystem) {
+        public byte[] createType(Library typeSystem) {
             checkCreated();
             this.created = true;
             var classWriter = new ClassWriterNoReflection(typeSystem, ClassWriter.COMPUTE_FRAMES);
-            classWriter.visit(Opcodes.V1_6, modifiers, getFullName(), BytecodeHelper.getClassSignature(this),
+            classWriter.visit(Opcodes.V1_6, modifiers, getFullName(), ReflectionHelper.getClassSignature(this),
                 baseType.getFullName(), getTypeNames(interfaces));
             if (sourceFile != null || sourceDebugExtension != null) {
                 classWriter.visitSource(sourceFile, sourceDebugExtension);
@@ -237,12 +217,12 @@ package stab.tools.bytecode {
             }
             
             foreach (var f in fields) {
-                ((JvmFieldBuilder)f).accept(classWriter.visitField(f.modifiers, f.Name, f.Descriptor, f.Signature, f.Value));
+                ((FieldBuilder)f).accept(classWriter.visitField(f.modifiers, f.Name, f.Descriptor, f.Signature, f.Value));
             }
             
             foreach (var m in methods) {
                 if (!m.IsExcludedFromCompilation) {
-                    ((JvmMethodBuilder)m).accept(classWriter.visitMethod(m.Modifiers, m.Name, m.Descriptor,
+                    ((MethodBuilder)m).accept(classWriter.visitMethod(m.Modifiers, m.Name, m.Descriptor,
                             m.Signature, getTypeNames(m.Exceptions)));
                 }
             }
@@ -251,9 +231,9 @@ package stab.tools.bytecode {
             return classWriter.toByteArray();
         }
 
-		public JvmTypeBuilder[] getDependencies() {
+		public TypeBuilder[] getDependencies() {
             checkCreated();
-			var dependencies = new HashSet<JvmTypeBuilder>();
+			var dependencies = new HashSet<TypeBuilder>();
 			addType(dependencies, baseType);
 			foreach (var t in interfaces) {
 				addType(dependencies, t);
@@ -262,8 +242,8 @@ package stab.tools.bytecode {
 				addType(dependencies, a.Type);
 			}
             foreach (var nt in nestedTypes) {
-				foreach (var t in ((JvmTypeBuilder)nt).getDependencies()) {
-					dependencies.add((JvmTypeBuilder)t);
+				foreach (var t in ((TypeBuilder)nt).getDependencies()) {
+					dependencies.add((TypeBuilder)t);
 				}
 			}
 			foreach (var f in fields) {
@@ -287,7 +267,7 @@ package stab.tools.bytecode {
 					foreach (var e in m.Exceptions) {
 						addType(dependencies, e);
 					}
-					foreach (var instruction in ((JvmMethodBuilder)m).CodeGenerator.Instructions) {
+					foreach (var instruction in ((MethodBuilder)m).CodeGenerator.Instructions) {
 						switch (instruction.Opcode) {
 						case Getfield:
 						case Getstatic:
@@ -313,12 +293,12 @@ package stab.tools.bytecode {
 					}
 				}
 			}
-			return dependencies.toArray(new JvmTypeBuilder[dependencies.size()]);
+			return dependencies.toArray(new TypeBuilder[dependencies.size()]);
 		}
 
-		private void addType(HashSet<JvmTypeBuilder> types, JvmTypeInfo type) {
-			if (type instanceof JvmTypeBuilder) {
-				types.add((JvmTypeBuilder)type);
+		private void addType(HashSet<TypeBuilder> types, TypeInfo type) {
+			if (type instanceof TypeBuilder) {
+				types.add((TypeBuilder)type);
 			} else if (type.TypeKind == TypeKind.Array) {
 				addType(types, type.ElementType);
 			} else {
@@ -328,7 +308,7 @@ package stab.tools.bytecode {
 			}
 		}
         
-        private static String[] getTypeNames(Iterable<JvmTypeInfo> types) {
+        private static String[] getTypeNames(Iterable<TypeInfo> types) {
             if (types.any()) {
                 String[] result = new String[types.count()];
                 int i = 0;
@@ -452,9 +432,9 @@ package stab.tools.bytecode {
 
         // ASM ClassWriter class has to be subclassed in order to avoid the use of Java reflection
         private class ClassWriterNoReflection : ClassWriter {
-            private JvmTypeSystem typeSystem;
+            private Library typeSystem;
             
-            public ClassWriterNoReflection(JvmTypeSystem typeSystem, int flags)
+            public ClassWriterNoReflection(Library typeSystem, int flags)
                 : super(flags) {
                 this.typeSystem = typeSystem;
             }
@@ -478,7 +458,7 @@ package stab.tools.bytecode {
                 }
             }
             
-            private JvmTypeInfo getTypeInfo(String name) {
+            private TypeInfo getTypeInfo(String name) {
                 int idx = name.indexOf('$');
                 if (idx == -1) {
                     return typeSystem.getType(name);

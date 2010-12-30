@@ -17,55 +17,55 @@
 using java.lang;
 using java.util;
 
-package stab.tools.bytecode {
+package stab.reflection {
 
-    class ClassFileMethod : JvmMethodInfo {
+    class ClassFileMethod : MethodInfo {
         int modifiers;
-        JvmTypeInfo returnType;
-        ArrayList<JvmParameterInfo> parameters;
-        List<JvmTypeInfo> exceptions;
-        List<JvmTypeInfo> genericArguments;
+        TypeInfo returnType;
+        ArrayList<ParameterInfo> parameters;
+        List<TypeInfo> exceptions;
+        List<TypeInfo> genericArguments;
         private String descriptor;
-        List<JvmAnnotationValue> annotations;
-        JvmAnnotationArgument defaultValue;
+        List<AnnotationValue> annotations;
+        AnnotationArgument defaultValue;
 
-        ClassFileMethod(JvmTypeInfo declaringType, String name, String descriptor)
+        ClassFileMethod(TypeInfo declaringType, String name, String descriptor)
             : super(declaringType, name) {
-            this.parameters = new ArrayList<JvmParameterInfo>();
+            this.parameters = new ArrayList<ParameterInfo>();
             this.descriptor = descriptor;
         }
         
-        public override JvmTypeInfo ReturnType {
+        public override TypeInfo ReturnType {
             get {
                 return returnType;
             }
         }
 
-        public override Iterable<JvmParameterInfo> Parameters {
+        public override Iterable<ParameterInfo> Parameters {
             get {
                 return parameters;
             }
         }
         
-        public override JvmAnnotationArgument DefaultValue {
+        public override AnnotationArgument DefaultValue {
             get {
                 return defaultValue;
             }
         }
         
-        public override Iterable<JvmTypeInfo> Exceptions {
+        public override Iterable<TypeInfo> Exceptions {
             get {
                 return exceptions;
             }
         }
         
-        public override Iterable<JvmTypeInfo> GenericArguments {
+        public override Iterable<TypeInfo> GenericArguments {
             get {
                 return genericArguments;
             }
         }
         
-        public override Iterable<JvmAnnotationValue> Annotations {
+        public override Iterable<AnnotationValue> Annotations {
             get {
                 return annotations;
             }

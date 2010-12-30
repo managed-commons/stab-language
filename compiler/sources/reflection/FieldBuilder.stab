@@ -18,18 +18,18 @@ using java.lang;
 using java.util;
 using org.objectweb.asm;
 
-package stab.tools.bytecode {
+package stab.reflection {
     
-    public class JvmFieldBuilder : JvmFieldInfo {
-        public JvmFieldBuilder(JvmTypeInfo declaringType, String name, JvmTypeInfo type)
+    public class FieldBuilder : FieldInfo {
+        public FieldBuilder(TypeInfo declaringType, String name, TypeInfo type)
             : super(declaringType, 0, name, null) {
-            this.annotations = new ArrayList<JvmAnnotationValue>();
+            this.annotations = new ArrayList<AnnotationValue>();
             this.type = type;
         }
     
-        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+        public AnnotationValueBuilder addAnnotation(TypeInfo type, boolean runtimeVisible) {
             checkCreated();
-            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            var result = new AnnotationValueBuilder(type, runtimeVisible);
             annotations.add(result);
             return result;
         }
@@ -92,7 +92,7 @@ package stab.tools.bytecode {
         }
         
         void checkCreated() {
-            ((JvmTypeBuilder)this.DeclaringType).checkCreated();
+            ((TypeBuilder)this.DeclaringType).checkCreated();
         }
     }
 }

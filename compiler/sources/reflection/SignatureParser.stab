@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 
-package stab.tools.bytecode.signature {
+package stab.reflection {
 
     public class SignatureParser {
         private String signature;
@@ -35,7 +35,7 @@ package stab.tools.bytecode.signature {
             if (current == '<') {
                 result.formalTypeParameters = parseFormalTypeParameters();
             } else {
-                result.formalTypeParameters = Collections.emptyList<FormalTypeParameterSignature>();
+                result.formalTypeParameters = Collections.emptyList<TypeSignature>();
             }
             result.superclass = parseClassTypeSignature();
             var superinterfaces = new ArrayList<TypeSignature>();
@@ -67,7 +67,7 @@ package stab.tools.bytecode.signature {
             if (current == '<') {
                 result.formalTypeParameters = parseFormalTypeParameters();
             } else {
-                result.formalTypeParameters = Collections.emptyList<FormalTypeParameterSignature>();
+                result.formalTypeParameters = Collections.emptyList<TypeSignature>();
             }
             if (current != '(') {
                 throw new IllegalStateException();
@@ -80,7 +80,7 @@ package stab.tools.bytecode.signature {
             }
             advance();
             if (current == 'V') {
-                result.returnType = new ClassTypeSignature(TypeSignatureKind.Void, "V");
+                result.returnType = PrimitiveTypeSignature.VoidSignature;
                 advance();
             } else {
                 result.returnType = parseTypeSignature();
@@ -105,35 +105,35 @@ package stab.tools.bytecode.signature {
             switch (current) {
             case 'B':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Byte, "B");
+                return PrimitiveTypeSignature.ByteSignature;
                 
             case 'C':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Char, "C");
+                return PrimitiveTypeSignature.CharSignature;
                 
             case 'F':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Float, "F");
+                return PrimitiveTypeSignature.FloatSignature;
                 
             case 'D':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Double, "D");
+                return PrimitiveTypeSignature.DoubleSignature;
                 
             case 'I':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Int, "I");
+                return PrimitiveTypeSignature.IntSignature;
                 
             case 'J':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Long, "J");
+                return PrimitiveTypeSignature.LongSignature;
                 
             case 'S':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Short, "S");
+                return PrimitiveTypeSignature.ShortSignature;
                 
             case 'Z':
                 advance();
-                return new ClassTypeSignature(TypeSignatureKind.Boolean, "Z");
+                return PrimitiveTypeSignature.BooleanSignature;
                 
             default:
                 return parseFieldTypeSignature();
@@ -176,7 +176,7 @@ package stab.tools.bytecode.signature {
             }
             advance();
             int pos = position;
-            TypeSignature outerType = null;
+            ClassTypeSignature outerType = null;
             for (;;) {
                 switch (current) {
                 case '.':
@@ -216,12 +216,12 @@ package stab.tools.bytecode.signature {
             }
         }
 
-        private void parseTypeArguments(TypeSignature genericTypeDeclaration) {
+        private void parseTypeArguments(ClassTypeSignature genericTypeDeclaration) {
             if (current != '<') {
                 throw new IllegalStateException();
             }
             advance();
-            var typeArguments = (ArrayList<TypeSignature>)genericTypeDeclaration.getTypeArguments();
+            var typeArguments = genericTypeDeclaration.typeArguments;
             for (;;) {
                 switch (current) {
                 case '*':
@@ -256,12 +256,12 @@ package stab.tools.bytecode.signature {
             }
         }
 
-        private ArrayList<FormalTypeParameterSignature> parseFormalTypeParameters() {
+        private List<TypeSignature> parseFormalTypeParameters() {
             if (current != '<') {
                 throw new IllegalStateException();
             }
             advance();
-            var result = new ArrayList<FormalTypeParameterSignature>();
+            var result = new ArrayList<TypeSignature>();
             int pos = position;
             FormalTypeParameterSignature currentParameterType = null;
             for (;;) {
@@ -316,5 +316,4 @@ package stab.tools.bytecode.signature {
             }
         }
     }
-    
 }

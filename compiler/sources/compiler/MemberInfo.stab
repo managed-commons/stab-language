@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 
 package stab.tools.compiler {
 
@@ -35,37 +35,37 @@ package stab.tools.compiler {
             HashMap<Object, Iterable<MemberInfo>> members = new HashMap<Object, Iterable<MemberInfo>>();
         }
     
-        public static MemberInfo getInfo(JvmTypeInfo type) {
-            var result = type.getUserData(typeof(TypeInfo));
+        public static MemberInfo getInfo(TypeInfo type) {
+            var result = type.getUserData(typeof(TypeMemberInfo));
             if (result == null) {
-                result = new TypeInfo(type);
+                result = new TypeMemberInfo(type);
                 type.addUserData(result);
             }
             return result;
         }
     
-        public static MemberInfo getInfo(JvmFieldInfo field) {
-            var result = field.getUserData(typeof(FieldInfo));
+        public static MemberInfo getInfo(FieldInfo field) {
+            var result = field.getUserData(typeof(FieldMemberInfo));
             if (result == null) {
-                result = new FieldInfo(field);
+                result = new FieldMemberInfo(field);
                 field.addUserData(result);
             }
             return result;
         }
     
-        public static MemberInfo getInfo(JvmMethodInfo method) {
-            var result = method.getUserData(typeof(MethodInfo));
+        public static MemberInfo getInfo(MethodInfo method) {
+            var result = method.getUserData(typeof(MethodMemberInfo));
             if (result == null) {
-                result = new MethodInfo(method);
+                result = new MethodMemberInfo(method);
                 method.addUserData(result);
             }
             return result;
         }
     
-        public static MemberInfo getInfo(JvmMethodInfo getAccessor, JvmMethodInfo setAccessor, String name) {
-            var result = (getAccessor ?? setAccessor).getUserData(typeof(PropertyInfo));
+        public static MemberInfo getInfo(MethodInfo getAccessor, MethodInfo setAccessor, String name) {
+            var result = (getAccessor ?? setAccessor).getUserData(typeof(PropertyMemberInfo));
             if (result == null) {
-                result = new PropertyInfo(getAccessor, setAccessor, name);
+                result = new PropertyMemberInfo(getAccessor, setAccessor, name);
                 if (getAccessor != null) {
                     getAccessor.addUserData(result);
                 }
@@ -76,10 +76,10 @@ package stab.tools.compiler {
             return result;
         }
     
-        public static MemberInfo getInfo(JvmMethodInfo getAccessor, JvmMethodInfo setAccessor) {
-            var result = (getAccessor ?? setAccessor).getUserData(typeof(IndexerInfo));
+        public static MemberInfo getInfo(MethodInfo getAccessor, MethodInfo setAccessor) {
+            var result = (getAccessor ?? setAccessor).getUserData(typeof(IndexerMemberInfo));
             if (result == null) {
-                result = new IndexerInfo(getAccessor, setAccessor);
+                result = new IndexerMemberInfo(getAccessor, setAccessor);
                 if (getAccessor != null) {
                     getAccessor.addUserData(result);
                 }
@@ -90,27 +90,27 @@ package stab.tools.compiler {
             return result;
         }
 
-        public static MemberInfo getInfo(JvmParameterInfo parameter, JvmMethodInfo method) {
-            var result = parameter.getUserData(typeof(LocalInfo));
+        public static MemberInfo getInfo(ParameterInfo parameter, MethodInfo method) {
+            var result = parameter.getUserData(typeof(LocalMemberInfo));
             if (result == null) {
-                result = new LocalInfo(parameter.Name, parameter.Type, method, true);
+                result = new LocalMemberInfo(parameter.Name, parameter.Type, method, true);
                 parameter.addUserData(result);
             }
             return result;
         }
         
-        public static Iterable<MemberInfo> getMembers(JvmTypeSystem typeSystem, JvmTypeInfo scope, JvmTypeInfo type,
+        public static Iterable<MemberInfo> getMembers(Library typeSystem, TypeInfo scope, TypeInfo type,
                 String name, boolean useCache) {
-            return getMembers(typeSystem, scope, type, name, Query.empty<JvmTypeInfo>(), useCache);
+            return getMembers(typeSystem, scope, type, name, Query.empty<TypeInfo>(), useCache);
         }
         
-        public static Iterable<MemberInfo> getMembers(JvmTypeSystem typeSystem, JvmTypeInfo scope, JvmTypeInfo type, String name,
-                Iterable<JvmTypeInfo> typeArguments, boolean useCache) {
+        public static Iterable<MemberInfo> getMembers(Library typeSystem, TypeInfo scope, TypeInfo type, String name,
+                Iterable<TypeInfo> typeArguments, boolean useCache) {
             return getMembersRecursively(typeSystem, scope, type, name, typeArguments, useCache, new LookupContext()).distinct().toList();
         }
         
-        private static Iterable<MemberInfo> getMembersRecursively(JvmTypeSystem typeSystem, JvmTypeInfo scope, JvmTypeInfo type, String name,
-                Iterable<JvmTypeInfo> typeArguments, boolean useCache, LookupContext context) {
+        private static Iterable<MemberInfo> getMembersRecursively(Library typeSystem, TypeInfo scope, TypeInfo type, String name,
+                Iterable<TypeInfo> typeArguments, boolean useCache, LookupContext context) {
             Iterable<MemberInfo> members;
 			switch (type.TypeKind) {
 			case Array:
@@ -140,8 +140,8 @@ package stab.tools.compiler {
             return filterMembers(typeSystem, scope, members);
         }
         
-        private static Iterable<MemberInfo> getMembers(JvmTypeSystem typeSystem, JvmTypeInfo type, String name,
-            Iterable<JvmTypeInfo> typeArguments, boolean useCache, LookupContext context) {
+        private static Iterable<MemberInfo> getMembers(Library typeSystem, TypeInfo type, String name,
+            Iterable<TypeInfo> typeArguments, boolean useCache, LookupContext context) {
             var nTypeArgs = typeArguments.count();
             foreach (var mi in (useCache) ? getCachedMembers(typeSystem, type, name) : getMembers(typeSystem, type, name)) {
                 switch (mi.MemberKind) {
@@ -178,7 +178,7 @@ package stab.tools.compiler {
                             }
                         } else {
                             if (mi.MemberKind == MemberKind.Type && mi.Type.GenericArguments.count() > 0) {
-                                mi = MemberInfo.getInfo(mi.Type.RawGenericType);
+                                mi = MemberInfo.getInfo(mi.Type.RawType);
                             }
                             yield return mi;
                         }
@@ -194,7 +194,7 @@ package stab.tools.compiler {
             boolean lookupClass = true;
         }
         
-        public static Iterable<MemberInfo> getCachedMembers(JvmTypeSystem typeSystem, JvmTypeInfo type, String name) {
+        public static Iterable<MemberInfo> getCachedMembers(Library typeSystem, TypeInfo type, String name) {
             var typeMembers = type.getUserData(typeof(TypeMembers));
             if (typeMembers == null) {
                 typeMembers = new TypeMembers();
@@ -208,7 +208,7 @@ package stab.tools.compiler {
             return members;
         }
         
-        public static Iterable<MemberInfo> getMembers(JvmTypeSystem typeSystem, JvmTypeInfo type, String name) {
+        public static Iterable<MemberInfo> getMembers(Library typeSystem, TypeInfo type, String name) {
             var result = new ArrayList<MemberInfo>();
             
             foreach (var f in type.Fields) {
@@ -218,8 +218,8 @@ package stab.tools.compiler {
                 }
             }
 
-            JvmMethodInfo getAccessor = null;
-            JvmMethodInfo setAccessor = null;
+            MethodInfo getAccessor = null;
+            MethodInfo setAccessor = null;
             foreach (var m in type.Methods) {
                 if (getAccessor == null || setAccessor == null) {
                     foreach (var annotation in BytecodeHelper.getAnnotations(typeSystem, m)) {
@@ -251,12 +251,12 @@ package stab.tools.compiler {
             return result;
         }
 
-        public static Iterable<MemberInfo> getIndexers(JvmTypeSystem typeSystem, JvmTypeInfo scope, JvmTypeInfo type,
+        public static Iterable<MemberInfo> getIndexers(Library typeSystem, TypeInfo scope, TypeInfo type,
                 int indexes, boolean useCache) {
             return getIndexersRecursively(typeSystem, scope, type, indexes, useCache).distinct().toList();
         }
 
-        private static Iterable<MemberInfo> getIndexersRecursively(JvmTypeSystem typeSystem, JvmTypeInfo scope, JvmTypeInfo type,
+        private static Iterable<MemberInfo> getIndexersRecursively(Library typeSystem, TypeInfo scope, TypeInfo type,
                 int indexes, boolean useCache) {
             Iterable<MemberInfo> members;
             if (type.IsArray) {
@@ -279,13 +279,13 @@ package stab.tools.compiler {
             return filterMembers(typeSystem, scope, members);
         }
         
-        private static Iterable<MemberInfo> filterMembers(JvmTypeSystem typeSystem, JvmTypeInfo scope, Iterable<MemberInfo> members) {
+        private static Iterable<MemberInfo> filterMembers(Library typeSystem, TypeInfo scope, Iterable<MemberInfo> members) {
             HashSet<MemberInfo> exclude = null;
             foreach (var mi in members) {
                 if (exclude != null && exclude.contains(mi)) {
                     continue;
                 }
-                if (!scope.canAccessMembers(mi.DeclaringType, mi.IsPublic, mi.IsProtected, mi.IsPrivate)) {
+                if (!scope.canAccessMember(mi.DeclaringType, mi.IsPublic, mi.IsProtected, mi.IsPrivate)) {
                     continue;
                 }
                 if (mi.isOverridingMembers(typeSystem)) {
@@ -300,7 +300,7 @@ package stab.tools.compiler {
             }
         }
         
-        public static Iterable<MemberInfo> getCachedIndexers(JvmTypeSystem typeSystem, JvmTypeInfo type, int indexes) {
+        public static Iterable<MemberInfo> getCachedIndexers(Library typeSystem, TypeInfo type, int indexes) {
             var typeMembers = type.getUserData(typeof(TypeMembers));
             if (typeMembers == null) {
                 typeMembers = new TypeMembers();
@@ -314,16 +314,16 @@ package stab.tools.compiler {
             return members;
         }
         
-        public static Iterable<MemberInfo> getIndexers(JvmTypeSystem typeSystem, JvmTypeInfo type, int indexes) {
-            List<JvmMethodInfo> getters = null;
-            List<JvmMethodInfo> setters = null;
+        public static Iterable<MemberInfo> getIndexers(Library typeSystem, TypeInfo type, int indexes) {
+            List<MethodInfo> getters = null;
+            List<MethodInfo> setters = null;
             foreach (var method in type.Methods) {
                 foreach (var annotation in BytecodeHelper.getAnnotations(typeSystem, method)) {
                     if (BytecodeHelper.isIndexerGet(annotation)) {
                         var nparams = method.Parameters.count();
                         if (indexes == nparams || (method.IsVarargs && indexes >= nparams)) {
                             if (getters == null) {
-                                getters = new ArrayList<JvmMethodInfo>();
+                                getters = new ArrayList<MethodInfo>();
                             }
                             getters.add(method);
                         }
@@ -333,7 +333,7 @@ package stab.tools.compiler {
                         var nparams = method.Parameters.count() - 1;
                         if (indexes == nparams || (method.IsVarargs && indexes >= nparams)) {
                             if (setters == null) {
-                                setters = new ArrayList<JvmMethodInfo>();
+                                setters = new ArrayList<MethodInfo>();
                             }
                             setters.add(method);
                         }
@@ -345,8 +345,8 @@ package stab.tools.compiler {
                 return Query.empty();
             }
             var result = new ArrayList<MemberInfo>();
-            var getters2 = (getters == null) ? Collections.emptySet<JvmMethodInfo>() : new HashSet<JvmMethodInfo>(getters);
-            var setters2 = (setters == null) ? Collections.emptySet<JvmMethodInfo>() : new HashSet<JvmMethodInfo>(setters);
+            var getters2 = (getters == null) ? Collections.emptySet<MethodInfo>() : new HashSet<MethodInfo>(getters);
+            var setters2 = (setters == null) ? Collections.emptySet<MethodInfo>() : new HashSet<MethodInfo>(setters);
             if (getters == null) {
                 getters = Collections.emptyList();
             }
@@ -395,7 +395,7 @@ package stab.tools.compiler {
                 result.add(MemberInfo.getInfo(m, null));
             }
             foreach (var m in setters2) {
-                result.add(MemberInfo.getInfo((JvmMethodInfo)null, m));
+                result.add(MemberInfo.getInfo((MethodInfo)null, m));
             }
             return result;
         }
@@ -411,37 +411,37 @@ package stab.tools.compiler {
         
         public abstract String Name { get; }
         
-        public virtual JvmTypeInfo DeclaringType {
+        public virtual TypeInfo DeclaringType {
             get {
                 throw new IllegalStateException();
             }
         }
         
-        public virtual JvmFieldInfo Field {
+        public virtual FieldInfo Field {
             get {
                 throw new IllegalStateException();
             }
         }
         
-        public virtual JvmMethodInfo Method {
+        public virtual MethodInfo Method {
             get {
                 throw new IllegalStateException();
             }
         }
         
-        public virtual JvmMethodInfo GetAccessor {
+        public virtual MethodInfo GetAccessor {
             get {
                 throw new IllegalStateException();
             }
         }
         
-        public virtual JvmMethodInfo SetAccessor {
+        public virtual MethodInfo SetAccessor {
             get {
                 throw new IllegalStateException();
             }
         }
         
-        public virtual JvmTypeInfo Type {
+        public virtual TypeInfo Type {
             get {
                 throw new IllegalStateException();
             }
@@ -486,20 +486,20 @@ package stab.tools.compiler {
             }
         }
         
-        public virtual boolean isOverridingMembers(JvmTypeSystem typeSystem) {
+        public virtual boolean isOverridingMembers(Library typeSystem) {
             throw new IllegalStateException();
         }
         
-        public virtual Iterable<MemberInfo> getOverridenMembers(JvmTypeSystem typeSystem) {
+        public virtual Iterable<MemberInfo> getOverridenMembers(Library typeSystem) {
             throw new IllegalStateException();
         }
     }
     
-    class TypeInfo : MemberInfo {
-        private JvmTypeInfo type;
+    class TypeMemberInfo : MemberInfo {
+        private TypeInfo type;
         private boolean nested;
 
-        TypeInfo(JvmTypeInfo type)
+        TypeMemberInfo(TypeInfo type)
             : super(MemberKind.Type) {
             this.type = type;
             this.nested = type.DeclaringType != null;
@@ -511,19 +511,19 @@ package stab.tools.compiler {
             }
         }
         
-        public override JvmTypeInfo Type {
+        public override TypeInfo Type {
             get {
                 return type;
             }
         }
 
-        public override JvmTypeInfo DeclaringType {
+        public override TypeInfo DeclaringType {
             get {
                 return type.DeclaringType;
             }
         }
         
-        public override boolean isOverridingMembers(JvmTypeSystem typeSystem) {
+        public override boolean isOverridingMembers(Library typeSystem) {
             return false;
         }
         
@@ -546,10 +546,10 @@ package stab.tools.compiler {
         }
     }
     
-    class FieldInfo : MemberInfo {
-        private JvmFieldInfo field;
+    class FieldMemberInfo : MemberInfo {
+        private FieldInfo field;
         
-        FieldInfo(JvmFieldInfo field)
+        FieldMemberInfo(FieldInfo field)
             : super(MemberKind.Field) {
             this.field = field;
         }
@@ -560,25 +560,25 @@ package stab.tools.compiler {
             }
         }
         
-        public override JvmFieldInfo Field {
+        public override FieldInfo Field {
             get {
                 return field;
             }
         }
         
-        public override JvmTypeInfo Type {
+        public override TypeInfo Type {
             get {
                 return field.Type;
             }
         }
         
-        public override JvmTypeInfo DeclaringType {
+        public override TypeInfo DeclaringType {
             get {
                 return field.DeclaringType;
             }
         }
         
-        public override boolean isOverridingMembers(JvmTypeSystem typeSystem) {
+        public override boolean isOverridingMembers(Library typeSystem) {
             return false;
         }
         
@@ -607,11 +607,11 @@ package stab.tools.compiler {
         }
     }
     
-    class MethodInfo : MemberInfo {
-        private JvmMethodInfo method;
+    class MethodMemberInfo : MemberInfo {
+        private MethodInfo method;
         private Set<MemberInfo> overridenMembers;
         
-        MethodInfo(JvmMethodInfo method)
+        MethodMemberInfo(MethodInfo method)
             : super(MemberKind.Method) {
             this.method = method;
         }
@@ -622,23 +622,23 @@ package stab.tools.compiler {
             }
         }
 
-        public override JvmMethodInfo Method {
+        public override MethodInfo Method {
             get {
                 return method;
             }
         }
         
-        public override JvmTypeInfo DeclaringType {
+        public override TypeInfo DeclaringType {
             get {
                 return method.DeclaringType;
             }
         }
         
-        public override boolean isOverridingMembers(JvmTypeSystem typeSystem) {
+        public override boolean isOverridingMembers(Library typeSystem) {
             return getOverridenMembers(typeSystem).any();
         }
 
-        public override Iterable<MemberInfo> getOverridenMembers(JvmTypeSystem typeSystem) {
+        public override Iterable<MemberInfo> getOverridenMembers(Library typeSystem) {
             if (overridenMembers == null) {
                 if (!method.IsStatic) {
                     foreach (var t in method.DeclaringType.getBaseTypes()) {
@@ -685,28 +685,28 @@ package stab.tools.compiler {
     }
     
     abstract class MemberWithAccessors : MemberInfo {
-        private JvmMethodInfo getAccessor;
-        private JvmMethodInfo setAccessor;
+        private MethodInfo getAccessor;
+        private MethodInfo setAccessor;
         
-        MemberWithAccessors(MemberKind memberKind, JvmMethodInfo getAccessor, JvmMethodInfo setAccessor)
+        MemberWithAccessors(MemberKind memberKind, MethodInfo getAccessor, MethodInfo setAccessor)
             : super(memberKind) {
             this.getAccessor = getAccessor;
             this.setAccessor = setAccessor;
         }
         
-        public override JvmMethodInfo GetAccessor {
+        public override MethodInfo GetAccessor {
             get {
                 return getAccessor;
             }
         }
         
-        public override JvmMethodInfo SetAccessor {
+        public override MethodInfo SetAccessor {
             get {
                 return setAccessor;
             }
         }
         
-        public override JvmTypeInfo DeclaringType {
+        public override TypeInfo DeclaringType {
             get {
                 return (getAccessor ?? setAccessor).DeclaringType;
             }
@@ -750,11 +750,11 @@ package stab.tools.compiler {
         }
     }
     
-    class IndexerInfo : MemberWithAccessors {
-        private JvmTypeInfo type;
+    class IndexerMemberInfo : MemberWithAccessors {
+        private TypeInfo type;
         private Set<MemberInfo> overridenMembers;
         
-        IndexerInfo(JvmMethodInfo getAccessor, JvmMethodInfo setAccessor)
+        IndexerMemberInfo(MethodInfo getAccessor, MethodInfo setAccessor)
             : super(MemberKind.Indexer, getAccessor, setAccessor) {
         }
         
@@ -764,7 +764,7 @@ package stab.tools.compiler {
             }
         }
         
-        public override JvmTypeInfo Type {
+        public override TypeInfo Type {
             get {
                 if (type == null) {
                     if (GetAccessor != null) {
@@ -777,11 +777,11 @@ package stab.tools.compiler {
             }
         }
         
-        public override boolean isOverridingMembers(JvmTypeSystem typeSystem) {
+        public override boolean isOverridingMembers(Library typeSystem) {
             return getOverridenMembers(typeSystem).any();
         }
 
-        public override Iterable<MemberInfo> getOverridenMembers(JvmTypeSystem typeSystem) {
+        public override Iterable<MemberInfo> getOverridenMembers(Library typeSystem) {
             if (overridenMembers == null) {
                 if (!this.IsStatic) {
                     int nparams = (GetAccessor != null) ? GetAccessor.Parameters.count() : SetAccessor.Parameters.count() - 1;
@@ -811,12 +811,12 @@ package stab.tools.compiler {
         }
     }
     
-    class PropertyInfo : MemberWithAccessors {
+    class PropertyMemberInfo : MemberWithAccessors {
         private String name;
-        private JvmTypeInfo type;
+        private TypeInfo type;
         private Set<MemberInfo> overridenMembers;
         
-        PropertyInfo(JvmMethodInfo getAccessor, JvmMethodInfo setAccessor, String name)
+        PropertyMemberInfo(MethodInfo getAccessor, MethodInfo setAccessor, String name)
             : super(MemberKind.Property, getAccessor, setAccessor) {
             this.name = name;
         }
@@ -827,7 +827,7 @@ package stab.tools.compiler {
             }
         }
         
-        public override JvmTypeInfo Type {
+        public override TypeInfo Type {
             get {
                 if (type == null) {
                     if (GetAccessor != null) {
@@ -840,18 +840,18 @@ package stab.tools.compiler {
             }
         }
         
-        public override boolean isOverridingMembers(JvmTypeSystem typeSystem) {
+        public override boolean isOverridingMembers(Library typeSystem) {
             return getOverridenMembers(typeSystem).any();
         }
 
-        public override Iterable<MemberInfo> getOverridenMembers(JvmTypeSystem typeSystem) {
+        public override Iterable<MemberInfo> getOverridenMembers(Library typeSystem) {
             if (overridenMembers == null) {
                 if (!this.IsStatic) {
                     foreach (var t in this.DeclaringType.getBaseTypes()) {
-                        JvmMethodInfo get = null;
-                        JvmMethodInfo set = null;
+                        MethodInfo get = null;
+                        MethodInfo set = null;
                         foreach (var m in t.Methods) {
-                            var pinfo = m.getUserData(typeof(PropertyInfo));
+                            var pinfo = m.getUserData(typeof(PropertyMemberInfo));
                             if (pinfo != null) {
                                 if (!pinfo.Name.equals(name) || pinfo.IsStatic) {
                                     continue;
@@ -891,14 +891,14 @@ package stab.tools.compiler {
         }
     }
     
-    class LocalInfo : MemberInfo {
+    class LocalMemberInfo : MemberInfo {
         private String name;
-        private JvmTypeInfo type;
-        private JvmMethodInfo method;
+        private TypeInfo type;
+        private MethodInfo method;
         private boolean parameter;
         private boolean usedFromLambda;
     
-        LocalInfo(String name, JvmTypeInfo type, JvmMethodInfo method, boolean parameter)
+        LocalMemberInfo(String name, TypeInfo type, MethodInfo method, boolean parameter)
             : super(MemberKind.Local) {
             this.name = name;
             this.type = type;
@@ -912,13 +912,13 @@ package stab.tools.compiler {
             }
         }
         
-        public override JvmTypeInfo Type {
+        public override TypeInfo Type {
             get {
                 return type;
             }
         }
         
-        public override JvmMethodInfo Method {
+        public override MethodInfo Method {
             get {
                 return method;
             }

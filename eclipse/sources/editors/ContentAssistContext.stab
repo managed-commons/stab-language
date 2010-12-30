@@ -17,30 +17,30 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.compiler;
 using stab.tools.syntaxtree;
 
 package stab.tools.eclipse.editors {
 
 	public class ContentAssistContext {
-		private JvmTypeSystem typeSystem;
-		private JvmTypeSystem annotatedTypeSystem;
+		private Library typeSystem;
+		private Library annotatedTypeSystem;
 		private Iterable<String> packageNames;
 		private List<PackageInfo> packageInfos;
-		private List<JvmTypeInfo> typeInfos;
-		private List<JvmMethodInfo> methodInfos;
+		private List<TypeInfo> typeInfos;
+		private List<MethodInfo> methodInfos;
 		private List<MemberInfo> localInfos;
 		private Set<MemberInfo> allTypeInfos;
-		private Set<JvmMethodInfo> extensionMethodInfos;
+		private Set<MethodInfo> extensionMethodInfos;
 		
-		public ContentAssistContext(JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem) {
+		public ContentAssistContext(Library typeSystem, Library annotatedTypeSystem) {
 			this.typeSystem = typeSystem;
 			this.annotatedTypeSystem = annotatedTypeSystem;
 			this.packageNames = Query.empty();
 			this.packageInfos = new ArrayList<PackageInfo>();
-			this.typeInfos = new ArrayList<JvmTypeInfo>();
-			this.methodInfos = new ArrayList<JvmMethodInfo>();
+			this.typeInfos = new ArrayList<TypeInfo>();
+			this.methodInfos = new ArrayList<MethodInfo>();
 			this.localInfos = new ArrayList<MemberInfo>();
 		}
 		
@@ -50,39 +50,39 @@ package stab.tools.eclipse.editors {
 		}
 		
 		public void enterClass(ClassDeclarationNode declaration) {
-			typeInfos.add(declaration.getUserData(typeof(JvmTypeInfo)));
+			typeInfos.add(declaration.getUserData(typeof(TypeInfo)));
 		}
 		
 		public void enterInterface(InterfaceDeclarationNode declaration) {
-			typeInfos.add(declaration.getUserData(typeof(JvmTypeInfo)));
+			typeInfos.add(declaration.getUserData(typeof(TypeInfo)));
 		}
 		
 		public void enterMethod(MethodDeclarationNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void enterConstructor(ConstructorDeclarationNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void enterPropertyGetter(PropertyDeclarationNode declaration) {
-			methodInfos.add(declaration.GetAccessor.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.GetAccessor.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void enterPropertySetter(PropertyDeclarationNode declaration) {
-			methodInfos.add(declaration.SetAccessor.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.SetAccessor.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void enterIndexerGetter(IndexerDeclarationNode declaration) {
-			methodInfos.add(declaration.GetAccessor.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.GetAccessor.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void enterIndexerSetter(IndexerDeclarationNode declaration) {
-			methodInfos.add(declaration.SetAccessor.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.SetAccessor.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void enterLambda(LambdaExpressionNode declaration) {
-			methodInfos.add(declaration.getUserData(typeof(JvmMethodInfo)));
+			methodInfos.add(declaration.getUserData(typeof(MethodInfo)));
 		}
 		
 		public void declareLocals(LocalDeclarationStatementNode statement) {
@@ -170,7 +170,7 @@ package stab.tools.eclipse.editors {
 			return getMembers(member.Type, (member.MemberKind == MemberKind.Local) ? false : member.IsStatic);
 		}
 		
-		public Iterable<MemberInfo> getMembers(JvmTypeInfo declaringType, boolean staticOnly) {
+		public Iterable<MemberInfo> getMembers(TypeInfo declaringType, boolean staticOnly) {
 			var members = new HashMap<String, MemberInfo>();
 			foreach (var t in declaringType.getBaseTypes().reverse()) {
 				putFields(t, members);
@@ -242,14 +242,14 @@ package stab.tools.eclipse.editors {
 			return allTypeInfos;
 		}
 		
-		private void putFields(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
+		private void putFields(TypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var field in declaringType.Fields.where(p => !p.IsSynthetic)) {
 				var member = MemberInfo.getInfo(field);
 				members[field.Name] = member;
 			}
 		}
 
-		private void putMethods(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
+		private void putMethods(TypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
 				var isPropertyAccessor = false;
                 foreach (var annotation in BytecodeHelper.getAnnotations(annotatedTypeSystem, method)) {
@@ -269,15 +269,15 @@ package stab.tools.eclipse.editors {
 			}
 			
 			foreach (var method in getExtensionMethods().where(
-					p => JvmTypeInfo.hasImplicitConversion(declaringType, p.Parameters.first().Type))) {
+					p => BytecodeHelper.hasImplicitConversion(declaringType, p.Parameters.first().Type))) {
 				var member = MemberInfo.getInfo(method);
 				members[method.Name + method.Signature] = member;
 			}
 		}
 		
-		private Set<JvmMethodInfo> getExtensionMethods() {
+		private Set<MethodInfo> getExtensionMethods() {
 			if (extensionMethodInfos == null) {
-				var l = new HashSet<JvmMethodInfo>();
+				var l = new HashSet<MethodInfo>();
 				foreach (var info in getAllTypeInfos().where(
 						p => BytecodeHelper.getAnnotations(annotatedTypeSystem, p.Type).any(a => BytecodeHelper.isStaticClass(a)))) {
 					foreach (var m in info.Type.Methods.where(
@@ -292,9 +292,9 @@ package stab.tools.eclipse.editors {
 			return extensionMethodInfos;
 		}
 
-		private void putProperties(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
-			var getters = new HashMap<String, JvmMethodInfo>();
-			var setters = new HashMap<String, JvmMethodInfo>();
+		private void putProperties(TypeInfo declaringType, Map<String, MemberInfo> members) {
+			var getters = new HashMap<String, MethodInfo>();
+			var setters = new HashMap<String, MethodInfo>();
 			foreach (var method in declaringType.Methods.where(p => !p.IsSynthetic && !p.Name.startsWith("<"))) {
                 foreach (var annotation in BytecodeHelper.getAnnotations(annotatedTypeSystem, method)) {
                     if (BytecodeHelper.isPropertyGet(annotation)) {
@@ -320,7 +320,7 @@ package stab.tools.eclipse.editors {
 			}
 		}
 
-		private void putNestedTypes(JvmTypeInfo declaringType, Map<String, MemberInfo> members) {
+		private void putNestedTypes(TypeInfo declaringType, Map<String, MemberInfo> members) {
 			foreach (var nt in declaringType.NestedTypes.where(p => !p.IsSynthetic)) {
 				var member = MemberInfo.getInfo(nt);
 				members[nt.Name] = member;
@@ -339,7 +339,7 @@ package stab.tools.eclipse.editors {
 			}
 		}
 		
-        private Iterable<MemberInfo> filterMembers(JvmTypeInfo scope, boolean staticOnly, Iterable<MemberInfo> members) {
+        private Iterable<MemberInfo> filterMembers(TypeInfo scope, boolean staticOnly, Iterable<MemberInfo> members) {
             foreach (var mi in members) {
             	if (mi.MemberKind == MemberKind.Local || mi.DeclaringType == null) {
             		yield return mi;
@@ -347,7 +347,7 @@ package stab.tools.eclipse.editors {
 	                if (staticOnly && !mi.IsStatic) {
 	                	continue;
 	                }
-	                if (!scope.canAccessMembers(mi.DeclaringType, mi.IsPublic, mi.IsProtected, mi.IsPrivate)) {
+	                if (!scope.canAccessMember(mi.DeclaringType, mi.IsPublic, mi.IsProtected, mi.IsPrivate)) {
 	                    continue;
 	                }
 	                yield return mi;

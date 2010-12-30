@@ -17,16 +17,16 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 
 package stab.tools.compiler {
 
     public class MemberResolver {
-        private JvmTypeSystem annotatedTypeSystem;
+        private Library annotatedTypeSystem;
         private Scope scope;
         private ArrayList<String> packages;
     
-        public MemberResolver(JvmTypeSystem typeSystem, JvmTypeSystem annotatedTypeSystem) {
+        public MemberResolver(Library typeSystem, Library annotatedTypeSystem) {
             this.TypeFinder = new TypeFinder(typeSystem);
             this.annotatedTypeSystem = annotatedTypeSystem;
             this.packages = new ArrayList<String>();
@@ -60,7 +60,7 @@ package stab.tools.compiler {
             return false;
         }
         
-        public Iterable<MemberInfo> resolveName(JvmTypeInfo scope, String name, Iterable<JvmTypeInfo> typeArguments) {
+        public Iterable<MemberInfo> resolveName(TypeInfo scope, String name, Iterable<TypeInfo> typeArguments) {
             var s = this.scope;
             var outerClass = false;
             var nTypeArgs = typeArguments.count();
@@ -73,7 +73,7 @@ package stab.tools.compiler {
                         }
                     } else {
                         if (member.MemberKind == MemberKind.Type && member.Type.GenericArguments.count() > 0) {
-                            member = MemberInfo.getInfo(member.Type.RawGenericType);
+                            member = MemberInfo.getInfo(member.Type.RawType);
                         }
                         yield return member;
                         if (member.MemberKind == MemberKind.Local) {
@@ -115,7 +115,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        public Iterable<JvmMethodInfo> getExtensionMethods(JvmTypeInfo type, String name, Iterable<JvmTypeInfo> typeArguments) {
+        public Iterable<MethodInfo> getExtensionMethods(TypeInfo type, String name, Iterable<TypeInfo> typeArguments) {
             int nTypeArgs = typeArguments.count();
             var s = scope;
             do {
@@ -127,7 +127,7 @@ package stab.tools.compiler {
                         if (nTypeArgs > 0 && nTypeArgs != m.GenericArguments.count()) {
                             continue;
                         }
-                        if (JvmTypeInfo.hasImplicitConversion(type, m.Parameters.first().Type)) {
+                        if (BytecodeHelper.hasImplicitConversion(type, m.Parameters.first().Type)) {
                             yield return (nTypeArgs > 0) ? this.TypeFinder.TypeSystem.getGenericMethod(m, typeArguments) : m;
                         }
                     }
@@ -163,7 +163,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void addExtensionMethods(JvmTypeInfo type) {
+        private void addExtensionMethods(TypeInfo type) {
             var isStatic = false;
             foreach (var annotation in BytecodeHelper.getAnnotations(annotatedTypeSystem, type)) {
                 if (BytecodeHelper.isStaticClass(annotation)) {
@@ -182,7 +182,7 @@ package stab.tools.compiler {
                 foreach (var av in BytecodeHelper.getAnnotations(annotatedTypeSystem, m)) {
                     if (BytecodeHelper.isExtensionMethod(av)) {
                         if (methods == null) {
-                            methods = new ArrayList<JvmMethodInfo>();
+                            methods = new ArrayList<MethodInfo>();
                             scope.extensionMethods = methods;
                         }
                         methods.add(m);
@@ -260,7 +260,7 @@ package stab.tools.compiler {
             leaveScope();
         }
         
-        public void enterType(JvmTypeInfo type) {
+        public void enterType(TypeInfo type) {
             enterScopeCore(false);
             scope.type = type;
             var members = scope.memberInfos;
@@ -276,18 +276,18 @@ package stab.tools.compiler {
             leaveScope();
         }
         
-        public void enterMethod(JvmMethodInfo method) {
+        public void enterMethod(MethodInfo method) {
             enterMethod(method, false);
         }
         
-        public void enterMethod(JvmMethodInfo method, boolean statementScope) {
+        public void enterMethod(MethodInfo method, boolean statementScope) {
             enterScopeCore(statementScope);
             var members = scope.memberInfos;
             foreach (var p in method.Parameters) {
                 members[p.Name] = MemberInfo.getInfo(p, method);
             }
             foreach (var t in method.GenericArguments) {
-                members[t.Name] = MemberInfo.getInfo(t);
+                members[t.FullName] = MemberInfo.getInfo(t);
             }
         }
         
@@ -303,8 +303,8 @@ package stab.tools.compiler {
             scope = scope.next;
         }
         
-        public MemberInfo defineLocal(String name, JvmTypeInfo type, JvmMethodInfo method) {
-            var result = new LocalInfo(name, type, method, false);
+        public MemberInfo defineLocal(String name, TypeInfo type, MethodInfo method) {
+            var result = new LocalMemberInfo(name, type, method, false);
             scope.memberInfos[name] = result;
             return result;
         }
@@ -336,9 +336,9 @@ package stab.tools.compiler {
             boolean statementScope;
             HashMap<String, MemberInfo> memberInfos;
             HashSet<String> ambiguousTypes;
-            ArrayList<JvmMethodInfo> extensionMethods;
+            ArrayList<MethodInfo> extensionMethods;
             HashMap<String, Iterable<String>> packageAliases;
-            JvmTypeInfo type;
+            TypeInfo type;
 
             Scope(boolean statementScope, Scope next) {
                 this.statementScope = statementScope;

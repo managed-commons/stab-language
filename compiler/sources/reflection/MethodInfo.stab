@@ -20,13 +20,13 @@ using org.objectweb.asm;
 using stab.query;
 using stab.tools.helpers;
 
-package stab.tools.bytecode {
+package stab.reflection {
 
-    public class JvmParameterInfo : UserDataContainer {
+    public class ParameterInfo : UserDataContainer {
         String name;
-        List<JvmAnnotationValue> annotations;
+        List<AnnotationValue> annotations;
     
-        JvmParameterInfo(int position, JvmTypeInfo type) {
+        ParameterInfo(int position, TypeInfo type) {
             this.Position = position;
             this.Type = type;
         }
@@ -36,7 +36,7 @@ package stab.tools.bytecode {
             private set;
         }
         
-        public JvmTypeInfo Type {
+        public TypeInfo Type {
             get;
             private set;
         }
@@ -51,23 +51,23 @@ package stab.tools.bytecode {
             }
         }
         
-        public Iterable<JvmAnnotationValue> Annotations {
+        public Iterable<AnnotationValue> Annotations {
             get {
                 return annotations;
             }
         }
     }
 
-    public abstract class JvmMethodInfo : UserDataContainer {
+    public abstract class MethodInfo : UserDataContainer {
         protected String signature;
-        JvmTypeInfo declaringType;
+        TypeInfo declaringType;
         
-        protected JvmMethodInfo(JvmTypeInfo declaringType, String name) {
+        protected MethodInfo(TypeInfo declaringType, String name) {
             this.declaringType = declaringType;
             this.Name = name;
         }
         
-        public JvmTypeInfo DeclaringType {
+        public TypeInfo DeclaringType {
             get {
             	return declaringType;
             }
@@ -78,13 +78,13 @@ package stab.tools.bytecode {
             private set;
         }
 
-        public virtual Iterable<JvmAnnotationValue> Annotations {
+        public virtual Iterable<AnnotationValue> Annotations {
             get {
                 return Query.empty();
             }
         }
         
-        public virtual JvmMethodInfo GenericMethodDefinition {
+        public virtual MethodInfo GenericMethodDefinition {
             get {
                 return null;
             }
@@ -93,7 +93,7 @@ package stab.tools.bytecode {
         public virtual String Signature {
             get {
                 if (signature == null) {
-                    signature = BytecodeHelper.getMethodTypeSignature(this);
+                    signature = ReflectionHelper.getMethodTypeSignature(this);
                 }
                 return signature;
             }
@@ -101,15 +101,15 @@ package stab.tools.bytecode {
         
         public abstract String Descriptor { get; }
         
-        public abstract JvmTypeInfo ReturnType { get; }
+        public abstract TypeInfo ReturnType { get; }
         
-        public abstract Iterable<JvmParameterInfo> Parameters { get; }
+        public abstract Iterable<ParameterInfo> Parameters { get; }
         
-        public abstract Iterable<JvmTypeInfo> Exceptions { get; }
+        public abstract Iterable<TypeInfo> Exceptions { get; }
         
-        public abstract Iterable<JvmTypeInfo> GenericArguments { get; }
+        public abstract Iterable<TypeInfo> GenericArguments { get; }
 
-        public abstract JvmAnnotationArgument DefaultValue { get; }
+        public abstract AnnotationArgument DefaultValue { get; }
 
         public boolean IsAbstract {
             get {
@@ -200,14 +200,14 @@ package stab.tools.bytecode {
             set;
         }
         
-        public boolean hasSameParameters(JvmMethodInfo method) {
+        public boolean hasSameParameters(MethodInfo method) {
             if (this.IsVarargs != method.IsVarargs) {
                 return false;
             }
             if (this.Parameters.count() != method.Parameters.count()) {
                 return false;
             }
-            FunctionTT<JvmParameterInfo, JvmTypeInfo> f = p => BytecodeHelper.getRawType(this.DeclaringType, p.Type);
+            FunctionTT<ParameterInfo, TypeInfo> f = p => ReflectionHelper.getRawType(this.DeclaringType, p.Type);
             return this.Parameters.select(f).sequenceEqual(method.Parameters.select(f));
         }
 
@@ -222,7 +222,7 @@ package stab.tools.bytecode {
             }
         }
         
-        public JvmMethodInfo OriginalMethodDefinition {
+        public MethodInfo OriginalMethodDefinition {
             get {
                 var result = this;
                 while (result.GenericMethodDefinition != null) {
@@ -232,14 +232,14 @@ package stab.tools.bytecode {
             }
         }
         
-        public boolean isOverriding(JvmMethodInfo method) {
+        public boolean isOverriding(MethodInfo method) {
             if (this.IsStatic || this == method || method.IsPrivate) {
                 return false;
             }
             if (!this.Name.equals(method.Name)) {
                 return false;
             }
-            if (!this.DeclaringType.canAccessMembers(method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
+            if (!this.DeclaringType.canAccessMember(method.DeclaringType, method.IsPublic, method.IsProtected, method.IsPrivate)) {
                 return false;
             }
             return this.hasSameParameters(method);

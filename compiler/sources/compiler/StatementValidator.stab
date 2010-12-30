@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.syntaxtree;
 
@@ -64,12 +64,12 @@ package stab.tools.compiler {
             }
             var condition = doStatement.Condition;
             this.ExpressionValidator.handleExpression(condition, null, true);
-            ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, condition);
+            ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, condition);
             var info = condition.getUserData(typeof(ExpressionInfo));
-            if (info == null || ValidationHelper.getType(context, condition) != JvmTypeInfo.BOOLEAN) {
+            if (info == null || ValidationHelper.getType(context, condition) != context.TypeSystem.BooleanType) {
                 throw context.error(CompileErrorId.NoImplicitConversion, condition,
                         BytecodeHelper.getDisplayName(info == null ? null : info.Type),
-                        BytecodeHelper.getDisplayName(JvmTypeInfo.BOOLEAN));
+                        BytecodeHelper.getDisplayName(context.TypeSystem.BooleanType));
             }
             return null;
         }
@@ -92,12 +92,12 @@ package stab.tools.compiler {
                 var condition = forStatement.Condition;
                 if (condition != null) {
                     this.ExpressionValidator.handleExpression(condition, null, true);
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, condition);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, condition);
                     var info = condition.getUserData(typeof(ExpressionInfo));
-                    if (info == null || ValidationHelper.getType(context, condition) != JvmTypeInfo.BOOLEAN) {
+                    if (info == null || ValidationHelper.getType(context, condition) != context.TypeSystem.BooleanType) {
                         throw context.error(CompileErrorId.NoImplicitConversion, condition,
                                 BytecodeHelper.getDisplayName(info == null ? null : info.Type),
-                                BytecodeHelper.getDisplayName(JvmTypeInfo.BOOLEAN));
+                                BytecodeHelper.getDisplayName(context.TypeSystem.BooleanType));
                     }
                 }
                 try {
@@ -126,7 +126,7 @@ package stab.tools.compiler {
                             "<null>", BytecodeHelper.getDisplayName(context.TypeSystem.getType("java/lang/Iterable")));
                 }
                 var sourceType = ValidationHelper.getType(context, source);
-                JvmTypeInfo elementType;
+                TypeInfo elementType;
                 if (sourceType.IsArray) {
                     elementType = sourceType.ElementType;
                 } else {
@@ -168,14 +168,14 @@ package stab.tools.compiler {
                         if (!einfo.IsConstant) {
                             throw context.error(CompileErrorId.ConstantValueExpected, expression);
                         }
-                        JvmTypeInfo type = ValidationHelper.getType(context, expression);
+                        TypeInfo type = ValidationHelper.getType(context, expression);
                         switch (type.NumericTypeKind) {
                         case Long:
                         case Float:
                         case Double:
                             throw context.error(CompileErrorId.IntegerStringOrEnumExpected, expression);
                         default:
-                            ValidationHelper.setBoxing(context, JvmTypeInfo.INT, expression);
+                            ValidationHelper.setBoxing(context, context.TypeSystem.IntType, expression);
                             break;
                         case None:
                             if (type != context.TypeSystem.StringType) {
@@ -193,13 +193,13 @@ package stab.tools.compiler {
 
         protected override Void handleIf(IfStatementNode ifStatement, Void source) {
             var condition = ifStatement.Condition;
-            this.ExpressionValidator.handleExpression(condition, JvmTypeInfo.BOOLEAN, true);
-            ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, condition);
+            this.ExpressionValidator.handleExpression(condition, context.TypeSystem.BooleanType, true);
+            ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, condition);
             var cinfo = condition.getUserData(typeof(ExpressionInfo));
-            if (cinfo == null || ValidationHelper.getType(context, condition) != JvmTypeInfo.BOOLEAN) {
+            if (cinfo == null || ValidationHelper.getType(context, condition) != context.TypeSystem.BooleanType) {
                 throw context.error(CompileErrorId.NoImplicitConversion, condition,
                     BytecodeHelper.getDisplayName(cinfo == null ? null : cinfo.Type),
-                    BytecodeHelper.getDisplayName(JvmTypeInfo.BOOLEAN));
+                    BytecodeHelper.getDisplayName(context.TypeSystem.BooleanType));
             }
             try {
                 context.MemberResolver.enterScope();
@@ -295,7 +295,7 @@ package stab.tools.compiler {
                         context.CodeValidationContext.LambdaReturnTypes.add(ValidationHelper.getType(context, returnStatement.Value));
                     }
                 }
-            } else if (returnType == JvmTypeInfo.VOID) {
+            } else if (returnType == context.TypeSystem.VoidType) {
                 if (returnStatement.Value != null) {
                     context.addError(CompileErrorId.ReturnVoid, returnStatement);
                 }
@@ -331,7 +331,7 @@ package stab.tools.compiler {
             case Double:
                 throw context.error(CompileErrorId.IntegerStringOrEnumExpected, switchStatement.Selector);
             default:
-                ValidationHelper.setBoxing(context, JvmTypeInfo.INT, switchStatement.getSelector());
+                ValidationHelper.setBoxing(context, context.TypeSystem.IntType, switchStatement.getSelector());
                 break;
             case None:
                 isString = !type.IsEnum;
@@ -502,13 +502,13 @@ package stab.tools.compiler {
         
         protected override Void handleWhile(WhileStatementNode whileStatement, Void source) {
             var condition = whileStatement.Condition;
-            this.ExpressionValidator.handleExpression(condition, JvmTypeInfo.BOOLEAN, true);
-            ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, condition);
+            this.ExpressionValidator.handleExpression(condition, context.TypeSystem.BooleanType, true);
+            ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, condition);
             var info = condition.getUserData(typeof(ExpressionInfo));
-            if (info == null || ValidationHelper.getType(context, condition) != JvmTypeInfo.BOOLEAN) {
+            if (info == null || ValidationHelper.getType(context, condition) != context.TypeSystem.BooleanType) {
                 throw context.error(CompileErrorId.NoImplicitConversion, condition,
                         BytecodeHelper.getDisplayName(info == null ? null : ValidationHelper.getType(context, condition)),
-                        BytecodeHelper.getDisplayName(JvmTypeInfo.BOOLEAN));
+                        BytecodeHelper.getDisplayName(context.TypeSystem.BooleanType));
             }
             try {
                 context.MemberResolver.enterScope();
@@ -544,7 +544,7 @@ package stab.tools.compiler {
             if (context.Iterables[context.CodeValidationContext.CurrentMethod] == null) {
                 var prefix = "_" + context.CodeValidationContext.CurrentMethod.Name + "_Iterable";
                 int n = context.CurrentType.NestedTypes.count(p => p.Name.startsWith(prefix));
-                var typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType(prefix + n);
+                var typeBuilder = ((TypeBuilder)context.CurrentType).defineNestedType(prefix + n);
                 typeBuilder.setSourceFile(PathHelper.getFileName(yieldStatement.Filename));
                 typeBuilder.setSynthetic(true);
                 typeBuilder.setSuper(true);

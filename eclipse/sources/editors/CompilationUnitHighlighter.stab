@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.compiler;
 using stab.tools.parser;
 using stab.tools.syntaxtree;
@@ -110,7 +110,7 @@ package stab.tools.eclipse.editors {
 			setStartAndEndTokens(declaration);
 			getToken(declaration.NameOffset).SemanticStyle = (declaration.IsEnum) ? SemanticStyle.Enum : SemanticStyle.Class;
 			
-			var t = declaration.getUserData(typeof(JvmTypeInfo));
+			var t = declaration.getUserData(typeof(TypeInfo));
 			int i = 0;
 			var classBase = declaration.ClassBase;
 			if (classBase.size() != t.Interfaces.count()) {
@@ -167,7 +167,7 @@ package stab.tools.eclipse.editors {
 			
 			highlightAnnotations(declaration.Annotations);
 			
-			var t = declaration.getUserData(typeof(JvmTypeInfo));
+			var t = declaration.getUserData(typeof(TypeInfo));
 			int i = 0;
 			foreach (var si in t.Interfaces) {
 				highlightType(declaration.InterfaceBase[i++], si);
@@ -208,7 +208,7 @@ package stab.tools.eclipse.editors {
 
 		private void highlightField(FieldDeclarationNode declaration) {
 			setStartAndEndTokens(declaration);
-			var f = declaration.Declarators[0].getUserData(typeof(JvmFieldInfo));
+			var f = declaration.Declarators[0].getUserData(typeof(FieldInfo));
 			highlightType(declaration.Type, f.Type);
 			SemanticStyle style;
 			if (declaration.getModifiers().contains(Modifier.Static)) {
@@ -239,10 +239,10 @@ package stab.tools.eclipse.editors {
 			highlightAccessor(set, Keyword.Set);
 			
 			if (get != null) {
-				var m = get.getUserData(typeof(JvmMethodInfo));
+				var m = get.getUserData(typeof(MethodInfo));
 				highlightType(declaration.Type, m.ReturnType);
 			} else if (set != null) {
-				var m = set.getUserData(typeof(JvmMethodInfo));
+				var m = set.getUserData(typeof(MethodInfo));
 				highlightType(declaration.Type, m.Parameters.first().Type);
 			}
 		}
@@ -266,15 +266,15 @@ package stab.tools.eclipse.editors {
 		
 		private void highlightIndexer(IndexerDeclarationNode declaration) {
 			setStartAndEndTokens(declaration);
-			JvmMethodInfo m = null;
+			MethodInfo m = null;
 			var get = declaration.GetAccessor;
 			if (get != null) {
-				m = get.getUserData(typeof(JvmMethodInfo));
+				m = get.getUserData(typeof(MethodInfo));
 				highlightType(declaration.Type, m.ReturnType);
 			}
 			var set = declaration.SetAccessor;
 			if (m == null && set != null) {
-				m = set.getUserData(typeof(JvmMethodInfo));
+				m = set.getUserData(typeof(MethodInfo));
 				highlightType(declaration.Type, m.Parameters.last().Type);
 			}
 			highlightParameters(declaration.Parameters, m);
@@ -286,7 +286,7 @@ package stab.tools.eclipse.editors {
 			setStartAndEndTokens(declaration);
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.MethodDeclaration;
 			
-			var m = declaration.getUserData(typeof(JvmMethodInfo));
+			var m = declaration.getUserData(typeof(MethodInfo));
 			highlightType(declaration.ReturnType, m.ReturnType);
 			foreach (var name in declaration.TypeParameters) {
 				getToken(name.NameOffset).SemanticStyle = SemanticStyle.GenericParameter;
@@ -301,7 +301,7 @@ package stab.tools.eclipse.editors {
 			setStartAndEndTokens(declaration);
 			getToken(declaration.NameOffset).SemanticStyle = SemanticStyle.MethodDeclaration;
 			
-			var m = declaration.getUserData(typeof(JvmMethodInfo));
+			var m = declaration.getUserData(typeof(MethodInfo));
 			highlightParameters(declaration.Parameters, m);
 			if (declaration.Initializer != null) {
 				foreach (var e in declaration.Initializer.Arguments) {
@@ -320,7 +320,7 @@ package stab.tools.eclipse.editors {
 			}
 		}
 		
-		private void highlightParameters(List<ParameterNode> parameters, JvmMethodInfo m) {
+		private void highlightParameters(List<ParameterNode> parameters, MethodInfo m) {
 			var pit = m.Parameters.iterator();
 			foreach (var p in parameters) {
 				setStartAndEndTokens(p);
@@ -332,11 +332,11 @@ package stab.tools.eclipse.editors {
 		private void highlightAnnotations(List<AnnotationSectionNode> annotations) {
 			foreach (var a in annotations.selectMany(p => p.Annotations)) {
 				setStartAndEndTokens(a);
-				highlightType(a.Type, a.getUserData(typeof(JvmTypeInfo)));
+				highlightType(a.Type, a.getUserData(typeof(TypeInfo)));
 			}
 		}
 	
-		private void highlightType(TypeReferenceNode type, JvmTypeInfo t) {
+		private void highlightType(TypeReferenceNode type, TypeInfo t) {
 			setStartAndEndTokens(type);
 			switch (type.TypeReferenceKind) {
 			case SimpleName:
@@ -563,7 +563,7 @@ package stab.tools.eclipse.editors {
 				foreach (var cc in tryStatement.CatchClauses) {
 					highlighter.setStartAndEndTokens(cc);
 					if (cc.ExceptionType != null) {
-						var t = cc.getUserData(typeof(JvmTypeInfo));
+						var t = cc.getUserData(typeof(TypeInfo));
 						highlighter.highlightType(cc.ExceptionType, t);
 					}
 					handleBlock(cc.Block, null);
@@ -694,7 +694,7 @@ package stab.tools.eclipse.editors {
 			
 			protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
 				highlighter.setStartAndEndTokens(lambda);
-				var m = lambda.getUserData(typeof(JvmMethodInfo));
+				var m = lambda.getUserData(typeof(MethodInfo));
 				var pit = m.Parameters.iterator();
 				foreach (var p in lambda.Parameters) {
 					highlighter.setStartAndEndTokens(p);
@@ -893,7 +893,7 @@ package stab.tools.eclipse.editors {
 			
 			protected override Void handleTypeof(TypeofExpressionNode typeofExpression, Void source, boolean nested) {
 				highlighter.setStartAndEndTokens(typeofExpression);
-				highlighter.highlightType(typeofExpression.Type, typeofExpression.getUserData(typeof(JvmTypeInfo)));
+				highlighter.highlightType(typeofExpression.Type, typeofExpression.getUserData(typeof(TypeInfo)));
 				return null;
 			}
 			

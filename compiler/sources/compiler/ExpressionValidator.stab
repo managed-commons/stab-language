@@ -17,13 +17,13 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
 
-    class ExpressionValidator : ExpressionHandler<JvmTypeInfo, Void> {
+    class ExpressionValidator : ExpressionHandler<TypeInfo, Void> {
         private CompilerContext context;
         private MethodResolver methodResolver;
     
@@ -43,7 +43,7 @@ package stab.tools.compiler {
             private set;
         }
         
-        boolean handleExpressionNoError(ExpressionNode expression, JvmTypeInfo targetType, boolean nested) {
+        boolean handleExpressionNoError(ExpressionNode expression, TypeInfo targetType, boolean nested) {
             try {
                 context.disableErrors();
                 handleExpression(expression, targetType, nested);
@@ -54,10 +54,10 @@ package stab.tools.compiler {
             return result;
         }
 
-        protected override Void handleAnonymousObjectCreation(AnonymousObjectCreationExpressionNode anonymousObject, JvmTypeInfo targetType,
+        protected override Void handleAnonymousObjectCreation(AnonymousObjectCreationExpressionNode anonymousObject, TypeInfo targetType,
                 boolean nested) {
             var propertyNames = new ArrayList<String>();
-            var propertyTypes = new ArrayList<JvmTypeInfo>();
+            var propertyTypes = new ArrayList<TypeInfo>();
             foreach (var decl in anonymousObject.MemberDeclarators) {
                 handleExpression(decl.Value, null, true);
                 String property;
@@ -88,7 +88,7 @@ package stab.tools.compiler {
                 return null;
             }
 
-            JvmTypeInfo anonymousType = null;
+            TypeInfo anonymousType = null;
             foreach (var t in context.CurrentType.NestedTypes) {
                 if (!t.Name.startsWith("Anonymous") || t.Fields.count() != propertyNames.size()) {
                     continue;
@@ -109,7 +109,7 @@ package stab.tools.compiler {
             }
             
             if (anonymousType == null) {
-                var currentType = (JvmTypeBuilder)context.CurrentType;
+                var currentType = (TypeBuilder)context.CurrentType;
                 var prefix = currentType.FullName + "$Anonymous";
                 int n = currentType.NestedTypes.count(p => p.FullName.startsWith(prefix));
                 var typeBuilder = currentType.defineNestedType("Anonymous" + n);
@@ -119,7 +119,7 @@ package stab.tools.compiler {
                 typeBuilder.setBaseType(context.TypeSystem.ObjectType);
 
                 var constructor = typeBuilder.defineMethod("<init>");
-                constructor.setReturnType(JvmTypeInfo.VOID);
+                constructor.setReturnType(context.TypeSystem.VoidType);
 
                 //
                 // Define the fields, properties and constructor parameters
@@ -141,16 +141,16 @@ package stab.tools.compiler {
                     methodBuilder.setReturnType(type);
                     var gen = methodBuilder.CodeGenerator;
                     gen.beginScope();
-                    gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                    gen.emit(JvmOpcode.Getfield, fieldBuilder);
+                    gen.emit(Opcode.Aload, gen.getLocal("this"));
+                    gen.emit(Opcode.Getfield, fieldBuilder);
                     gen.emit(BytecodeHelper.getReturnOpcode(type));
                     gen.endScope();
                     i++;
                 }
             }
             if (!context.IsErrorHandlingDisabled) {
-                if (!context.TypeBuilders.contains((JvmTypeBuilder)anonymousType)) {
-                    context.TypeBuilders.add((JvmTypeBuilder)anonymousType);
+                if (!context.TypeBuilders.contains((TypeBuilder)anonymousType)) {
+                    context.TypeBuilders.add((TypeBuilder)anonymousType);
                 }
             }
             
@@ -158,9 +158,9 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleArrayCreation(ArrayCreationExpressionNode arrayCreation, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleArrayCreation(ArrayCreationExpressionNode arrayCreation, TypeInfo targetType, boolean nested) {
             var typeRef = arrayCreation.Type;
-            JvmTypeInfo type = null;
+            TypeInfo type = null;
             if (typeRef != null) {
                 type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, typeRef);
                 if (type.IsGenericParameter) {
@@ -178,10 +178,10 @@ package stab.tools.compiler {
             for (int i = 0; i < dimensions; i++) {
                 type = type.ArrayType;
                 var e = arrayCreation.DimensionExpressions[i];
-                handleExpression(e, JvmTypeInfo.INT, true);
-                ValidationHelper.setBoxing(context, JvmTypeInfo.INT, e);
+                handleExpression(e, context.TypeSystem.IntType, true);
+                ValidationHelper.setBoxing(context, context.TypeSystem.IntType, e);
                 var etype = ValidationHelper.getType(context, e);
-                if (!JvmTypeInfo.INT.isAssignableFrom(etype)) {
+                if (!context.TypeSystem.IntType.isAssignableFrom(etype)) {
                     context.addError(CompileErrorId.NoImplicitConversion, e, BytecodeHelper.getDisplayName(etype), "int");
                 }
             }
@@ -209,8 +209,8 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleArrayInitializer(ArrayInitializerExpressionNode arrayInitializer, JvmTypeInfo targetType, boolean nested) {
-            JvmTypeInfo targetElementType = null;
+        protected override Void handleArrayInitializer(ArrayInitializerExpressionNode arrayInitializer, TypeInfo targetType, boolean nested) {
+            TypeInfo targetElementType = null;
             if (targetType != null) {
                 targetElementType = targetType.ElementType;
             }
@@ -248,7 +248,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleAssign(AssignExpressionNode assign, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleAssign(AssignExpressionNode assign, TypeInfo targetType, boolean nested) {
             var left = assign.Left;
             var right = assign.Right;
             handleExpression(left, targetType, true);
@@ -330,7 +330,7 @@ package stab.tools.compiler {
             case LeftShift:
             case RightShift:
             case UnsignedRightShift:
-                ValidationHelper.setBoxing(context, JvmTypeInfo.INT, right);
+                ValidationHelper.setBoxing(context, context.TypeSystem.IntType, right);
                 inError = false;
                 switch (lt.NumericTypeKind) {
                 case Float:
@@ -362,15 +362,15 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleBinary(BinaryExpressionNode binary, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleBinary(BinaryExpressionNode binary, TypeInfo targetType, boolean nested) {
             var left = binary.LeftOperand;
             var right = binary.RightOperand;
             handleExpression(left, null, true);
             handleExpression(right, null, true);
             var li = left.getUserData(typeof(ExpressionInfo));
             var ri = right.getUserData(typeof(ExpressionInfo));
-            JvmTypeInfo lt = null;
-            JvmTypeInfo rt = null;
+            TypeInfo lt = null;
+            TypeInfo rt = null;
             
             if (li != null && li.IsConstant && ri != null && ri.IsConstant) {
                 var info = new ExpressionInfo(null);
@@ -390,13 +390,13 @@ package stab.tools.compiler {
                     rt = ValidationHelper.getType(context, right);
                     if (lt.IsNumeric && rt.IsNumeric) {
                         if (lt.TypeKind == TypeKind.Double || rt.TypeKind == TypeKind.Double) {
-                            info.Type = JvmTypeInfo.DOUBLE;
+                            info.Type = context.TypeSystem.DoubleType;
                         } else if (lt.TypeKind == TypeKind.Float || rt.TypeKind == TypeKind.Float) {
-                            info.Type = JvmTypeInfo.FLOAT;
+                            info.Type = context.TypeSystem.FloatType;
                         } else if (lt.TypeKind == TypeKind.Long || rt.TypeKind == TypeKind.Long) {
-                            info.Type = JvmTypeInfo.LONG;
+                            info.Type = context.TypeSystem.LongType;
                         } else {
-                            info.Type = JvmTypeInfo.INT;
+                            info.Type = context.TypeSystem.IntType;
                         }
                     } else {
                         info.Type = context.TypeSystem.StringType;
@@ -410,11 +410,11 @@ package stab.tools.compiler {
                     lt = ValidationHelper.getType(context, left);
                     rt = ValidationHelper.getType(context, right);
                     if (lt.IsBoolean) {
-                        info.Type = JvmTypeInfo.BOOLEAN;
+                        info.Type = context.TypeSystem.BooleanType;
                     } else if (lt.TypeKind == TypeKind.Long || rt.TypeKind == TypeKind.Long) {
-                        info.Type = JvmTypeInfo.LONG;
+                        info.Type = context.TypeSystem.LongType;
                     } else {
-                        info.Type = JvmTypeInfo.INT;
+                        info.Type = context.TypeSystem.IntType;
                     }
                     break;
                     
@@ -425,7 +425,7 @@ package stab.tools.compiler {
                 case Equal:
                 case NotEqual:
                     info.Value = context.ConstantBuilder.buildConstant(binary);
-                    info.Type = JvmTypeInfo.BOOLEAN;
+                    info.Type = context.TypeSystem.BooleanType;
                     break;
                     
                 case LeftShift:
@@ -434,16 +434,16 @@ package stab.tools.compiler {
                     info.Value = context.ConstantBuilder.buildConstant(binary);
                     lt = ValidationHelper.getType(context, left);
                     if (lt.TypeKind == TypeKind.Long) {
-                        info.Type = JvmTypeInfo.LONG;
+                        info.Type = context.TypeSystem.LongType;
                     } else {
-                        info.Type = JvmTypeInfo.INT;
+                        info.Type = context.TypeSystem.IntType;
                     }
                     break;
 
                 case LogicalAnd:
                 case LogicalOr:
                     info.Value = context.ConstantBuilder.buildConstant(binary);
-                    info.Type = JvmTypeInfo.BOOLEAN;
+                    info.Type = context.TypeSystem.BooleanType;
                     break;
 
                 default:
@@ -483,13 +483,13 @@ package stab.tools.compiler {
                 var info = new ExpressionInfo(null);
                 if (lt != null && lt.IsNumeric && rt != null && rt.IsNumeric) {
                     if (lt.NumericTypeKind == NumericTypeKind.Double || rt.NumericTypeKind == NumericTypeKind.Double) {
-                        lt = rt = JvmTypeInfo.DOUBLE;
+                        lt = rt = context.TypeSystem.DoubleType;
                     } else if (lt.NumericTypeKind == NumericTypeKind.Float || rt.NumericTypeKind == NumericTypeKind.Float) {
-                        lt = rt = JvmTypeInfo.FLOAT;
+                        lt = rt = context.TypeSystem.FloatType;
                     } else if (lt.NumericTypeKind == NumericTypeKind.Long || rt.NumericTypeKind == NumericTypeKind.Long) {
-                        lt = rt = JvmTypeInfo.LONG;
+                        lt = rt = context.TypeSystem.LongType;
                     } else {
-                        lt = rt = JvmTypeInfo.INT;
+                        lt = rt = context.TypeSystem.IntType;
                     }
                     info.Type = lt;
                     ValidationHelper.setBoxing(context, lt, left);
@@ -531,9 +531,9 @@ package stab.tools.compiler {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
                     if (lt.NumericTypeKind == NumericTypeKind.Long || rt.NumericTypeKind == NumericTypeKind.Long) {
-                        lt = rt = JvmTypeInfo.LONG;
+                        lt = rt = context.TypeSystem.LongType;
                     } else {
-                        lt = rt = JvmTypeInfo.INT;
+                        lt = rt = context.TypeSystem.IntType;
                     }
                     ValidationHelper.setBoxing(context, lt, left);
                     ValidationHelper.setBoxing(context, rt, right);
@@ -542,10 +542,10 @@ package stab.tools.compiler {
                     if (rt == null || !rt.IsBoolean) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
-                        ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, left);
-                        ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, right);
+                        ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, left);
+                        ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, right);
                     }
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                 } else {
                     binary.addOrReplaceUserData(new ExpressionInfo(lt ?? rt));
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
@@ -563,13 +563,13 @@ package stab.tools.compiler {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     } else {
                         if (lt.NumericTypeKind == NumericTypeKind.Double || rt.NumericTypeKind == NumericTypeKind.Double) {
-                            lt = rt = JvmTypeInfo.DOUBLE;
+                            lt = rt = context.TypeSystem.DoubleType;
                         } else if (lt.NumericTypeKind == NumericTypeKind.Float || rt.NumericTypeKind == NumericTypeKind.Float) {
-                            lt = rt = JvmTypeInfo.FLOAT;
+                            lt = rt = context.TypeSystem.FloatType;
                         } else if (lt.NumericTypeKind == NumericTypeKind.Long || rt.NumericTypeKind == NumericTypeKind.Long) {
-                            lt = rt = JvmTypeInfo.LONG;
+                            lt = rt = context.TypeSystem.LongType;
                         } else {
-                            lt = rt = JvmTypeInfo.INT;
+                            lt = rt = context.TypeSystem.IntType;
                         }
                         ValidationHelper.setBoxing(context, lt, left);
                         ValidationHelper.setBoxing(context, rt, right);
@@ -578,25 +578,25 @@ package stab.tools.compiler {
                 } else {
                     addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                 }
-				binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+				binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                 break;
                 
             case Equal:
             case NotEqual:
                 if (lt == null && rt == null) {
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN, true));
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType, true));
                     binary.addOrReplaceUserData(context.TypeSystem.ObjectType);
                 } else if (lt == null) {
                     if (rt.IsPrimitive) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                     binary.addOrReplaceUserData(rt);
                 } else if (rt == null) {
                     if (lt.IsPrimitive) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                     binary.addOrReplaceUserData(lt);
                 } else if (lt.IsNumeric || rt.IsNumeric) {
                     if (!lt.IsNumeric || !rt.IsNumeric) {
@@ -604,13 +604,13 @@ package stab.tools.compiler {
                     } else {
                         if (lt.IsPrimitive || rt.IsPrimitive) {
                             if (lt.NumericTypeKind == NumericTypeKind.Double || rt.NumericTypeKind == NumericTypeKind.Double) {
-                                lt = rt = JvmTypeInfo.DOUBLE;
+                                lt = rt = context.TypeSystem.DoubleType;
                             } else if (lt.NumericTypeKind == NumericTypeKind.Float || rt.NumericTypeKind == NumericTypeKind.Float) {
-                                lt = rt = JvmTypeInfo.FLOAT;
+                                lt = rt = context.TypeSystem.FloatType;
                             } else if (lt.NumericTypeKind == NumericTypeKind.Long || rt.NumericTypeKind == NumericTypeKind.Long) {
-                                lt = rt = JvmTypeInfo.LONG;
+                                lt = rt = context.TypeSystem.LongType;
                             } else {
-                                lt = rt = JvmTypeInfo.INT;
+                                lt = rt = context.TypeSystem.IntType;
                             }
                             ValidationHelper.setBoxing(context, lt, left);
                             ValidationHelper.setBoxing(context, rt, right);
@@ -619,21 +619,21 @@ package stab.tools.compiler {
                             binary.addOrReplaceUserData(context.TypeSystem.ObjectType);
                         }
                     }
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
-                } else if (lt == JvmTypeInfo.BOOLEAN || rt == JvmTypeInfo.BOOLEAN) {
-                    if (lt != JvmTypeInfo.BOOLEAN || rt != JvmTypeInfo.BOOLEAN) {
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
+                } else if (lt == context.TypeSystem.BooleanType || rt == context.TypeSystem.BooleanType) {
+                    if (lt != context.TypeSystem.BooleanType || rt != context.TypeSystem.BooleanType) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                     }
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
-                    binary.addOrReplaceUserData(JvmTypeInfo.BOOLEAN);
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
+                    binary.addOrReplaceUserData(context.TypeSystem.BooleanType);
 				} else if (lt.IsEnum || rt.IsEnum) {
 					if (lt != rt) {
                         addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
 					}
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                     binary.addOrReplaceUserData(lt);
                 } else {
-                    binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                    binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                     binary.addOrReplaceUserData(context.TypeSystem.ObjectType);
                 }
                 break;
@@ -656,17 +656,17 @@ package stab.tools.compiler {
                             case Char:
                             case Short:
                             case Int:
-                                lt = JvmTypeInfo.INT;
+                                lt = context.TypeSystem.IntType;
                                 break;
                             case Long:
-                                lt = JvmTypeInfo.LONG;
+                                lt = context.TypeSystem.LongType;
                                 break;
                             default:
                                 addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                                 break;
                             }
                             ValidationHelper.setBoxing(context, lt, left);
-                            ValidationHelper.setBoxing(context, JvmTypeInfo.INT, right);
+                            ValidationHelper.setBoxing(context, context.TypeSystem.IntType, right);
                         } else {
                             addBinaryOperatorNotApplicableErrors(CompilerHelper.getDisplayName(binary.Operator), left, right);
                         }
@@ -696,7 +696,7 @@ package stab.tools.compiler {
                 if (rt.IsPrimitive) {
                     throw context.error(CompileErrorId.ReferenceTypeExpected, right);
                 }
-                binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                 break;
                 
             case LogicalOr:
@@ -706,10 +706,10 @@ package stab.tools.compiler {
                 } else {
                     lt = ValidationHelper.getType(context, left);
                     rt = ValidationHelper.getType(context, right);
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, left);
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, right);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, left);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, right);
                 }
-                binary.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.BOOLEAN));
+                binary.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.BooleanType));
                 break;
                 
             case NullCoalescing:
@@ -737,7 +737,7 @@ package stab.tools.compiler {
             return null;
         }
 
-        protected override Void handleCast(CastExpressionNode cast, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleCast(CastExpressionNode cast, TypeInfo targetType, boolean nested) {
             var type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, cast.TargetType);
             handleExpression(cast.Expression, type, true);
             ValidationHelper.setBoxing(context, type, cast.Expression);
@@ -763,14 +763,14 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleConditional(ConditionalExpressionNode conditional, JvmTypeInfo targetType, boolean nested) {
-            handleExpression(conditional.Condition, JvmTypeInfo.BOOLEAN, true);
-            ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, conditional.Condition);
+        protected override Void handleConditional(ConditionalExpressionNode conditional, TypeInfo targetType, boolean nested) {
+            handleExpression(conditional.Condition, context.TypeSystem.BooleanType, true);
+            ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, conditional.Condition);
             var cinfo = conditional.Condition.getUserData(typeof(ExpressionInfo));
-            if (cinfo == null || ValidationHelper.getType(context, conditional.Condition) != JvmTypeInfo.BOOLEAN) {
+            if (cinfo == null || ValidationHelper.getType(context, conditional.Condition) != context.TypeSystem.BooleanType) {
                 throw context.error(CompileErrorId.NoImplicitConversion, conditional.Condition,
                         BytecodeHelper.getDisplayName(cinfo == null ? null : cinfo.Type),
-                        BytecodeHelper.getDisplayName(JvmTypeInfo.BOOLEAN));
+                        BytecodeHelper.getDisplayName(context.TypeSystem.BooleanType));
             }
             handleExpression(conditional.IfTrue, targetType, true);
             handleExpression(conditional.IfFalse, targetType, true);
@@ -803,7 +803,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleElementAccess(ElementAccessExpressionNode elementAccess, TypeInfo targetType, boolean nested) {
             var target = elementAccess.TargetObject;
             handleExpression(target, null, true);
             var tinfo = target.getUserData(typeof(ExpressionInfo));
@@ -848,19 +848,23 @@ package stab.tools.compiler {
                 }
             } else {
                 foreach (var e in elementAccess.Indexes) {
-                    handleExpression(e, JvmTypeInfo.INT, true);
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.INT, e);
+                    handleExpression(e, context.TypeSystem.IntType, true);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.IntType, e);
+	                var etype = ValidationHelper.getType(context, e);
+	                if (!context.TypeSystem.IntType.isAssignableFrom(etype)) {
+	                    context.addError(CompileErrorId.NoImplicitConversion, e, BytecodeHelper.getDisplayName(etype), "int");
+	                }
                 }
                 elementAccess.addOrReplaceUserData(new ExpressionInfo(ttype.ElementType));
             }
             return null;
         }
         
-        protected override Void handleInvocation(InvocationExpressionNode invocation, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleInvocation(InvocationExpressionNode invocation, TypeInfo targetType, boolean nested) {
             handleExpression(invocation.TargetObject, null, true);
             var tinfo = invocation.TargetObject.getUserData(typeof(ExpressionInfo));
             var members = tinfo.Members;
-            JvmMethodInfo method = null;
+            MethodInfo method = null;
             var arguments = invocation.Arguments;
             foreach (var arg in arguments) {
                 if (arg.ExpressionKind != ExpressionKind.Lambda) {
@@ -874,7 +878,7 @@ package stab.tools.compiler {
                 }
                 method = tinfo.Type.Methods.where(p => p.Name.equals("invoke")).single();
             } else {
-                var methods = new ArrayList<JvmMethodInfo>();
+                var methods = new ArrayList<MethodInfo>();
                 foreach (var member in members) {
                     switch (member.MemberKind) {
                     case Field:
@@ -892,7 +896,7 @@ package stab.tools.compiler {
                             	if (member.MemberKind == MemberKind.Local && member.Method != currentMethod) {
 	                                member.IsUsedFromLambda = true;
 					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
-					                context.getLocalField(typeBuilder, (LocalInfo)member);
+					                context.getLocalField(typeBuilder, (LocalMemberInfo)member);
                             	} else if (!member.IsStatic && invocation.TargetObject.ExpressionKind == ExpressionKind.SimpleName) {
 					                var typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
 					                if (typeBuilder.getField("this$0") == null) {
@@ -987,17 +991,17 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleLambda(LambdaExpressionNode lambda, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleLambda(LambdaExpressionNode lambda, TypeInfo targetType, boolean nested) {
         	if (!context.CodeValidationContext.IsInMethod) {
                 throw context.error(CompileErrorId.LambdaOutsideMethod, lambda);
         	}
-            JvmTypeBuilder typeBuilder;
+            TypeBuilder typeBuilder;
             var inExpressionTree = context.CodeValidationContext.IsInExpressionTree;
             if (!inExpressionTree && targetType != null && !targetType.FullName.equals("stab/tree/ExpressionTree")) {
                 typeBuilder = context.LambdaScopes[context.CodeValidationContext.RootMethod];
                 if (typeBuilder == null) {
                     int n = context.CurrentType.NestedTypes.where(p => p.Name.startsWith("LambdaScope")).count();
-                    typeBuilder = ((JvmTypeBuilder)context.CurrentType).defineNestedType("LambdaScope" + n);
+                    typeBuilder = ((TypeBuilder)context.CurrentType).defineNestedType("LambdaScope" + n);
                     typeBuilder.setSourceFile(PathHelper.getFileName(lambda.Filename));
                     context.LambdaScopes[context.CodeValidationContext.RootMethod] = typeBuilder;
                     typeBuilder.setSynthetic(true);
@@ -1008,18 +1012,18 @@ package stab.tools.compiler {
                     typeBuilder.setBaseType(objectType);
                     
                     var methodBuilder = typeBuilder.defineMethod("<init>");
-                    methodBuilder.setReturnType(JvmTypeInfo.VOID);
+                    methodBuilder.setReturnType(context.TypeSystem.VoidType);
                     var gen = methodBuilder.CodeGenerator;
                     gen.beginScope();
-                    gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                    gen.emit(JvmOpcode.Invokespecial, objectType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-                    gen.emit(JvmOpcode.Return);
+                    gen.emit(Opcode.Aload, gen.getLocal("this"));
+                    gen.emit(Opcode.Invokespecial, objectType.getMethod("<init>", Query.empty<TypeInfo>()));
+                    gen.emit(Opcode.Return);
                     gen.endScope();
                 }
             } else if (inExpressionTree) {
-                typeBuilder = (JvmTypeBuilder)context.CodeValidationContext.CurrentMethod.DeclaringType;
+                typeBuilder = (TypeBuilder)context.CodeValidationContext.CurrentMethod.DeclaringType;
             } else {
-                var prefix = ((JvmTypeBuilder)context.CurrentType).FullName + "#";
+                var prefix = ((TypeBuilder)context.CurrentType).FullName + "#";
                 int n = 0;
                 while (context.TypeSystem.typeExists(prefix + n)) {
                     n++;
@@ -1027,9 +1031,9 @@ package stab.tools.compiler {
                 typeBuilder = context.TypeSystem.defineType(prefix + n);
             }
             
-            var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = lambda.getUserData(typeof(MethodBuilder));
             if (methodBuilder != null) {
-                ((JvmTypeBuilder)methodBuilder.DeclaringType).undefineMethod(methodBuilder);
+                ((TypeBuilder)methodBuilder.DeclaringType).undefineMethod(methodBuilder);
             }
 			var methodName = "lambda$" + context.CodeValidationContext.LambdaCount++;
             methodBuilder = typeBuilder.defineMethod(methodName);
@@ -1045,7 +1049,7 @@ package stab.tools.compiler {
                     pb.setName(p.Name ?? context.getIdentifier(p.NameOffset, p.NameLength));
                 }
             } else {
-                JvmMethodInfo method;
+                MethodInfo method;
                 if (BytecodeHelper.isDelegateType(targetType)) {
                     method = targetType.Methods.where(p => p.Name.equals("invoke")).firstOrDefault();
                 } else if (targetType.IsInterface) {
@@ -1078,7 +1082,7 @@ package stab.tools.compiler {
                 if (method.Parameters.count() != lambda.Parameters.size()) {
                     throw context.error(CompileErrorId.IncompatibleParameterList, lambda, BytecodeHelper.getDisplayName(method.DeclaringType));
                 }
-                foreach (JvmTypeInfo t in method.Exceptions) {
+                foreach (TypeInfo t in method.Exceptions) {
                     methodBuilder.addException(t);
                 }
                 int i = 0;
@@ -1110,7 +1114,7 @@ package stab.tools.compiler {
                     this.StatementValidator.handleStatement(lambda.Body, null);
                     if (targetType == null) {
                         var returnTypes = context.CodeValidationContext.LambdaReturnTypes;
-                        JvmTypeInfo rt = returnTypes[0];
+                        TypeInfo rt = returnTypes[0];
                         for (int i = 1; i < returnTypes.size(); i++) {
                             var t = returnTypes[i];
                             if (t == null) {
@@ -1154,7 +1158,7 @@ package stab.tools.compiler {
                         block.DisabledWarnings = body.DisabledWarnings;
                         block.StartPosition = body.StartPosition;
                         block.EndPosition = body.EndPosition;
-                        if (returnType == JvmTypeInfo.VOID || methodBuilder.ReturnType == JvmTypeInfo.VOID) {
+                        if (returnType == context.TypeSystem.VoidType || methodBuilder.ReturnType == context.TypeSystem.VoidType) {
                             block.Statements.add(body);
                         } else {
                             var returnNode = new ReturnStatementNode();
@@ -1178,7 +1182,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        private Iterable<JvmMethodInfo> getAllMethods(JvmTypeInfo interfaceType) {
+        private Iterable<MethodInfo> getAllMethods(TypeInfo interfaceType) {
             var result = interfaceType.Methods;
             foreach (var i in interfaceType.Interfaces) {
                 result = result.concat(getAllMethods(i));
@@ -1186,7 +1190,7 @@ package stab.tools.compiler {
             return result.distinct().toList();
         }
 
-        protected override Void handleLiteral(LiteralExpressionNode literal, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleLiteral(LiteralExpressionNode literal, TypeInfo targetType, boolean nested) {
             switch (literal.getLiteralKind()) {
             case Character:
                 literal.addOrReplaceUserData(new ExpressionInfo(null, null));
@@ -1232,7 +1236,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleMemberAccess(MemberAccessExpressionNode memberAccess, TypeInfo targetType, boolean nested) {
             var nameExpression = memberAccess.Member;
             var name = nameExpression.Name ?? context.getIdentifier(nameExpression.NameOffset, nameExpression.NameLength);
             handleExpression(memberAccess.TargetObject, null, true);
@@ -1263,7 +1267,7 @@ package stab.tools.compiler {
                                 }
                                 type = context.TypeSystem.getGenericType(type, typeArgs);
                             } else {
-                                type = type.RawGenericType;
+                                type = type.RawType;
                                 context.addWarning(CompileErrorId.RawTypeUsage, memberAccess,
                                     BytecodeHelper.getDisplayName(type.GenericTypeDefinition), BytecodeHelper.getDisplayName(type));
                             }
@@ -1295,7 +1299,7 @@ package stab.tools.compiler {
 
                 var info = new ExpressionInfo(null) { Members = members };
                 if (staticOnly) {
-                    info.ExtensionMethods = Query.empty<JvmMethodInfo>();
+                    info.ExtensionMethods = Query.empty<MethodInfo>();
                 } else {
                     info.ExtensionMethods = context.MemberResolver.getExtensionMethods(ttype, name, typeArgs);
                 }
@@ -1311,7 +1315,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleObjectCreation(ObjectCreationExpressionNode objectCreation, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleObjectCreation(ObjectCreationExpressionNode objectCreation, TypeInfo targetType, boolean nested) {
             var type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, objectCreation.Type);
             if (BytecodeHelper.isDelegateType(type)) {
                 if (objectCreation.Arguments.size() != 1) {
@@ -1333,7 +1337,7 @@ package stab.tools.compiler {
 				if (type.HasWildcardArgument) {
                     context.addError(CompileErrorId.WildcardTypeCreation, objectCreation.Type, BytecodeHelper.getDisplayName(type));
 				}
-                var constructors = new ArrayList<JvmMethodInfo>();
+                var constructors = new ArrayList<MethodInfo>();
                 foreach (var method in type.Methods) {
                     if (method.Name.equals("<init>")) {
                         constructors.add(method);
@@ -1347,8 +1351,8 @@ package stab.tools.compiler {
                         handleExpression(arg, null, true);
                     }
                 }
-                var constructor = MethodResolver.resolveMethod(constructors, objectCreation.Arguments, JvmTypeInfo.VOID);
-                if (constructor == null || !context.CurrentType.canAccessMembers(constructor.DeclaringType, constructor.IsPublic,
+                var constructor = MethodResolver.resolveMethod(constructors, objectCreation.Arguments, context.TypeSystem.VoidType);
+                if (constructor == null || !context.CurrentType.canAccessMember(constructor.DeclaringType, constructor.IsPublic,
                     constructor.IsProtected, constructor.IsPrivate)) {
                     // TODO: better message
                     throw context.error(CompileErrorId.NoAccessibleConstructors, objectCreation.Type, BytecodeHelper.getDisplayName(type));
@@ -1376,7 +1380,7 @@ package stab.tools.compiler {
                             foreach (var m in members) {
                                 if (m.MemberKind == MemberKind.Property) {
 									var setter = m.SetAccessor;
-									if (setter != null && context.CurrentType.canAccessMembers(setter.DeclaringType, setter.IsPublic,
+									if (setter != null && context.CurrentType.canAccessMember(setter.DeclaringType, setter.IsPublic,
 											setter.IsProtected, setter.IsPrivate)) {
 										memb = m;
 										break;
@@ -1400,13 +1404,13 @@ package stab.tools.compiler {
                         }
                     } else {
                         var initializer = (CollectionInitializerExpressionNode)init;
-                        var argTypeBounds = new ArrayList<HashSet<JvmTypeInfo>>();
+                        var argTypeBounds = new ArrayList<HashSet<TypeInfo>>();
                         int nargs = 0;
                         foreach (var args in initializer.Values) {
                             if (nargs == 0) {
                                 nargs = args.size();
                                 for (int i = 0; i < nargs; i++) {
-                                	argTypeBounds.add(new HashSet<JvmTypeInfo>());
+                                	argTypeBounds.add(new HashSet<TypeInfo>());
                                 }
                             } else if (nargs != args.size()) {
                                 throw context.error(CompileErrorId.MalformedCollectionInitializer, initializer);
@@ -1419,7 +1423,7 @@ package stab.tools.compiler {
                                 bounds.add((ei == null) ? null : ValidationHelper.getType(context, e));
                             }
                         }
-                        var paramTypes = new ArrayList<JvmTypeInfo>();
+                        var paramTypes = new ArrayList<TypeInfo>();
                         foreach (var bounds in argTypeBounds) {
                         	var fixedType = MethodResolver.getFixedType(context.TypeSystem, bounds);
                         	if (fixedType == null) {
@@ -1428,7 +1432,7 @@ package stab.tools.compiler {
                             paramTypes.add(fixedType);
                         }
                         var members = MemberInfo.getMembers(context.AnnotatedTypeSystem, type, "add");
-                        var candidates = new ArrayList<JvmMethodInfo>();
+                        var candidates = new ArrayList<MethodInfo>();
                         foreach (var m in members) {
                             if (m.MemberKind == MemberKind.Method) {
                                 var meth = m.Method;
@@ -1497,7 +1501,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleSimpleName(SimpleNameExpressionNode simpleName, TypeInfo targetType, boolean nested) {
             var name = simpleName.Name ?? context.getIdentifier(simpleName.NameOffset, simpleName.NameLength);
             var typeArgs = getTypeArguments(simpleName.TypeArguments);
             var members = context.MemberResolver.resolveName(context.CurrentType, name, typeArgs);
@@ -1529,18 +1533,18 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleSizeof(SizeofExpressionNode sizeofExpression, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleSizeof(SizeofExpressionNode sizeofExpression, TypeInfo targetType, boolean nested) {
             var expression = sizeofExpression.Expression;
             handleExpression(expression, null, true);
             var einfo = expression.getUserData(typeof(ExpressionInfo));
             if (einfo == null || !ValidationHelper.getType(context, expression).IsArray) {
                 context.addError(CompileErrorId.ArrayExpressionExpected, expression);
             }
-            sizeofExpression.addOrReplaceUserData(new ExpressionInfo(JvmTypeInfo.INT));
+            sizeofExpression.addOrReplaceUserData(new ExpressionInfo(context.TypeSystem.IntType));
             return null;
         }
         
-        protected override Void handleSuperAccess(SuperAccessExpressionNode superAccess, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleSuperAccess(SuperAccessExpressionNode superAccess, TypeInfo targetType, boolean nested) {
             if (context.CodeValidationContext.IsStatic) {
                 context.addError(CompileErrorId.StaticSuperAccess, superAccess);
             }
@@ -1551,7 +1555,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleThisAccess(ThisAccessExpressionNode thisAccess, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleThisAccess(ThisAccessExpressionNode thisAccess, TypeInfo targetType, boolean nested) {
             if (context.CodeValidationContext.IsStatic) {
                 context.addError(CompileErrorId.StaticThisAccess, thisAccess);
             }
@@ -1565,13 +1569,13 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleType(TypeExpressionNode type, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleType(TypeExpressionNode type, TypeInfo targetType, boolean nested) {
             var t = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, type.TypeReference);
             type.addOrReplaceUserData(new ExpressionInfo(t));
             return null;
         }
         
-        protected override Void handleTypeof(TypeofExpressionNode typeofExpression, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleTypeof(TypeofExpressionNode typeofExpression, TypeInfo targetType, boolean nested) {
             var type = CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, typeofExpression.Type);
             if (type.IsGenericParameter) {
                 throw context.error(CompileErrorId.TypeofTypeVariable, typeofExpression, BytecodeHelper.getDisplayName(type));
@@ -1584,7 +1588,7 @@ package stab.tools.compiler {
             var typeSystem = context.TypeSystem;
             var classType = typeSystem.getType("java/lang/Class");
             if (type.IsPrimitive) {
-                if (type == JvmTypeInfo.VOID) {
+                if (type == context.TypeSystem.VoidType) {
                     classType = typeSystem.getGenericType(classType, Collections.singletonList(typeSystem.getType("java/lang/Void")));
                 } else {
                     classType = typeSystem.getGenericType(classType, Collections.singletonList(typeSystem.getBoxingMethod(type).ReturnType));
@@ -1596,7 +1600,7 @@ package stab.tools.compiler {
             return null;
         }
         
-        protected override Void handleUnary(UnaryExpressionNode unary, JvmTypeInfo targetType, boolean nested) {
+        protected override Void handleUnary(UnaryExpressionNode unary, TypeInfo targetType, boolean nested) {
             handleExpression(unary.Operand, null, true);
             var oinfo = unary.Operand.getUserData(typeof(ExpressionInfo));
             if (oinfo == null) {
@@ -1604,7 +1608,7 @@ package stab.tools.compiler {
                     CompilerHelper.getDisplayName(unary.Operator), "<null>");
             }
             var info = new ExpressionInfo(null);
-            JvmTypeInfo type;
+            TypeInfo type;
             if (oinfo.IsConstant) {
                 switch (unary.Operator) {
                 case PostDecrement:
@@ -1637,12 +1641,12 @@ package stab.tools.compiler {
                 case Char:
                 case Int:
                 case Short:
-                    info.Type = JvmTypeInfo.INT;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.INT, unary.Operand);
+                    info.Type = context.TypeSystem.IntType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.IntType, unary.Operand);
                     break;
                 case Long:
-                    info.Type = JvmTypeInfo.LONG;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.LONG, unary.Operand);
+                    info.Type = context.TypeSystem.LongType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.LongType, unary.Operand);
                     break;
                 default:
                     info.Type = type;
@@ -1658,20 +1662,20 @@ package stab.tools.compiler {
                 case Char:
                 case Int:
                 case Short:
-                    info.Type = JvmTypeInfo.INT;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.INT, unary.Operand);
+                    info.Type = context.TypeSystem.IntType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.IntType, unary.Operand);
                     break;
                 case Long:
-                    info.Type = JvmTypeInfo.LONG;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.LONG, unary.Operand);
+                    info.Type = context.TypeSystem.LongType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.LongType, unary.Operand);
                     break;
                 case Float:
-                    info.Type = JvmTypeInfo.FLOAT;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.FLOAT, unary.Operand);
+                    info.Type = context.TypeSystem.FloatType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.FloatType, unary.Operand);
                     break;
                 case Double:
-                    info.Type = JvmTypeInfo.DOUBLE;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.DOUBLE, unary.Operand);
+                    info.Type = context.TypeSystem.DoubleType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.DoubleType, unary.Operand);
                     break;
                 default:
                     info.Type = type;
@@ -1682,8 +1686,8 @@ package stab.tools.compiler {
                 break;
             case Not:
                 if (type.IsBoolean) {
-                    info.Type = JvmTypeInfo.BOOLEAN;
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.BOOLEAN, unary.Operand);
+                    info.Type = context.TypeSystem.BooleanType;
+                    ValidationHelper.setBoxing(context, context.TypeSystem.BooleanType, unary.Operand);
                 } else {
                     info.Type = type;
                     context.addError(CompileErrorId.UnaryOperatorNotApplicable, unary,
@@ -1701,19 +1705,19 @@ package stab.tools.compiler {
                 case Char:
                 case Int:
                 case Short:
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.INT, unary.Operand);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.IntType, unary.Operand);
                     break;
 
                 case Long:
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.LONG, unary.Operand);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.LongType, unary.Operand);
                     break;
                     
                 case Float:
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.FLOAT, unary.Operand);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.FloatType, unary.Operand);
                     break;
 
                 case Double:
-                    ValidationHelper.setBoxing(context, JvmTypeInfo.DOUBLE, unary.Operand);
+                    ValidationHelper.setBoxing(context, context.TypeSystem.DoubleType, unary.Operand);
                     break;
                     
                 default:
@@ -1728,7 +1732,7 @@ package stab.tools.compiler {
             return null;
         }
 
-        private void setArrayInitializersTypes(ArrayInitializerExpressionNode initializer, JvmTypeInfo type) {
+        private void setArrayInitializersTypes(ArrayInitializerExpressionNode initializer, TypeInfo type) {
             initializer.getUserData(typeof(ExpressionInfo)).Type = type;
             foreach (var e in initializer.Values) {
                 if (e.ExpressionKind == ExpressionKind.ArrayInitializer) {
@@ -1745,7 +1749,7 @@ package stab.tools.compiler {
             context.addError(CompileErrorId.BinaryOperatorNotApplicable, left, operator, lcname, rcname);
         }
 
-        private JvmTypeInfo checkLeftValue(ExpressionNode left) {
+        private TypeInfo checkLeftValue(ExpressionNode left) {
             var linfo = left.getUserData(typeof(ExpressionInfo));
             if (left.ExpressionKind != ExpressionKind.ElementAccess) {
                 if (linfo == null || linfo.Members == null || !linfo.Members.any(p => p.MemberKind != MemberKind.Method)) {
@@ -1780,7 +1784,7 @@ package stab.tools.compiler {
                 case Property:
 					var setter = member.SetAccessor;
                     if (setter == null ||
-						!context.CurrentType.canAccessMembers(setter.DeclaringType, setter.IsPublic, setter.IsProtected, setter.IsPrivate)) {
+						!context.CurrentType.canAccessMember(setter.DeclaringType, setter.IsPublic, setter.IsProtected, setter.IsPrivate)) {
                         context.addError(CompileErrorId.ReadonlyPropertyModification, left);
                     }
                     break;
@@ -1797,11 +1801,11 @@ package stab.tools.compiler {
             return ltype;
         }
         
-        private Iterable<JvmTypeInfo> getTypeArguments(List<TypeReferenceNode> typeArguments) {
+        private Iterable<TypeInfo> getTypeArguments(List<TypeReferenceNode> typeArguments) {
             if (typeArguments.size() == 0) {
                 return Query.empty();
             } else {
-                var result = new ArrayList<JvmTypeInfo>();
+                var result = new ArrayList<TypeInfo>();
                 foreach (var t in typeArguments) {
                     result.add(CompilerHelper.resolveTypeReference(context, context.CurrentType.PackageName, t));
                 }
@@ -1809,7 +1813,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void fixArguments(JvmMethodInfo method, List<ExpressionNode> arguments, ExpressionNode expression) {
+        private void fixArguments(MethodInfo method, List<ExpressionNode> arguments, ExpressionNode expression) {
             var it1 = method.Parameters.iterator();
             var it2 = arguments.iterator();
             int nParams = method.Parameters.count();

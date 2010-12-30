@@ -191,5 +191,12 @@ package stab.tools.compiler.test {
 				"LongEqualsNull.stab (4, 13) error 175: Operator '==' cannot be applied to operand of type 'long' and '<null>'" },
 				new String[] {});
 		}
+
+		[Test]
+		public void arrayIndexType() {
+			doTest("ArrayIndexType", new String[]{
+				"ArrayIndexType.stab (4, 19) error 234: Cannot implicitly convert type 'java.lang.String' to 'int'" },
+				new String[] {});
+		}
 	}
 }

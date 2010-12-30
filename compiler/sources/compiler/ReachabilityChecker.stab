@@ -17,7 +17,7 @@
 using java.lang;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.syntaxtree;
 
 package stab.tools.compiler {
@@ -54,22 +54,22 @@ package stab.tools.compiler {
     }
 
     class InitializedLocalInfo {
-        LocalInfo local;
+        LocalMemberInfo local;
         LocalDeclarationStatementNode declaration;
         
-        InitializedLocalInfo(LocalInfo local, LocalDeclarationStatementNode declaration) {
+        InitializedLocalInfo(LocalMemberInfo local, LocalDeclarationStatementNode declaration) {
             this.local = local;
             this.declaration = declaration;
         }
     }
     
     class UninitializedLocalInfo {
-        LocalInfo local;
+        LocalMemberInfo local;
         LocalDeclarationStatementNode declaration;
         int referenceCount;
         int assignmentCount;
         
-        UninitializedLocalInfo(LocalInfo local, LocalDeclarationStatementNode declaration) {
+        UninitializedLocalInfo(LocalMemberInfo local, LocalDeclarationStatementNode declaration) {
             this.local = local;
             this.declaration = declaration;
         }
@@ -79,8 +79,8 @@ package stab.tools.compiler {
         private CompilerContext context;
         private ExpressionChecker expressionChecker;
         private UnreachableStatementsHandler unreachableStatementsHandler;
-        private HashMap<LocalInfo, UninitializedLocalInfo> uninitializedLocals;
-        private HashMap<LocalInfo, InitializedLocalInfo> initializedLocals;
+        private HashMap<LocalMemberInfo, UninitializedLocalInfo> uninitializedLocals;
+        private HashMap<LocalMemberInfo, InitializedLocalInfo> initializedLocals;
     
         ReachabilityChecker(CompilerContext context)
             : super(true) {
@@ -89,13 +89,13 @@ package stab.tools.compiler {
             this.unreachableStatementsHandler = new UnreachableStatementsHandler(context);
         }
         
-        Iterable<UninitializedLocalInfo> checkMethod(JvmMethodInfo method, BlockStatementNode body, boolean insertReturn) {
-            uninitializedLocals = new HashMap<LocalInfo, UninitializedLocalInfo>();
-            initializedLocals = new HashMap<LocalInfo, InitializedLocalInfo>();
+        Iterable<UninitializedLocalInfo> checkMethod(MethodInfo method, BlockStatementNode body, boolean insertReturn) {
+            uninitializedLocals = new HashMap<LocalMemberInfo, UninitializedLocalInfo>();
+            initializedLocals = new HashMap<LocalMemberInfo, InitializedLocalInfo>();
             
             var info = handleStatement(body, null);
             if (insertReturn && info.IsEndPointReachable) {
-                if (method.ReturnType == JvmTypeInfo.VOID) {
+                if (method.ReturnType == context.TypeSystem.VoidType) {
                     var returnStatement = new ReturnStatementNode();
                     returnStatement.addUserData(new StatementInfo());
                     body.Statements.add(returnStatement);
@@ -469,7 +469,7 @@ package stab.tools.compiler {
             localDeclaration.addOrReplaceUserData(info);
             info.IsEndPointReachable = true;
             foreach (var decl in localDeclaration.Declarators) {
-                var local = decl.getUserData(typeof(LocalInfo));
+                var local = decl.getUserData(typeof(LocalMemberInfo));
                 if (decl.Value != null) {
                     initializedLocals[local] = new InitializedLocalInfo(local, localDeclaration);
                     expressionChecker.handleExpression(decl.Value, null, true);
@@ -818,12 +818,12 @@ package stab.tools.compiler {
             }
             
             protected override Void handleLambda(LambdaExpressionNode lambda, Void source, boolean nested) {
-                var methodBuilder = lambda.getUserData(typeof(JvmMethodBuilder));
+                var methodBuilder = lambda.getUserData(typeof(MethodBuilder));
                 if (lambda.Body instanceof BlockStatementNode) {
                     var body = (BlockStatementNode)lambda.Body;
                     var info = statementChecker.handleStatement(body, null);
                     if (info.IsEndPointReachable) {
-                        if (methodBuilder.ReturnType == JvmTypeInfo.VOID) {
+                        if (methodBuilder.ReturnType == context.TypeSystem.VoidType) {
                             var returnStatement = new ReturnStatementNode();
                             returnStatement.addOrReplaceUserData(new StatementInfo());
                             body.Statements.add(returnStatement);

@@ -15,25 +15,19 @@
    limitations under the License.
  */
 using java.lang;
+using java.util;
 
-package stab.tools.bytecode.signature {
+package stab.reflection {
 
     public class ClassSignature {
-        Iterable<FormalTypeParameterSignature> formalTypeParameters;
+        Iterable<TypeSignature> formalTypeParameters;
         TypeSignature superclass;
         Iterable<TypeSignature> superinterfaces;
     
         ClassSignature() {
         }
     
-        ClassSignature(Iterable<FormalTypeParameterSignature> formalTypeParameters, TypeSignature superclass,
-                Iterable<TypeSignature> superinterfaces) {
-            this.formalTypeParameters = formalTypeParameters;
-            this.superclass = superclass;
-            this.superinterfaces = superinterfaces;
-        }
-        
-        public Iterable<FormalTypeParameterSignature> FormalTypeParameters {
+        public Iterable<TypeSignature> FormalTypeParameters {
             get {
                 return formalTypeParameters;
             }
@@ -52,4 +46,37 @@ package stab.tools.bytecode.signature {
         }
     }
     
+    public class MethodTypeSignature {
+        List<TypeSignature> formalTypeParameters;
+        ArrayList<TypeSignature> parameters;
+        TypeSignature returnType;
+        ArrayList<TypeSignature> exceptions;
+    
+        MethodTypeSignature() {
+        }
+        
+        public Iterable<TypeSignature> FormalTypeParameters {
+            get {
+                return formalTypeParameters;
+            }
+        }
+        
+        public Iterable<TypeSignature> Parameters {
+            get {
+                return parameters;
+            }
+        }
+        
+        public TypeSignature ReturnType {
+            get {
+                return returnType;
+            }
+        }
+        
+        public Iterable<TypeSignature> Exceptions {
+            get {
+                return exceptions;
+            }
+        }
+    }
 }

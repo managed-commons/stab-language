@@ -18,7 +18,7 @@ using java.lang;
 using java.lang.annotation;
 using java.util;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 using stab.tools.syntaxtree;
 
@@ -41,10 +41,10 @@ package stab.tools.compiler {
             var info = expression.getUserData(typeof(ExpressionInfo));
             switch (info.BoxingKind) {
             case Box:
-                generator.emit(JvmOpcode.Invokestatic, info.BoxingMethod);
+                generator.emit(Opcode.Invokestatic, info.BoxingMethod);
                 break;
             case Unbox:
-                generator.emit(JvmOpcode.Invokevirtual, info.BoxingMethod);
+                generator.emit(Opcode.Invokevirtual, info.BoxingMethod);
                 break;
             }
         }
@@ -53,22 +53,22 @@ package stab.tools.compiler {
             foreach (var methodBuilder in context.ConstructorBuilders) {
                 var baseConstructor = methodBuilder.DeclaringType.BaseType.getMethod("<init>",
                         (methodBuilder.DeclaringType.IsEnum)
-                            ? new ArrayList<JvmTypeInfo> { context.TypeSystem.StringType, JvmTypeInfo.INT }
-                            : Query.empty<JvmTypeInfo>());
+                            ? new ArrayList<TypeInfo> { context.TypeSystem.StringType, context.TypeSystem.IntType }
+                            : Query.empty<TypeInfo>());
                 context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, null), context.LambdaScopes[methodBuilder]);
                 var generator = context.MethodGenerationContext.Generator;
                 generator.beginScope();
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
                 if (methodBuilder.DeclaringType.IsEnum) {
-                    generator.emit(JvmOpcode.Aload, generator.getLocal("name$0"));
-                    generator.emit(JvmOpcode.Iload, generator.getLocal("ordinal$0"));
+                    generator.emit(Opcode.Aload, generator.getLocal("name$0"));
+                    generator.emit(Opcode.Iload, generator.getLocal("ordinal$0"));
                 }
-                generator.emit(JvmOpcode.Invokespecial, baseConstructor);
+                generator.emit(Opcode.Invokespecial, baseConstructor);
                 initializeLambdaScope(methodBuilder);
                 foreach (var c in methodBuilder.DeclaringType.getAllUserData(typeof(ClassDeclarationNode))) {
                     initializeFields(generator, c);
                 }
-                generator.emit(JvmOpcode.Return);
+                generator.emit(Opcode.Return);
                 generator.emptyScope();
                 context.MethodGenerationContext.Iterable = null;
             }
@@ -78,7 +78,7 @@ package stab.tools.compiler {
                     continue;
                 }
                 context.CurrentType = typeBuilder;
-                var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<JvmTypeInfo>());
+                var methodBuilder = (MethodBuilder)typeBuilder.getMethod("<clinit>", Query.empty<TypeInfo>());
                 if (methodBuilder != null) {
                     context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, null), context.LambdaScopes[methodBuilder]);
                     var generator = context.MethodGenerationContext.Generator;
@@ -87,7 +87,7 @@ package stab.tools.compiler {
                     foreach (var c in typeBuilder.getAllUserData(typeof(ClassDeclarationNode))) {
                         initializeStaticFields(generator, c);
                     }
-                    generator.emit(JvmOpcode.Return);
+                    generator.emit(Opcode.Return);
                     generator.endScope();
                     context.MethodGenerationContext.Iterable = null;
                 }
@@ -95,7 +95,7 @@ package stab.tools.compiler {
         }
         
         void generateMethodBytecode(MethodDeclarationNode methodDeclaration) {
-            var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
             if (methodDeclaration.Body != null) {
                 context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, methodDeclaration.Body),
                     context.LambdaScopes[methodBuilder]);
@@ -108,7 +108,7 @@ package stab.tools.compiler {
             }
             if (!methodBuilder.IsExcludedFromCompilation) {
                 var member = MemberInfo.getInfo(methodBuilder);
-                emitBridgeMethod((JvmTypeBuilder)methodBuilder.DeclaringType, methodBuilder,
+                emitBridgeMethod((TypeBuilder)methodBuilder.DeclaringType, methodBuilder,
                     member.getOverridenMembers(context.AnnotatedTypeSystem).select(p => p.Method));
             }
         }
@@ -118,7 +118,7 @@ package stab.tools.compiler {
                 if (decl.Value == null) {
                     continue;
                 }
-                var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                var fieldBuilder = decl.getUserData(typeof(FieldBuilder));
                 if (fieldBuilder.IsStatic) {
                     var info = decl.Value.getUserData(typeof(ExpressionInfo));
                     if (info.IsConstant && info.BoxingKind == BoxingKind.None) {
@@ -186,27 +186,27 @@ package stab.tools.compiler {
             if (constructorDeclaration.Modifiers.contains(Modifier.Static)) {
                 return;
             }
-            var methodBuilder = constructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = constructorDeclaration.getUserData(typeof(MethodBuilder));
             context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, constructorDeclaration.Body),
                 context.LambdaScopes[methodBuilder]);
             var generator = context.MethodGenerationContext.Generator;
             generator.beginScope();
             var initializer = constructorDeclaration.getInitializer();
-            generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+            generator.emit(Opcode.Aload, generator.getLocal("this"));
             var initFields = true;
             if (initializer != null) {
                 var iinfo = initializer.getUserData(typeof(ExpressionInfo));
                 var method = iinfo.Method;
                 expressionGenerator.emitArguments(initializer.Arguments, method.Parameters, method.Parameters.count(), method.IsVarargs);
-                generator.emit(JvmOpcode.Invokespecial, method);
+                generator.emit(Opcode.Invokespecial, method);
                 initFields = initializer.IsSuper;
             } else {
                 var iinfo = constructorDeclaration.getUserData(typeof(ExpressionInfo));
                 if (methodBuilder.DeclaringType.IsEnum) {
-                    generator.emit(JvmOpcode.Aload, generator.getLocal("name$0"));
-                    generator.emit(JvmOpcode.Iload, generator.getLocal("ordinal$0"));
+                    generator.emit(Opcode.Aload, generator.getLocal("name$0"));
+                    generator.emit(Opcode.Iload, generator.getLocal("ordinal$0"));
                 }
-                generator.emit(JvmOpcode.Invokespecial, iinfo.Method);
+                generator.emit(Opcode.Invokespecial, iinfo.Method);
             }
             initializeLambdaScope(methodBuilder);
             if (initFields) {
@@ -221,7 +221,7 @@ package stab.tools.compiler {
         }
 
         void generateDestructorBytecode(DestructorDeclarationNode destructorDeclaration) {
-            var methodBuilder = destructorDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = destructorDeclaration.getUserData(typeof(MethodBuilder));
             context.MethodGenerationContext.initialize(getMethodBuilder(methodBuilder, destructorDeclaration.Body),
                 context.LambdaScopes[methodBuilder]);
             var generator = context.MethodGenerationContext.Generator;
@@ -231,27 +231,27 @@ package stab.tools.compiler {
             var startLabel = generator.defineLabel();
             generator.markLabel(startLabel);
             handleStatement(destructorDeclaration.Body, null);
-            JvmLabelMarker endBodyLabel = generator.defineLabel();
+            LabelMarker endBodyLabel = generator.defineLabel();
             generator.markLabel(endBodyLabel);
             var fallThrough = destructorDeclaration.Body.getUserData(typeof(StatementInfo)).IsEndPointReachable;
-            var parentFinalize = methodBuilder.DeclaringType.BaseType.getMethod("finalize", Query.empty<JvmTypeInfo>());
+            var parentFinalize = methodBuilder.DeclaringType.BaseType.getMethod("finalize", Query.empty<TypeInfo>());
             
-            JvmLabelMarker endLabel = null;
+            LabelMarker endLabel = null;
             if (fallThrough) {
                 endLabel = generator.defineLabel();
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                generator.emit(JvmOpcode.Invokespecial, parentFinalize);
-                generator.emit(JvmOpcode.Goto, endLabel);
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Invokespecial, parentFinalize);
+                generator.emit(Opcode.Goto, endLabel);
             }
             var targetLabel = generator.defineLabel();
             generator.markLabel(targetLabel);
-            generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-            generator.emit(JvmOpcode.Invokespecial, parentFinalize);
-            generator.emit(JvmOpcode.Athrow);
+            generator.emit(Opcode.Aload, generator.getLocal("this"));
+            generator.emit(Opcode.Invokespecial, parentFinalize);
+            generator.emit(Opcode.Athrow);
             generator.exceptionHandler(startLabel, endBodyLabel, targetLabel, null);
             if (endLabel != null) {
                 generator.markLabel(endLabel);
-                generator.emit(JvmOpcode.Return);
+                generator.emit(Opcode.Return);
             }
             generator.emptyScope();
             context.MethodGenerationContext.Iterable = null;
@@ -260,12 +260,12 @@ package stab.tools.compiler {
         void generateIndexerBytecode(IndexerDeclarationNode indexerDeclaration) {
             var get = indexerDeclaration.GetAccessor;
             var set = indexerDeclaration.SetAccessor;
-            var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-            var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
+            var getBuilder = (get == null) ? null : get.getUserData(typeof(MethodBuilder));
+            var setBuilder = (set == null) ? null : set.getUserData(typeof(MethodBuilder));
             
             var memberInfo = indexerDeclaration.getUserData(typeof(MemberInfo));
             var overriden = memberInfo.getOverridenMembers(context.getAnnotatedTypeSystem());
-            var typeBuilder = (JvmTypeBuilder)(getBuilder ?? setBuilder).DeclaringType;
+            var typeBuilder = (TypeBuilder)(getBuilder ?? setBuilder).DeclaringType;
             
             if (get != null) {
                 var methodBuilder = getBuilder;
@@ -306,12 +306,12 @@ package stab.tools.compiler {
         void generatePropertyBytecode(PropertyDeclarationNode propertyDeclaration) {
             var get = propertyDeclaration.GetAccessor;
             var set = propertyDeclaration.SetAccessor;
-            var getBuilder = (get == null) ? null : get.getUserData(typeof(JvmMethodBuilder));
-            var setBuilder = (set == null) ? null : set.getUserData(typeof(JvmMethodBuilder));
-            JvmFieldBuilder fieldBuilder = null;
+            var getBuilder = (get == null) ? null : get.getUserData(typeof(MethodBuilder));
+            var setBuilder = (set == null) ? null : set.getUserData(typeof(MethodBuilder));
+            FieldBuilder fieldBuilder = null;
             var memberInfo = propertyDeclaration.getUserData(typeof(MemberInfo));
             var overriden = memberInfo.getOverridenMembers(context.AnnotatedTypeSystem);
-            var typeBuilder = (JvmTypeBuilder)(getBuilder ?? setBuilder).DeclaringType;
+            var typeBuilder = (TypeBuilder)(getBuilder ?? setBuilder).DeclaringType;
             
             if (get != null) {
                 var methodBuilder = getBuilder;
@@ -327,10 +327,10 @@ package stab.tools.compiler {
                         fieldBuilder.setStatic(methodBuilder.IsStatic);
                         
                         if (fieldBuilder.IsStatic) {
-                            generator.emit(JvmOpcode.Getstatic, fieldBuilder);
+                            generator.emit(Opcode.Getstatic, fieldBuilder);
                         } else {
-                            generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                            generator.emit(JvmOpcode.Getfield, fieldBuilder);
+                            generator.emit(Opcode.Aload, generator.getLocal("this"));
+                            generator.emit(Opcode.Getfield, fieldBuilder);
                         }
                         generator.emit(BytecodeHelper.getReturnOpcode(fieldBuilder.Type));
                     } else {
@@ -356,10 +356,10 @@ package stab.tools.compiler {
                     initializeLambdaScope(methodBuilder);
                     if (set.Body == null) {
                         if (!fieldBuilder.IsStatic) {
-                            generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                            generator.emit(Opcode.Aload, generator.getLocal("this"));
                         }
                         // Can be null if the property is automatically implemented
-                        var local = methodBuilder.getUserData(typeof(LocalInfo));
+                        var local = methodBuilder.getUserData(typeof(LocalMemberInfo));
                         if (local != null && local.IsUsedFromLambda) {
                             var type = fieldBuilder.Type;
                             emitLoadLambdaScope(context, generator, local.Method);
@@ -368,11 +368,11 @@ package stab.tools.compiler {
                             generator.emit(BytecodeHelper.getLoadOpcode(fieldBuilder.Type), generator.getLocal("value"));
                         }
                         if (fieldBuilder.IsStatic) {
-                            generator.emit(JvmOpcode.Putstatic, fieldBuilder);
+                            generator.emit(Opcode.Putstatic, fieldBuilder);
                         } else {
-                            generator.emit(JvmOpcode.Putfield, fieldBuilder);
+                            generator.emit(Opcode.Putfield, fieldBuilder);
                         }
-                        generator.emit(JvmOpcode.Return);
+                        generator.emit(Opcode.Return);
                     } else {
                         handleStatement(set.Body, null);
                     }
@@ -390,17 +390,17 @@ package stab.tools.compiler {
         }
 
         void generateInterfaceMethodAnnotations(MethodDeclarationNode methodDeclaration) {
-            var methodBuilder = methodDeclaration.getUserData(typeof(JvmMethodBuilder));
+            var methodBuilder = methodDeclaration.getUserData(typeof(MethodBuilder));
             generateAnnotationsBytecode(methodDeclaration.Annotations, methodBuilder);
             if (methodDeclaration.DefaultValue != null) {
-                var annotationValueBuilder = new JvmAnnotationValueBuilder(methodBuilder.ReturnType, false);
+                var annotationValueBuilder = new AnnotationValueBuilder(methodBuilder.ReturnType, false);
                 methodBuilder.setDefaultValue(annotationValueBuilder);
                 generateAnnotationArgument("", methodDeclaration.DefaultValue, annotationValueBuilder);
             }
         }
         
         void emitAccessorAnnotations(AccessorDeclarationNode accessor, List<AnnotationSectionNode> commonAnnotations) {
-            var builder = (accessor == null) ? null : accessor.getUserData(typeof(JvmMethodBuilder));
+            var builder = (accessor == null) ? null : accessor.getUserData(typeof(MethodBuilder));
             if (builder != null) {
                 generateAnnotationsBytecode(commonAnnotations, builder);
                 generateAnnotationsBytecode(accessor.Annotations, builder);
@@ -408,69 +408,69 @@ package stab.tools.compiler {
         }
         
         void generateDelegateBytecode(DelegateDeclarationNode delegateDeclaration) {
-            var typeBuilder = delegateDeclaration.getUserData(typeof(JvmTypeBuilder));
+            var typeBuilder = delegateDeclaration.getUserData(typeof(TypeBuilder));
             typeBuilder.setSourceFile(PathHelper.getFileName(delegateDeclaration.Filename));
             context.CurrentType = typeBuilder;
             var parameterTypes = Collections.singletonList(context.TypeSystem.ObjectType);
-            var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod("<init>", parameterTypes);
+            var methodBuilder = (MethodBuilder)typeBuilder.getMethod("<init>", parameterTypes);
 
             var baseConstructor = typeBuilder.getBaseType().getMethod("<init>", parameterTypes);
             var gen = methodBuilder.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Aload, gen.getLocal("target"));
-            gen.emit(JvmOpcode.Invokespecial, baseConstructor);
-            gen.emit(JvmOpcode.Return);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Aload, gen.getLocal("target"));
+            gen.emit(Opcode.Invokespecial, baseConstructor);
+            gen.emit(Opcode.Return);
             gen.endScope();
         }
         
-        void generateImplicitEnumMembersBytecode(JvmTypeBuilder typeBuilder) {
+        void generateImplicitEnumMembersBytecode(TypeBuilder typeBuilder) {
             //
             // valueOf
             //
-            var methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod("valueOf",
+            var methodBuilder = (MethodBuilder)typeBuilder.getMethod("valueOf",
                     Collections.singletonList(context.TypeSystem.StringType));
             var generator = methodBuilder.CodeGenerator;
             generator.beginScope();
-            generator.emit(JvmOpcode.Ldc, typeBuilder);
-            generator.emit(JvmOpcode.Aload, generator.getLocal("str"));
-            JvmMethodInfo meth = typeBuilder.BaseType.Methods.where(p => p.Name.equals("valueOf")).first();
-            generator.emit(JvmOpcode.Invokestatic, meth);
-            generator.emit(JvmOpcode.Checkcast, typeBuilder);
-            generator.emit(JvmOpcode.Areturn);
+            generator.emit(Opcode.Ldc, typeBuilder);
+            generator.emit(Opcode.Aload, generator.getLocal("str"));
+            MethodInfo meth = typeBuilder.BaseType.Methods.where(p => p.Name.equals("valueOf")).first();
+            generator.emit(Opcode.Invokestatic, meth);
+            generator.emit(Opcode.Checkcast, typeBuilder);
+            generator.emit(Opcode.Areturn);
             generator.endScope();
 
             //
             // values
             //
-            methodBuilder = (JvmMethodBuilder)typeBuilder.getMethod("values", Query.empty<JvmTypeInfo>());
+            methodBuilder = (MethodBuilder)typeBuilder.getMethod("values", Query.empty<TypeInfo>());
             generator = methodBuilder.CodeGenerator;
             generator.beginScope();
-            generator.emit(JvmOpcode.Getstatic, typeBuilder.getField("ENUM$VALUES"));
-            generator.emit(JvmOpcode.Dup);
-            JvmLocalInfo local0 = generator.declareLocal(typeBuilder.ArrayType, "local0");
-            generator.emit(JvmOpcode.Astore, local0);
-            generator.emit(JvmOpcode.Iconst_0);
-            generator.emit(JvmOpcode.Aload, local0);
-            generator.emit(JvmOpcode.Arraylength);
-            generator.emit(JvmOpcode.Dup);
-            JvmLocalInfo local1 = generator.declareLocal(JvmTypeInfo.INT, "local1");
-            generator.emit(JvmOpcode.Istore, local1);
-            generator.emit(JvmOpcode.Anewarray, typeBuilder);
-            generator.emit(JvmOpcode.Dup);
-            JvmLocalInfo local2 = generator.declareLocal(typeBuilder.ArrayType, "local2");
-            generator.emit(JvmOpcode.Astore, local2);
-            generator.emit(JvmOpcode.Iconst_0);
-            generator.emit(JvmOpcode.Iload, local1);
-            generator.emit(JvmOpcode.Invokestatic, context.SystemArraycopyMethod);
-            generator.emit(JvmOpcode.Aload, local2);
-            generator.emit(JvmOpcode.Areturn);
+            generator.emit(Opcode.Getstatic, typeBuilder.getField("ENUM$VALUES"));
+            generator.emit(Opcode.Dup);
+            LocalInfo local0 = generator.declareLocal(typeBuilder.ArrayType, "local0");
+            generator.emit(Opcode.Astore, local0);
+            generator.emit(Opcode.Iconst_0);
+            generator.emit(Opcode.Aload, local0);
+            generator.emit(Opcode.Arraylength);
+            generator.emit(Opcode.Dup);
+            LocalInfo local1 = generator.declareLocal(context.TypeSystem.IntType, "local1");
+            generator.emit(Opcode.Istore, local1);
+            generator.emit(Opcode.Anewarray, typeBuilder);
+            generator.emit(Opcode.Dup);
+            LocalInfo local2 = generator.declareLocal(typeBuilder.ArrayType, "local2");
+            generator.emit(Opcode.Astore, local2);
+            generator.emit(Opcode.Iconst_0);
+            generator.emit(Opcode.Iload, local1);
+            generator.emit(Opcode.Invokestatic, context.SystemArraycopyMethod);
+            generator.emit(Opcode.Aload, local2);
+            generator.emit(Opcode.Areturn);
             generator.endScope();
         }
         
-        void emitBridgeMethod(JvmTypeBuilder typeBuilder, JvmMethodInfo bridgedMethod, Iterable<JvmMethodInfo> overridenMethods) {
-        	var methods = new HashSet<JvmMethodInfo>();
-        	var returnTypes = new HashSet<JvmTypeInfo>();
+        void emitBridgeMethod(TypeBuilder typeBuilder, MethodInfo bridgedMethod, Iterable<MethodInfo> overridenMethods) {
+        	var methods = new HashSet<MethodInfo>();
+        	var returnTypes = new HashSet<TypeInfo>();
             foreach (var method in overridenMethods) {
                 if (method == null) {
                 	continue;
@@ -487,7 +487,7 @@ package stab.tools.compiler {
             }
         }
         
-        private static boolean requireBridge(CompilerContext context, JvmMethodInfo bridgedMethod, JvmMethodInfo method) {
+        private static boolean requireBridge(CompilerContext context, MethodInfo bridgedMethod, MethodInfo method) {
             var def = method.OriginalMethodDefinition;
             var pit = bridgedMethod.Parameters.iterator();
             foreach (var p in def.Parameters) {
@@ -499,7 +499,7 @@ package stab.tools.compiler {
         	return getTypeErasure(context, bridgedMethod.ReturnType).OriginalTypeDefinition != getTypeErasure(context, def.ReturnType).OriginalTypeDefinition;
         }
 
-		private static boolean isBridgeDefined(CompilerContext context, JvmTypeInfo type, JvmMethodInfo method) {
+		private static boolean isBridgeDefined(CompilerContext context, TypeInfo type, MethodInfo method) {
             method = method.OriginalMethodDefinition;
         	var pcount = method.Parameters.count();
             foreach (var m in type.Methods) {
@@ -527,7 +527,7 @@ package stab.tools.compiler {
 			return false;
 		}
         
-        private static JvmTypeInfo getTypeErasure(CompilerContext context, JvmTypeInfo type) {
+        private static TypeInfo getTypeErasure(CompilerContext context, TypeInfo type) {
         	if (type.IsGenericParameter) {
         		return BytecodeHelper.getGenericParameterTypeErasure(context.TypeSystem, type);
         	} else if (type.IsArray) {
@@ -540,8 +540,8 @@ package stab.tools.compiler {
         	}
         }
         
-        static void emitBridgeMethod(CompilerContext context, JvmTypeBuilder typeBuilder, JvmMethodInfo bridgedMethod,
-                JvmMethodInfo overloadedMethod) {
+        static void emitBridgeMethod(CompilerContext context, TypeBuilder typeBuilder, MethodInfo bridgedMethod,
+                MethodInfo overloadedMethod) {
             if (isBridgeDefined(context, typeBuilder, overloadedMethod)) {
             	return;
             }
@@ -555,7 +555,7 @@ package stab.tools.compiler {
             methodBuilder.setReturnType(getTypeErasure(context, overloadedMethod.ReturnType));
             var pit = bridgedMethod.Parameters.iterator();
             foreach (var p in overloadedMethod.Parameters) {
-                JvmParameterBuilder pb = methodBuilder.addParameter(getTypeErasure(context, p.Type));
+                ParameterBuilder pb = methodBuilder.addParameter(getTypeErasure(context, p.Type));
                 pb.setName(pit.next().Name);
             }
             foreach (var t in overloadedMethod.Exceptions) {
@@ -565,15 +565,15 @@ package stab.tools.compiler {
             var gen = methodBuilder.CodeGenerator;
             gen.beginScope();
 
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
             var iit = overloadedMethod.Parameters.iterator();
             foreach (var p in bridgedMethod.Parameters) {
                 gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
                 if (iit.next().Type.IsGenericParameter) {
-                    gen.emit(JvmOpcode.Checkcast, p.Type);
+                    gen.emit(Opcode.Checkcast, p.Type);
                 }
             }
-            gen.emit(JvmOpcode.Invokevirtual, bridgedMethod);
+            gen.emit(Opcode.Invokevirtual, bridgedMethod);
             gen.emit(BytecodeHelper.getReturnOpcode(overloadedMethod.ReturnType));
             gen.endScope();
         }
@@ -617,7 +617,7 @@ package stab.tools.compiler {
                         if (ninfo.EndLabel == null) {
                             ninfo.EndLabel = generator.defineLabel();
                         }
-                        generator.emit(JvmOpcode.Goto, ninfo.EndLabel);
+                        generator.emit(Opcode.Goto, ninfo.EndLabel);
                         done = true;
                         break;
                     }
@@ -629,7 +629,7 @@ package stab.tools.compiler {
                     tinfo.BeginLabel = generator.defineLabel();
                 }
                 emitEnclosingFinally(breakStatement, info.Target);
-                generator.emit(JvmOpcode.Goto, tinfo.BeginLabel);
+                generator.emit(Opcode.Goto, tinfo.BeginLabel);
             }
             return null;
         }
@@ -643,7 +643,7 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             emitEnclosingFinally(continueStatement, info.Target);
             var tinfo = info.Target.getUserData(typeof(StatementInfo));
-            generator.emit(JvmOpcode.Goto, tinfo.ContinueLabel);
+            generator.emit(Opcode.Goto, tinfo.ContinueLabel);
             return null;
         }
 
@@ -668,7 +668,7 @@ package stab.tools.compiler {
                     handleStatement(doStatement.Statement, source);
                     generator.endScope();
                     generator.markLabel(conditionLabel);
-                    generator.emit(JvmOpcode.Goto, startLabel);
+                    generator.emit(Opcode.Goto, startLabel);
                 } else {
                     generator.beginScope();
                     handleStatement(doStatement.Statement, source);
@@ -719,7 +719,7 @@ package stab.tools.compiler {
             
             var startLabel = generator.defineLabel();
             var conditionLabel = generator.defineLabel();
-            JvmLabelMarker continueLabel;
+            LabelMarker continueLabel;
             if (forStatement.Iterator.isEmpty()) {
                 continueLabel = conditionLabel;
             } else {
@@ -745,11 +745,11 @@ package stab.tools.compiler {
                         handleStatement(s, source);
                     }
                     generator.markLabel(conditionLabel);
-                    generator.emit(JvmOpcode.Goto, startLabel);
+                    generator.emit(Opcode.Goto, startLabel);
                 }
             } else {
                 if (forStatement.Condition != null) {
-                    generator.emit(JvmOpcode.Goto, conditionLabel);
+                    generator.emit(Opcode.Goto, conditionLabel);
                 }
                 generator.markLabel(startLabel);
                 handleStatement(forStatement.Statement, source);
@@ -758,7 +758,7 @@ package stab.tools.compiler {
                     handleStatement(s, source);
                 }
                 if (forStatement.Condition == null) {
-                    generator.emit(JvmOpcode.Goto, startLabel);
+                    generator.emit(Opcode.Goto, startLabel);
                 } else {
                     if (info.EndLabel == null) {
                         info.EndLabel = generator.defineLabel();
@@ -790,7 +790,7 @@ package stab.tools.compiler {
             var conditionLabel = info.getBeginLabel();
             var sinfo = foreachStatement.Source.getUserData(typeof(ExpressionInfo));
             var isArraySource = sinfo.Type.IsArray;
-            var local = foreachStatement.getUserData(typeof(LocalInfo));
+            var local = foreachStatement.getUserData(typeof(LocalMemberInfo));
             
             expressionGenerator.handleExpression(foreachStatement.Source, null, true);
             
@@ -804,24 +804,24 @@ package stab.tools.compiler {
                 var continueLabel = generator.defineLabel();
                 info.ContinueLabel = continueLabel;
                 
-                generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Astore, generator.declareLocal(arrayType, arrayVar));
-                generator.emit(JvmOpcode.Arraylength);
-                generator.emit(JvmOpcode.Istore, generator.declareLocal(JvmTypeInfo.INT, arraylengthVar));
-                generator.emit(JvmOpcode.Iconst_0);
-                generator.emit(JvmOpcode.Istore, generator.declareLocal(JvmTypeInfo.INT, indexVar));
+                generator.emit(Opcode.Dup);
+                generator.emit(Opcode.Astore, generator.declareLocal(arrayType, arrayVar));
+                generator.emit(Opcode.Arraylength);
+                generator.emit(Opcode.Istore, generator.declareLocal(context.TypeSystem.IntType, arraylengthVar));
+                generator.emit(Opcode.Iconst_0);
+                generator.emit(Opcode.Istore, generator.declareLocal(context.TypeSystem.IntType, indexVar));
                 
-                generator.emit(JvmOpcode.Goto, conditionLabel);
+                generator.emit(Opcode.Goto, conditionLabel);
                 
                 generator.markLabel(startLabel);
                 if (local.IsUsedFromLambda) {
                     emitLoadLambdaScope(context, generator, local.Method);
                 }
-                generator.emit(JvmOpcode.Aload, generator.getLocal(arrayVar));
-                generator.emit(JvmOpcode.Iload, generator.getLocal(indexVar));
+                generator.emit(Opcode.Aload, generator.getLocal(arrayVar));
+                generator.emit(Opcode.Iload, generator.getLocal(indexVar));
                 generator.emit(BytecodeHelper.getAloadOpcode(elementType));
                 if (local.IsUsedFromLambda) {
-                    generator.emit(JvmOpcode.Putfield, getLambdaScopeField(context, local));
+                    generator.emit(Opcode.Putfield, getLambdaScopeField(context, local));
                 } else {
                     generator.emit(BytecodeHelper.getStoreOpcode(elementType), generator.declareLocal(elementType, local.Name));
                 }
@@ -829,20 +829,20 @@ package stab.tools.compiler {
                 handleStatement(foreachStatement.Statement, source);
                 
                 generator.markLabel(continueLabel);
-                generator.emit(JvmOpcode.Iinc, generator.getLocal(indexVar), 1);
+                generator.emit(Opcode.Iinc, generator.getLocal(indexVar), 1);
                 
                 generator.markLabel(conditionLabel);
-                generator.emit(JvmOpcode.Iload, generator.getLocal(indexVar));
-                generator.emit(JvmOpcode.Iload, generator.getLocal(arraylengthVar));
-                generator.emit(JvmOpcode.If_icmplt, startLabel);
+                generator.emit(Opcode.Iload, generator.getLocal(indexVar));
+                generator.emit(Opcode.Iload, generator.getLocal(arraylengthVar));
+                generator.emit(Opcode.If_icmplt, startLabel);
             } else {
-                var iterableType = foreachStatement.getUserData(typeof(JvmTypeInfo));
-                var iteratorMethod = iterableType.getMethod("iterator", Query.empty<JvmTypeInfo>());
+                var iterableType = foreachStatement.getUserData(typeof(TypeInfo));
+                var iteratorMethod = iterableType.getMethod("iterator", Query.empty<TypeInfo>());
                 var iteratorType = iteratorMethod.getReturnType();
                 var elementType = BytecodeHelper.getIterableOrIteratorElementType(iterableType);
                 var baseIterator = context.TypeSystem.getType("java/util/Iterator");
-                var hasNextMethod = baseIterator.getMethod("hasNext", Query.empty<JvmTypeInfo>());
-                JvmMethodInfo nextMethod;
+                var hasNextMethod = baseIterator.getMethod("hasNext", Query.empty<TypeInfo>());
+                MethodInfo nextMethod;
                 var requireCast = false;
                 switch (elementType.TypeKind) {
                 case Boolean:
@@ -853,57 +853,57 @@ package stab.tools.compiler {
                 case Long:
                 case Float:
                 case Double:
-                    nextMethod = iteratorType.getMethod("next" + elementType.TypeKind, Query.empty<JvmTypeInfo>());
+                    nextMethod = iteratorType.getMethod("next" + elementType.TypeKind, Query.empty<TypeInfo>());
                     break;
                 case UpperBoundedWildcard:
-                    nextMethod = baseIterator.getMethod("next", Query.empty<JvmTypeInfo>());
+                    nextMethod = baseIterator.getMethod("next", Query.empty<TypeInfo>());
                     elementType = elementType.WildcardBound;
                     requireCast = elementType != context.TypeSystem.ObjectType;
                     break;
                 case LowerBoundedWildcard:
                 case UnboundedWildcard:
-                    nextMethod = baseIterator.getMethod("next", Query.empty<JvmTypeInfo>());
+                    nextMethod = baseIterator.getMethod("next", Query.empty<TypeInfo>());
                     elementType = context.TypeSystem.ObjectType;
                     break;
                 case GenericParameter:
-                    nextMethod = baseIterator.getMethod("next", Query.empty<JvmTypeInfo>());
+                    nextMethod = baseIterator.getMethod("next", Query.empty<TypeInfo>());
                     elementType = BytecodeHelper.getGenericParameterTypeErasure(context.TypeSystem, elementType);
                     requireCast = elementType != context.TypeSystem.ObjectType;
                     break;
                 default:
-                    nextMethod = baseIterator.getMethod("next", Query.empty<JvmTypeInfo>());
+                    nextMethod = baseIterator.getMethod("next", Query.empty<TypeInfo>());
                     requireCast = elementType != context.TypeSystem.ObjectType;
                     break;
                 }
                 var iteratorVar = "foreach$iterator" + foreachCount;
 
                 var dispose = BytecodeHelper.getDisposeMethod(context.AnnotatedTypeSystem, sinfo.Type);
-                JvmLocalInfo iterableLocal = null;
+                LocalInfo iterableLocal = null;
                 if (dispose != null) {
                     var iterableVar = "foreach$iterable" + foreachCount;
                     iterableLocal = generator.declareLocal(sinfo.Type, iterableVar);
                     foreachStatement.Source.addOrReplaceUserData(iterableLocal);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Astore, iterableLocal);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Astore, iterableLocal);
                 }
                 
-                generator.emit(JvmOpcode.Invokeinterface, iteratorMethod);
-                generator.emit(JvmOpcode.Astore, generator.declareLocal(iteratorType, iteratorVar));
+                generator.emit(Opcode.Invokeinterface, iteratorMethod);
+                generator.emit(Opcode.Astore, generator.declareLocal(iteratorType, iteratorVar));
                 info.ContinueLabel = conditionLabel;
                 
-                generator.emit(JvmOpcode.Goto, conditionLabel);
+                generator.emit(Opcode.Goto, conditionLabel);
                 generator.markLabel(startLabel);
                 
                 if (local.IsUsedFromLambda) {
                     emitLoadLambdaScope(context, generator, local.Method);
                 }
-                generator.emit(JvmOpcode.Aload, generator.getLocal(iteratorVar));
-                generator.emit(JvmOpcode.Invokeinterface, nextMethod);
+                generator.emit(Opcode.Aload, generator.getLocal(iteratorVar));
+                generator.emit(Opcode.Invokeinterface, nextMethod);
                 if (requireCast) {
-                    generator.emit(JvmOpcode.Checkcast, elementType);
+                    generator.emit(Opcode.Checkcast, elementType);
                 }
                 if (local.IsUsedFromLambda) {
-                    generator.emit(JvmOpcode.Putfield, getLambdaScopeField(context, local));
+                    generator.emit(Opcode.Putfield, getLambdaScopeField(context, local));
                 } else {
                     generator.emit(BytecodeHelper.getStoreOpcode(elementType), generator.declareLocal(elementType, local.Name));
                 }
@@ -911,9 +911,9 @@ package stab.tools.compiler {
                 handleStatement(foreachStatement.Statement, source);
                 generator.markLabel(conditionLabel);
                 
-                generator.emit(JvmOpcode.Aload, generator.getLocal(iteratorVar));
-                generator.emit(JvmOpcode.Invokeinterface, hasNextMethod);
-                generator.emit(JvmOpcode.Ifne, startLabel);
+                generator.emit(Opcode.Aload, generator.getLocal(iteratorVar));
+                generator.emit(Opcode.Invokeinterface, hasNextMethod);
+                generator.emit(Opcode.Ifne, startLabel);
                 
                 if (dispose != null) {
                     var endForeachLabel = generator.defineLabel();
@@ -921,21 +921,21 @@ package stab.tools.compiler {
                     if (info.EndLabel == null) {
                         info.EndLabel = generator.defineLabel();
                     }
-                    generator.emit(JvmOpcode.Aload, iterableLocal);
-                    generator.emit(JvmOpcode.Invokevirtual, dispose);
-                    if (dispose.ReturnType != JvmTypeInfo.VOID) {
-                        generator.emit((dispose.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                    generator.emit(Opcode.Aload, iterableLocal);
+                    generator.emit(Opcode.Invokevirtual, dispose);
+                    if (dispose.ReturnType != context.TypeSystem.VoidType) {
+                        generator.emit((dispose.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                     }
-                    generator.emit(JvmOpcode.Goto, info.EndLabel);
+                    generator.emit(Opcode.Goto, info.EndLabel);
                     
                     var targetLabel = generator.defineLabel();
                     generator.markLabel(targetLabel);
-                    generator.emit(JvmOpcode.Aload, iterableLocal);
-                    generator.emit(JvmOpcode.Invokevirtual, dispose);
-                    if (dispose.ReturnType != JvmTypeInfo.VOID) {
-                        generator.emit((dispose.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                    generator.emit(Opcode.Aload, iterableLocal);
+                    generator.emit(Opcode.Invokevirtual, dispose);
+                    if (dispose.ReturnType != context.TypeSystem.VoidType) {
+                        generator.emit((dispose.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                     }
-                    generator.emit(JvmOpcode.Athrow);
+                    generator.emit(Opcode.Athrow);
                     generator.exceptionHandler(startLabel, endForeachLabel, targetLabel, null);
                 }
             }
@@ -959,7 +959,7 @@ package stab.tools.compiler {
             if (tinfo.BeginLabel == null) {
                 tinfo.BeginLabel = generator.defineLabel();
             }
-            generator.emit(JvmOpcode.Goto, tinfo.BeginLabel);
+            generator.emit(Opcode.Goto, tinfo.BeginLabel);
             return null;
         }
 
@@ -975,7 +975,7 @@ package stab.tools.compiler {
             if (tinfo.BeginLabel == null) {
                 tinfo.BeginLabel = generator.defineLabel();
             }
-            generator.emit(JvmOpcode.Goto, tinfo.BeginLabel);
+            generator.emit(Opcode.Goto, tinfo.BeginLabel);
             return null;
         }
 
@@ -1007,11 +1007,11 @@ package stab.tools.compiler {
                 if (ifFalse == null) {
                     generator.markLabel(elseLabel);
                 } else {
-                    JvmLabelMarker endLabel = null;
+                    LabelMarker endLabel = null;
                     var tinfo = ifTrue.getUserData(typeof(StatementInfo));
                     if (tinfo.IsEndPointReachable) {
                         endLabel = generator.defineLabel();
-                        generator.emit(JvmOpcode.Goto, endLabel);
+                        generator.emit(Opcode.Goto, endLabel);
                     }
                     generator.markLabel(elseLabel);
                     handleStatement(ifFalse, null);
@@ -1042,7 +1042,7 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
 
             foreach (var decl in localDeclaration.Declarators) {
-                var local = decl.getUserData(typeof(LocalInfo));
+                var local = decl.getUserData(typeof(LocalMemberInfo));
                 var type = local.Type;
                 if (decl.Value != null) {
                     if (local.IsUsedFromLambda) {
@@ -1051,7 +1051,7 @@ package stab.tools.compiler {
                     expressionGenerator.handleExpression(decl.Value, null, true);
                     emitConversion(context, type, decl.Value);
                     if (local.IsUsedFromLambda) {
-                        generator.emit(JvmOpcode.Putfield, getLambdaScopeField(context, local));
+                        generator.emit(Opcode.Putfield, getLambdaScopeField(context, local));
                     } else {
                         generator.emit(BytecodeHelper.getStoreOpcode(type), generator.declareLocal(type, local.Name));
                     }
@@ -1090,16 +1090,16 @@ package stab.tools.compiler {
                     }
                     break;
                 case Synchronized:
-                    generator.emit(JvmOpcode.Aload, statement.getUserData(typeof(JvmLocalInfo)));
-                    generator.emit(JvmOpcode.Monitorexit);
+                    generator.emit(Opcode.Aload, statement.getUserData(typeof(LocalInfo)));
+                    generator.emit(Opcode.Monitorexit);
                     break;
                 }
                 scope = scope.next;
             }
             if (context.MethodGenerationContext.IsInDestructor) {
-                var parentFinalize = context.CurrentType.BaseType.getMethod("finalize", Query.empty<JvmTypeInfo>());
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                generator.emit(JvmOpcode.Invokespecial, parentFinalize);
+                var parentFinalize = context.CurrentType.BaseType.getMethod("finalize", Query.empty<TypeInfo>());
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Invokespecial, parentFinalize);
             }
             generator.emit(BytecodeHelper.getReturnOpcode(returnType));
             return null;
@@ -1120,8 +1120,8 @@ package stab.tools.compiler {
                 int maxValue = 0;
                 expressionGenerator.handleExpression(switchStatement.Selector, null, true);
                 if (sinfo.Type.IsEnum) {
-                    generator.emit(JvmOpcode.Invokevirtual,
-                        context.TypeSystem.getType("java/lang/Enum").getMethod("ordinal", Query.empty<JvmTypeInfo>()));
+                    generator.emit(Opcode.Invokevirtual,
+                        context.TypeSystem.getType("java/lang/Enum").getMethod("ordinal", Query.empty<TypeInfo>()));
                 }
                 SwitchSectionNode defaultSection = null;
                 foreach (var section in switchStatement.Sections) {
@@ -1156,13 +1156,13 @@ package stab.tools.compiler {
                     cases.add(value);
                 }
                 if (cases.size() > 0) {
-                    var labels = new JvmLabelMarker[cases.size()];
+                    var labels = new LabelMarker[cases.size()];
                     for (int i = 0; i < sizeof(labels); i++) {
                         labels[i] = generator.defineLabel();
                     }
-                    var sortedLabels = new JvmLabelMarker[sizeof(labels)];
+                    var sortedLabels = new LabelMarker[sizeof(labels)];
                     System.arraycopy(labels, 0, sortedLabels, 0, sizeof(labels));
-                    JvmLabelMarker defaultLabel;
+                    LabelMarker defaultLabel;
                     if (defaultSection != null) {
                         defaultLabel = generator.defineLabel();
                     } else {
@@ -1184,7 +1184,7 @@ package stab.tools.compiler {
                                 }
                             }
                         }
-                        generator.emit(JvmOpcode.Tableswitch, minValue, maxValue, sortedLabels, defaultLabel);
+                        generator.emit(Opcode.Tableswitch, minValue, maxValue, sortedLabels, defaultLabel);
                     } else {
                         var keys = new int[cases.size()];
                         for (int i = 0; i < sizeof(keys); i++) {
@@ -1199,13 +1199,13 @@ package stab.tools.compiler {
                                     int tmp = keys[i];
                                     keys[i] = keys[j];
                                     keys[j] = tmp;
-                                    JvmLabelMarker tmpl = sortedLabels[i];
+                                    LabelMarker tmpl = sortedLabels[i];
                                     sortedLabels[i] = sortedLabels[j];
                                     sortedLabels[j] = tmpl;
                                 }
                             }
                         }
-                        generator.emit(JvmOpcode.Lookupswitch, keys, sortedLabels, defaultLabel);
+                        generator.emit(Opcode.Lookupswitch, keys, sortedLabels, defaultLabel);
                     }
                     int i = 0;
                     foreach (var section in switchStatement.Sections) {
@@ -1219,12 +1219,12 @@ package stab.tools.compiler {
                         }
                     }
                 } else if (defaultSection != null) {
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Pop);
                     foreach (var s in defaultSection.Statements) {
                         handleStatement(s, null);
                     }
                 } else {
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Pop);
                 }
             } else {
                 var objectType = context.TypeSystem.ObjectType;
@@ -1270,7 +1270,7 @@ package stab.tools.compiler {
 					
                     expressionGenerator.handleExpression(switchStatement.Selector, null, true);
                     var selectorVar = generator.declareLocal(objectType, "switchselector$" + context.MethodGenerationContext.nextStringSwitch());
-                    generator.emit(JvmOpcode.Astore, selectorVar);
+                    generator.emit(Opcode.Astore, selectorVar);
 					if (ntests > 0) {
 						var eq = objectType.getMethod("equals", Collections.singleton(objectType));
 						var tit = tests.iterator();
@@ -1280,29 +1280,29 @@ package stab.tools.compiler {
 							var stmts = sit.next();
 							
 							var thenLabel = (strings.size() == 1) ? null : generator.defineLabel();
-							JvmLabelMarker elseLabel = null;
+							LabelMarker elseLabel = null;
 							for (int i = 0; i < strings.size(); i++) {
 								var s = strings[i];
-								generator.emit(JvmOpcode.Aload, selectorVar);
+								generator.emit(Opcode.Aload, selectorVar);
 								if (i == strings.size() - 1) {
 									elseLabel = generator.defineLabel();
 									if (s == null) {
-										generator.emit(JvmOpcode.Ifnonnull, elseLabel);
+										generator.emit(Opcode.Ifnonnull, elseLabel);
 									} else {
-										generator.emit(JvmOpcode.Ldc, s);
-										generator.emit(JvmOpcode.Invokevirtual, eq);
-										generator.emit(JvmOpcode.Ifeq, elseLabel);
+										generator.emit(Opcode.Ldc, s);
+										generator.emit(Opcode.Invokevirtual, eq);
+										generator.emit(Opcode.Ifeq, elseLabel);
 									}
 									if (thenLabel != null) {
 										generator.markLabel(thenLabel);
 									}
 								} else {
 									if (s == null) {
-										generator.emit(JvmOpcode.Ifnull, thenLabel);
+										generator.emit(Opcode.Ifnull, thenLabel);
 									} else {
-										generator.emit(JvmOpcode.Ldc, s);
-										generator.emit(JvmOpcode.Invokevirtual, eq);
-										generator.emit(JvmOpcode.Ifne, thenLabel);
+										generator.emit(Opcode.Ldc, s);
+										generator.emit(Opcode.Invokevirtual, eq);
+										generator.emit(Opcode.Ifne, thenLabel);
 									}
 								}
 							}
@@ -1335,62 +1335,62 @@ package stab.tools.compiler {
 					
                     int n = context.CurrentType.Fields.count(p => p.Name.startsWith("stringswitch$"));
                     var mapType = context.TypeSystem.getType("java/util/Map");
-                    var argTypes = new ArrayList<JvmTypeInfo> { objectType, objectType };
+                    var argTypes = new ArrayList<TypeInfo> { objectType, objectType };
                     mapType = context.TypeSystem.getGenericType(mapType, argTypes);
                     var hashMapType = context.TypeSystem.getType("java/util/HashMap");
-                    var strings = ((JvmTypeBuilder)context.CurrentType).defineField("stringswitch$" + n, hashMapType);
+                    var strings = ((TypeBuilder)context.CurrentType).defineField("stringswitch$" + n, hashMapType);
                     strings.setFinal(true);
                     strings.setStatic(true);
                     strings.setSynthetic(true);
                     strings.setPrivate(true);
 
                     var getIntegerLabel = generator.defineLabel();
-                    generator.emit(JvmOpcode.Getstatic, strings);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Ifnonnull, getIntegerLabel);
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Getstatic, strings);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Ifnonnull, getIntegerLabel);
+                    generator.emit(Opcode.Pop);
                     
                     // Initialize the static map
-                    generator.emit(JvmOpcode.New, hashMapType);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Invokespecial, hashMapType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-                    var valueOf = context.TypeSystem.getBoxingMethod(JvmTypeInfo.INT);
-                    var intValue = context.TypeSystem.getUnboxingMethod(JvmTypeInfo.INT);
+                    generator.emit(Opcode.New, hashMapType);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Invokespecial, hashMapType.getMethod("<init>", Query.empty<TypeInfo>()));
+                    var valueOf = context.TypeSystem.getBoxingMethod(context.TypeSystem.IntType);
+                    var intValue = context.TypeSystem.getUnboxingMethod(context.TypeSystem.IntType);
                     var put = mapType.getMethod("put", argTypes);
                     var get = mapType.getMethod("get", Collections.singletonList(objectType));
-                    var labels = new JvmLabelMarker[cases.size()];
+                    var labels = new LabelMarker[cases.size()];
                     var defaultLabel = generator.defineLabel();
                     for (int i = 0; i < cases.size(); i++) {
                         labels[i] = generator.defineLabel();
-                        generator.emit(JvmOpcode.Dup);
-                        generator.emit(JvmOpcode.Ldc, cases.get(i));
+                        generator.emit(Opcode.Dup);
+                        generator.emit(Opcode.Ldc, cases.get(i));
                         BytecodeHelper.emitIntConstant(generator, i);
-                        generator.emit(JvmOpcode.Invokestatic, valueOf);
-                        generator.emit(JvmOpcode.Invokeinterface, put);
-                        generator.emit(JvmOpcode.Pop);
+                        generator.emit(Opcode.Invokestatic, valueOf);
+                        generator.emit(Opcode.Invokeinterface, put);
+                        generator.emit(Opcode.Pop);
                     }
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Putstatic, strings);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Putstatic, strings);
 
                     // Get the Integer code of the string
                     generator.markLabel(getIntegerLabel);
                     expressionGenerator.handleExpression(switchStatement.Selector, null, true);
-                    generator.emit(JvmOpcode.Invokeinterface, get);
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Invokeinterface, get);
+                    generator.emit(Opcode.Dup);
                     var getIntLabel = generator.defineLabel();
-                    generator.emit(JvmOpcode.Ifnonnull, getIntLabel);
-                    generator.emit(JvmOpcode.Pop);
+                    generator.emit(Opcode.Ifnonnull, getIntLabel);
+                    generator.emit(Opcode.Pop);
                     BytecodeHelper.emitIntConstant(generator, cases.size());
                     var switchLabel = generator.defineLabel();
-                    generator.emit(JvmOpcode.Goto, switchLabel);
+                    generator.emit(Opcode.Goto, switchLabel);
                     
                     generator.markLabel(getIntLabel);
-                    generator.emit(JvmOpcode.Checkcast, context.TypeSystem.getType("java/lang/Integer"));
-                    generator.emit(JvmOpcode.Invokevirtual, intValue);
+                    generator.emit(Opcode.Checkcast, context.TypeSystem.getType("java/lang/Integer"));
+                    generator.emit(Opcode.Invokevirtual, intValue);
 
                     // Tablewitch
                     generator.markLabel(switchLabel);
-                    generator.emit(JvmOpcode.Tableswitch, 0, cases.size() - 1, labels, defaultLabel);
+                    generator.emit(Opcode.Tableswitch, 0, cases.size() - 1, labels, defaultLabel);
                     int i = 0;
 					var defaultMarked = false;
                     foreach (var section in switchStatement.Sections) {
@@ -1424,9 +1424,9 @@ package stab.tools.compiler {
             expressionGenerator.handleExpression(synchronizedStatement.Lock, null, true);
             var local = generator.declareLocal(context.TypeSystem.getType("java/lang/Object"), "synchro$lock");
             synchronizedStatement.addOrReplaceUserData(local);
-            generator.emit(JvmOpcode.Dup);
-            generator.emit(JvmOpcode.Astore, local);
-            generator.emit(JvmOpcode.Monitorenter);
+            generator.emit(Opcode.Dup);
+            generator.emit(Opcode.Astore, local);
+            generator.emit(Opcode.Monitorenter);
             var startLabel = generator.defineLabel();
             generator.markLabel(startLabel);
             handleStatement(synchronizedStatement.Statement, null);
@@ -1437,15 +1437,15 @@ package stab.tools.compiler {
                 if (info.EndLabel == null) {
                     info.EndLabel = generator.defineLabel();
                 }
-                generator.emit(JvmOpcode.Aload, local);
-                generator.emit(JvmOpcode.Monitorexit);
-                generator.emit(JvmOpcode.Goto, info.EndLabel);
+                generator.emit(Opcode.Aload, local);
+                generator.emit(Opcode.Monitorexit);
+                generator.emit(Opcode.Goto, info.EndLabel);
             }
             var targetLabel = generator.defineLabel();
             generator.markLabel(targetLabel);
-            generator.emit(JvmOpcode.Aload, local);
-            generator.emit(JvmOpcode.Monitorexit);
-            generator.emit(JvmOpcode.Athrow);
+            generator.emit(Opcode.Aload, local);
+            generator.emit(Opcode.Monitorexit);
+            generator.emit(Opcode.Athrow);
             generator.exceptionHandler(startLabel, endSyncLabel, targetLabel, null);
             if (info.EndLabel != null) {
                 generator.markLabel(info.EndLabel);
@@ -1461,9 +1461,9 @@ package stab.tools.compiler {
             emitBeginLabel(info);
             var generator = context.MethodGenerationContext.Generator;
             if (context.Iterables[context.MethodGenerationContext.CurrentMethod] != null) {
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                generator.emit(JvmOpcode.Iconst_M1);
-                generator.emit(JvmOpcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("state$0"));
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Iconst_M1);
+                generator.emit(Opcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("state$0"));
             }
             if (throwStatement.Exception == null) {
                 var catchVars = context.MethodGenerationContext.CatchVariables;
@@ -1471,11 +1471,11 @@ package stab.tools.compiler {
                     throw new RuntimeException("Internal error: Throw used outside a catch clause");
                 }
                 var local = catchVars[catchVars.size() - 1];
-                generator.emit(JvmOpcode.Aload, local);
+                generator.emit(Opcode.Aload, local);
             } else {
                 expressionGenerator.handleExpression(throwStatement.Exception, null, true);
             }
-            generator.emit(JvmOpcode.Athrow);
+            generator.emit(Opcode.Athrow);
             return null;
         }
 
@@ -1490,7 +1490,7 @@ package stab.tools.compiler {
             }
             generator.markLabel(info.BeginLabel);
             handleStatement(tryStatement.Block, source);
-            JvmLabelMarker finallyLabel = null;
+            LabelMarker finallyLabel = null;
             if (tryStatement.Finally != null) {
                 finallyLabel = generator.defineLabel();
             }
@@ -1499,7 +1499,7 @@ package stab.tools.compiler {
                 if (info.EndLabel == null) {
                     info.EndLabel = generator.defineLabel();
                 }
-                generator.emit(JvmOpcode.Goto, info.EndLabel);
+                generator.emit(Opcode.Goto, info.EndLabel);
             }
             var endBlockLabel = generator.defineLabel();
             generator.markLabel(endBlockLabel);
@@ -1508,26 +1508,26 @@ package stab.tools.compiler {
                 generator.markLabel(targetLabel);
                 generator.beginScope();
                 var catchVars = context.getMethodGenerationContext().getCatchVariables();
-                JvmTypeInfo etype;
+                TypeInfo etype;
                 if (node.ExceptionType == null) {
                     etype = context.TypeSystem.getType("java/lang/Throwable");
                     var local = generator.declareLocal(etype, "throwable$exception");
-                    generator.emit(JvmOpcode.Astore, local);
+                    generator.emit(Opcode.Astore, local);
                     catchVars.add(local);
                 } else {
-                    etype = node.getUserData(typeof(JvmTypeInfo));
-                    JvmLocalInfo local;
+                    etype = node.getUserData(typeof(TypeInfo));
+                    LocalInfo local;
                     if (node.NameLength == 0) {
                         local = generator.declareLocal(etype, "anonymous$exception");
-	                    generator.emit(JvmOpcode.Astore, local);
+	                    generator.emit(Opcode.Astore, local);
                     } else {
                         local = generator.declareLocal(etype, context.getIdentifier(node.NameOffset, node.NameLength));
-	                    generator.emit(JvmOpcode.Astore, local);
-                    	var linfo = node.getUserData(typeof(LocalInfo));
+	                    generator.emit(Opcode.Astore, local);
+                    	var linfo = node.getUserData(typeof(LocalMemberInfo));
 	                    if (linfo.IsUsedFromLambda) {
 	                        emitLoadLambdaScope(context, generator, linfo.Method);
-		                    generator.emit(JvmOpcode.Aload, local);
-	                        generator.emit(JvmOpcode.Putfield, getLambdaScopeField(context, linfo));
+		                    generator.emit(Opcode.Aload, local);
+	                        generator.emit(Opcode.Putfield, getLambdaScopeField(context, linfo));
 	                    }
                     }
                     catchVars.add(local);
@@ -1545,7 +1545,7 @@ package stab.tools.compiler {
                     if (info.EndLabel == null) {
                         info.EndLabel = generator.defineLabel();
                     }
-                    generator.emit(JvmOpcode.Goto, info.EndLabel);
+                    generator.emit(Opcode.Goto, info.EndLabel);
                 }
                 if (tryStatement.Finally != null) {
                     var endCatchLabel = generator.defineLabel();
@@ -1560,11 +1560,11 @@ package stab.tools.compiler {
                 generator.markLabel(finallyLabel);
                 generator.beginScope();
                 var local = generator.declareLocal(context.TypeSystem.getType("java/lang/Throwable"), "finally$exception", true);
-                generator.emit(JvmOpcode.Astore, local);
+                generator.emit(Opcode.Astore, local);
                 labelRemover.handleStatement(tryStatement.Finally, null);
                 handleStatement(tryStatement.Finally, source);
-                generator.emit(JvmOpcode.Aload, local);
-                generator.emit(JvmOpcode.Athrow);
+                generator.emit(Opcode.Aload, local);
+                generator.emit(Opcode.Athrow);
                 generator.exceptionHandler(info.BeginLabel, endBlockLabel, finallyLabel, null);
                 generator.endScope();
             }
@@ -1594,8 +1594,8 @@ package stab.tools.compiler {
                 expressionGenerator.handleExpression(expr, null, true);
                 var local = generator.declareLocal(expr.getUserData(typeof(ExpressionInfo)).Type, "using$local0");
                 resource.addOrReplaceUserData(local);
-                generator.emit(JvmOpcode.Dup);
-                generator.emit(JvmOpcode.Astore, local);
+                generator.emit(Opcode.Dup);
+                generator.emit(Opcode.Astore, local);
             } else {
                 handleStatement(resource, null);
             }
@@ -1613,12 +1613,12 @@ package stab.tools.compiler {
                 if (info.EndLabel == null) {
                     info.EndLabel = generator.defineLabel();
                 }
-                generator.emit(JvmOpcode.Goto, info.EndLabel);
+                generator.emit(Opcode.Goto, info.EndLabel);
                 
                 var targetLabel = generator.defineLabel();
                 generator.markLabel(targetLabel);
                 emitDispose(usingStatement);
-                generator.emit(JvmOpcode.Athrow);
+                generator.emit(Opcode.Athrow);
                 generator.exceptionHandler(startLabel, endUsingLabel, targetLabel, null);
             }
             
@@ -1633,28 +1633,28 @@ package stab.tools.compiler {
             var generator = context.MethodGenerationContext.Generator;
             var resource = usingStatement.ResourceAcquisition;
             if (resource.StatementKind == StatementKind.Expression) {
-                var local = resource.getUserData(typeof(JvmLocalInfo));
+                var local = resource.getUserData(typeof(LocalInfo));
                 var endLabel = generator.defineLabel();
-                generator.emit(JvmOpcode.Aload, local);
-                generator.emit(JvmOpcode.Ifnull, endLabel);
-                generator.emit(JvmOpcode.Aload, local);
+                generator.emit(Opcode.Aload, local);
+                generator.emit(Opcode.Ifnull, endLabel);
+                generator.emit(Opcode.Aload, local);
                 var dispose = BytecodeHelper.getDisposeMethod(context.AnnotatedTypeSystem, local.Type);
-                generator.emit((dispose.DeclaringType.IsInterface) ? JvmOpcode.Invokeinterface : JvmOpcode.Invokevirtual, dispose);
-                if (dispose.ReturnType != JvmTypeInfo.VOID) {
-                    generator.emit((dispose.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                generator.emit((dispose.DeclaringType.IsInterface) ? Opcode.Invokeinterface : Opcode.Invokevirtual, dispose);
+                if (dispose.ReturnType != context.TypeSystem.VoidType) {
+                    generator.emit((dispose.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                 }
                 generator.markLabel(endLabel);
             } else {
                 foreach (var decl in ((LocalDeclarationStatementNode)resource).Declarators) {
-                    var l = decl.getUserData(typeof(LocalInfo));
+                    var l = decl.getUserData(typeof(LocalMemberInfo));
                     var endLabel = generator.defineLabel();
-                    generator.emit(JvmOpcode.Aload, generator.getLocal(l.Name));
-                    generator.emit(JvmOpcode.Ifnull, endLabel);
-                    generator.emit(JvmOpcode.Aload, generator.getLocal(l.Name));
+                    generator.emit(Opcode.Aload, generator.getLocal(l.Name));
+                    generator.emit(Opcode.Ifnull, endLabel);
+                    generator.emit(Opcode.Aload, generator.getLocal(l.Name));
                     var dispose = BytecodeHelper.getDisposeMethod(context.AnnotatedTypeSystem, l.Type);
-                    generator.emit((dispose.DeclaringType.IsInterface) ? JvmOpcode.Invokeinterface : JvmOpcode.Invokevirtual, dispose);
-                    if (dispose.ReturnType != JvmTypeInfo.VOID) {
-                        generator.emit((dispose.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                    generator.emit((dispose.DeclaringType.IsInterface) ? Opcode.Invokeinterface : Opcode.Invokevirtual, dispose);
+                    if (dispose.ReturnType != context.TypeSystem.VoidType) {
+                        generator.emit((dispose.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                     }
                     generator.markLabel(endLabel);
                 }
@@ -1680,10 +1680,10 @@ package stab.tools.compiler {
                     generator.markLabel(startLabel);
                     handleStatement(whileStatement.Statement, source);
                     generator.markLabel(conditionLabel);
-                    generator.emit(JvmOpcode.Goto, startLabel);
+                    generator.emit(Opcode.Goto, startLabel);
                 }
             } else {
-                generator.emit(JvmOpcode.Goto, conditionLabel);
+                generator.emit(Opcode.Goto, conditionLabel);
                 generator.markLabel(startLabel);
                 handleStatement(whileStatement.getStatement(), source);
                 generator.markLabel(conditionLabel);
@@ -1724,24 +1724,24 @@ package stab.tools.compiler {
                         break;
                     case Synchronized:
                         var synchronizedStatement = (SynchronizedStatementNode)node;
-                        generator.emit(JvmOpcode.Aload, synchronizedStatement.getUserData(typeof(JvmLocalInfo)));
-                        generator.emit(JvmOpcode.Monitorexit);
+                        generator.emit(Opcode.Aload, synchronizedStatement.getUserData(typeof(LocalInfo)));
+                        generator.emit(Opcode.Monitorexit);
                         break;
                     }
                     scope = scope.next;
                 }
 
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                generator.emit(JvmOpcode.Iconst_M1);
-                generator.emit(JvmOpcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("state$0"));
-                generator.emit(JvmOpcode.Iconst_0);
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Iconst_M1);
+                generator.emit(Opcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("state$0"));
+                generator.emit(Opcode.Iconst_0);
             } else {
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
                 expressionGenerator.handleExpression(yieldStatement.Value, null, true);
-                generator.emit(JvmOpcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("current$0"));
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("current$0"));
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
                 BytecodeHelper.emitIntConstant(generator, yieldCount);
-                generator.emit(JvmOpcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("state$0"));
+                generator.emit(Opcode.Putfield, context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("state$0"));
                 foreach (var s in generator.getAllLocalNames()) {
                     if (s.equals("this")) {
                         continue;
@@ -1749,18 +1749,18 @@ package stab.tools.compiler {
                     var local = generator.getLocal(s);
                     var f = context.MethodGenerationContext.CurrentMethod.DeclaringType.getField(s);
                     if (f == null) {
-                        var typeBuilder = (JvmTypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
+                        var typeBuilder = (TypeBuilder)context.MethodGenerationContext.CurrentMethod.DeclaringType;
                         var fb = typeBuilder.defineField(local.Name, local.getType());
                         fb.setPrivate(true);
                         f = fb;
                     }
-                    generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                    generator.emit(Opcode.Aload, generator.getLocal("this"));
                     generator.emit(BytecodeHelper.getLoadOpcode(local.Type), local);
-                    generator.emit(JvmOpcode.Putfield, f);
+                    generator.emit(Opcode.Putfield, f);
                 }
-                generator.emit(JvmOpcode.Iconst_1);
+                generator.emit(Opcode.Iconst_1);
             }
-            generator.emit(JvmOpcode.Ireturn);
+            generator.emit(Opcode.Ireturn);
             if (yieldStatement.Value != null) {
                 generator.markLabel(context.MethodGenerationContext.YieldLabels[yieldCount]);
                 foreach (String s in generator.getAllLocalNames()) {
@@ -1769,8 +1769,8 @@ package stab.tools.compiler {
                     }
                     var local = generator.getLocal(s);
                     var f = context.MethodGenerationContext.CurrentMethod.DeclaringType.getField(s);
-                    generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                    generator.emit(JvmOpcode.Getfield, f);
+                    generator.emit(Opcode.Aload, generator.getLocal("this"));
+                    generator.emit(Opcode.Getfield, f);
                     generator.emit(BytecodeHelper.getStoreOpcode(local.Type), local);
                 }
             }
@@ -1780,25 +1780,25 @@ package stab.tools.compiler {
         static void emitStringBuilderAppend(CompilerContext context, ExpressionInfo info) {
             var generator = context.MethodGenerationContext.Generator;
             var argType = (info == null) ? context.TypeSystem.StringType : info.Type;
-            Iterable<JvmTypeInfo> argList;
+            Iterable<TypeInfo> argList;
             if (argType.IsPrimitive) {
                 argList = Query.singleton(argType);
             } else {
                 argList = Query.singleton(context.TypeSystem.ObjectType);
             }
-            generator.emit(JvmOpcode.Invokevirtual, context.StringBuilderType.getMethod("append", argList));
+            generator.emit(Opcode.Invokevirtual, context.StringBuilderType.getMethod("append", argList));
         }
 
-        static void emitLoadLambdaScope(CompilerContext context, JvmCodeGenerator generator, JvmMethodInfo localMethod) {
+        static void emitLoadLambdaScope(CompilerContext context, CodeGenerator generator, MethodInfo localMethod) {
             if (context.MethodGenerationContext.CurrentMethod == localMethod) {
                 getLambdaScope(context, localMethod);
-                generator.emit(JvmOpcode.Aload, generator.getLocal("lambda$scope"));
+                generator.emit(Opcode.Aload, generator.getLocal("lambda$scope"));
             } else {
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
             }
         }
         
-        static JvmFieldInfo getLambdaScopeField(CompilerContext context, LocalInfo local) {
+        static FieldInfo getLambdaScopeField(CompilerContext context, LocalMemberInfo local) {
             var mcontext = context.MethodGenerationContext;
             var result = mcontext.LocalFields[local];
             if (result == null) {
@@ -1816,41 +1816,41 @@ package stab.tools.compiler {
             return result;
         }
         
-        static JvmTypeBuilder getLambdaScope(CompilerContext context, JvmMethodInfo localMethod) {
+        static TypeBuilder getLambdaScope(CompilerContext context, MethodInfo localMethod) {
             var mcontext = context.MethodGenerationContext;
             var generator = mcontext.Generator;
             if (mcontext.CurrentMethod == localMethod) {
                 if (!mcontext.IsInLambda && !mcontext.IsLambdaScopeInitialized) {
                     var type = mcontext.LambdaScope;
-                    generator.emit(JvmOpcode.New, type);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Invokespecial, type.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-                    generator.emit(JvmOpcode.Astore, generator.declareLocal(type, "lambda$scope"));
+                    generator.emit(Opcode.New, type);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Invokespecial, type.getMethod("<init>", Query.empty<TypeInfo>()));
+                    generator.emit(Opcode.Astore, generator.declareLocal(type, "lambda$scope"));
                     mcontext.IsLambdaScopeInitialized = true;
                 }
                 if (mcontext.IsLambdaScopeInitialized) {
                     var field = mcontext.LambdaScope.getField("this$0");
                     if (field != null && !mcontext.IsLambdaScopeThisInitialized && !mcontext.IsInLambda) {
-						generator.emit(JvmOpcode.Aload, generator.getLocal("lambda$scope"));
-                        generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                        generator.emit(JvmOpcode.Putfield, field);
+						generator.emit(Opcode.Aload, generator.getLocal("lambda$scope"));
+                        generator.emit(Opcode.Aload, generator.getLocal("this"));
+                        generator.emit(Opcode.Putfield, field);
                         mcontext.IsLambdaScopeThisInitialized = true;
                     }
                 }
                 var allParams = mcontext.ParametersUsedInLambdas;
                 var lparams = mcontext.ParametersUsedInLambda;
                 if (!lparams.isEmpty()) {
-                    foreach (var param in lparams.toArray(new LocalInfo[lparams.size()])) {
+                    foreach (var param in lparams.toArray(new LocalMemberInfo[lparams.size()])) {
                         if (allParams.contains(param) || param.Method != mcontext.CurrentMethod) {
                             continue;
                         }
                         if (mcontext.IsInLambda) {
-                            generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                            generator.emit(Opcode.Aload, generator.getLocal("this"));
                         } else {
-                            generator.emit(JvmOpcode.Aload, generator.getLocal("lambda$scope"));
+                            generator.emit(Opcode.Aload, generator.getLocal("lambda$scope"));
                         }
                         generator.emit(BytecodeHelper.getLoadOpcode(param.Type), generator.getLocal(param.Name));
-                        generator.emit(JvmOpcode.Putfield, context.getLocalField(mcontext.LambdaScope, param));
+                        generator.emit(Opcode.Putfield, context.getLocalField(mcontext.LambdaScope, param));
                         allParams.add(param);
                         lparams.remove(param);
                     }
@@ -1860,22 +1860,22 @@ package stab.tools.compiler {
             return mcontext.LambdaScope;
         }
         
-        static void emitThisAccess(CompilerContext context, JvmCodeGenerator generator) {
+        static void emitThisAccess(CompilerContext context, CodeGenerator generator) {
             if (context.MethodGenerationContext.IsInLambda) {
                 var field = context.MethodGenerationContext.LambdaScope.getField("this$0");
                 context.MethodGenerationContext.IsLambdaScopeUsed = true;
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                generator.emit(JvmOpcode.Getfield, field);
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Getfield, field);
             } else if (context.MethodGenerationContext.IsInIterable) {
                 var field = context.MethodGenerationContext.CurrentMethod.DeclaringType.getField("this$0");
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
-                generator.emit(JvmOpcode.Getfield, field);
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Getfield, field);
             } else {
-                generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                generator.emit(Opcode.Aload, generator.getLocal("this"));
             }
         }
         
-        static void emitGenericCast(CompilerContext context, JvmTypeInfo target, JvmTypeInfo source) {
+        static void emitGenericCast(CompilerContext context, TypeInfo target, TypeInfo source) {
             if (target == source) {
                 return;
             }
@@ -1891,17 +1891,17 @@ package stab.tools.compiler {
                 }
                 if (source.GenericParameterBounds.count() == 1) {
                     if (!target.isAssignableFrom(source.GenericParameterBounds.single())) {
-                        generator.emit(JvmOpcode.Checkcast, target);
+                        generator.emit(Opcode.Checkcast, target);
                     }
                 } else {
-                    generator.emit(JvmOpcode.Checkcast, target);
+                    generator.emit(Opcode.Checkcast, target);
                 }
             } else if (isGenericArray(source)) {
-                generator.emit(JvmOpcode.Checkcast, target);
+                generator.emit(Opcode.Checkcast, target);
             }
         }
         
-        private static boolean isGenericArray(JvmTypeInfo type) {
+        private static boolean isGenericArray(TypeInfo type) {
             if (!type.IsArray) {
                 return false;
             }
@@ -1911,7 +1911,7 @@ package stab.tools.compiler {
             return type.IsGenericParameter;
         }
         
-        static void emitConversion(CompilerContext context, JvmTypeInfo targetType, ExpressionNode expression) {
+        static void emitConversion(CompilerContext context, TypeInfo targetType, ExpressionNode expression) {
             var generator = context.MethodGenerationContext.Generator;
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info == null) {
@@ -1923,11 +1923,11 @@ package stab.tools.compiler {
             }
             BytecodeHelper.emitNumericConversion(generator, type, targetType);
             if (!targetType.IsPrimitive && info.BoxingKind == BoxingKind.Unbox) {
-                generator.emit(JvmOpcode.Invokestatic, context.TypeSystem.getBoxingMethod((targetType.IsObject) ? type : targetType));
+                generator.emit(Opcode.Invokestatic, context.TypeSystem.getBoxingMethod((targetType.IsObject) ? type : targetType));
             }
         }
         
-        void emitArray(int dimensions, JvmTypeInfo type, Iterator<ExpressionNode> values) {
+        void emitArray(int dimensions, TypeInfo type, Iterator<ExpressionNode> values) {
             var generator = context.MethodGenerationContext.Generator;
             if (values == null) {
                 BytecodeHelper.emitNewarray(generator, dimensions, type.ElementType);
@@ -1937,7 +1937,7 @@ package stab.tools.compiler {
                 int i = 0;
                 while (values.hasNext()) {
                     var e = values.next();
-                    generator.emit(JvmOpcode.Dup);
+                    generator.emit(Opcode.Dup);
                     BytecodeHelper.emitIntConstant(generator, i++);
                     expressionGenerator.emitNestedExpression(e, type);
                     generator.emit(opcode);
@@ -1945,10 +1945,10 @@ package stab.tools.compiler {
             }
         }
 
-        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmTypeBuilder typeBuilder) {
+        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, TypeBuilder typeBuilder) {
             foreach (var section in annotations) {
                 foreach (var annotation in section.Annotations) {
-                    var type = annotation.getUserData(typeof(JvmTypeInfo));
+                    var type = annotation.getUserData(typeof(TypeInfo));
                     var retentionPolicy = BytecodeHelper.getRetentionPolicy(type);
                     if (retentionPolicy != RetentionPolicy.SOURCE) {
                         generateAnnotationBytecode(annotation, typeBuilder.addAnnotation(type, retentionPolicy == RetentionPolicy.RUNTIME));
@@ -1957,10 +1957,10 @@ package stab.tools.compiler {
             }
         }
         
-        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmFieldBuilder fieldBuilder) {
+        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, FieldBuilder fieldBuilder) {
             foreach (var section in annotations) {
                 foreach (var annotation in section.Annotations) {
-                    var type = annotation.getUserData(typeof(JvmTypeInfo));
+                    var type = annotation.getUserData(typeof(TypeInfo));
                     var retentionPolicy = BytecodeHelper.getRetentionPolicy(type);
                     if (retentionPolicy != RetentionPolicy.SOURCE) {
                         generateAnnotationBytecode(annotation, fieldBuilder.addAnnotation(type, retentionPolicy == RetentionPolicy.RUNTIME));
@@ -1969,10 +1969,10 @@ package stab.tools.compiler {
             }
         }
         
-        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmMethodBuilder methodBuilder) {
+        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, MethodBuilder methodBuilder) {
             foreach (var section in annotations) {
                 foreach (var annotation in section.Annotations) {
-                    var type = annotation.getUserData(typeof(JvmTypeInfo));
+                    var type = annotation.getUserData(typeof(TypeInfo));
                     var retentionPolicy = BytecodeHelper.getRetentionPolicy(type);
                     if (retentionPolicy != RetentionPolicy.SOURCE) {
                         generateAnnotationBytecode(annotation, methodBuilder.addAnnotation(type, retentionPolicy == RetentionPolicy.RUNTIME));
@@ -1981,10 +1981,10 @@ package stab.tools.compiler {
             }
         }
 
-        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, JvmParameterBuilder parameterBuilder) {
+        void generateAnnotationsBytecode(List<AnnotationSectionNode> annotations, ParameterBuilder parameterBuilder) {
             foreach (var section in annotations) {
                 foreach (var annotation in section.Annotations) {
-                    var type = annotation.getUserData(typeof(JvmTypeInfo));
+                    var type = annotation.getUserData(typeof(TypeInfo));
                     var retentionPolicy = BytecodeHelper.getRetentionPolicy(type);
                     if (retentionPolicy != RetentionPolicy.SOURCE) {
                         generateAnnotationBytecode(annotation, parameterBuilder.addAnnotation(type, retentionPolicy == RetentionPolicy.RUNTIME));
@@ -1993,7 +1993,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void generateAnnotationBytecode(AnnotationCreationNode annotation, JvmAnnotationValueBuilder annotationBuilder) {
+        private void generateAnnotationBytecode(AnnotationCreationNode annotation, AnnotationValueBuilder annotationBuilder) {
             var e = annotation.Initializer;
             if (e != null) {
                 if (e.ExpressionKind == ExpressionKind.ObjectInitializer) {
@@ -2007,7 +2007,7 @@ package stab.tools.compiler {
             }
         }
 
-        private void generateAnnotationArgument(String name, ExpressionNode expression, JvmAnnotationValueBuilder annotationBuilder) {
+        private void generateAnnotationArgument(String name, ExpressionNode expression, AnnotationValueBuilder annotationBuilder) {
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info.IsConstant) {
                 switch (info.Type.TypeKind) {
@@ -2045,7 +2045,7 @@ package stab.tools.compiler {
                 switch (expression.ExpressionKind) {
                 case Annotation:
                     var annotationSection = (AnnotationSectionNode)expression;
-                    var valueBuilder = annotationBuilder.setAnnotationArgument(name, annotationSection.getUserData(typeof(JvmTypeInfo)), true);
+                    var valueBuilder = annotationBuilder.setAnnotationArgument(name, annotationSection.getUserData(typeof(TypeInfo)), true);
                     foreach (var a in annotationSection.Annotations) {
                         generateAnnotationBytecode(a, valueBuilder);
                     }
@@ -2057,7 +2057,7 @@ package stab.tools.compiler {
                     }
                     break;
                 case Typeof:
-                    annotationBuilder.setTypeArgument(name, expression.getUserData(typeof(JvmTypeInfo)));
+                    annotationBuilder.setTypeArgument(name, expression.getUserData(typeof(TypeInfo)));
                     break;
                 default:
                     var mi = info.Members.single();
@@ -2067,7 +2067,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void generateAnnotationArrayArgumentElement(ExpressionNode expression, JvmAnnotationArrayValueBuilder arrayBuilder) {
+        private void generateAnnotationArrayArgumentElement(ExpressionNode expression, AnnotationArrayValueBuilder arrayBuilder) {
             var info = expression.getUserData(typeof(ExpressionInfo));
             if (info.IsConstant) {
                 switch (info.Type.TypeKind) {
@@ -2117,7 +2117,7 @@ package stab.tools.compiler {
                     }
                     break;
                 case Typeof:
-                    arrayBuilder.addTypeArgument(expression.getUserData(typeof(JvmTypeInfo)));
+                    arrayBuilder.addTypeArgument(expression.getUserData(typeof(TypeInfo)));
                     break;
                 default:
                     var mi = info.Members.single();
@@ -2141,17 +2141,17 @@ package stab.tools.compiler {
                     }
                     break;
                 case Synchronized:
-                    generator.emit(JvmOpcode.Aload, node.getUserData(typeof(JvmLocalInfo)));
-                    generator.emit(JvmOpcode.Monitorexit);
+                    generator.emit(Opcode.Aload, node.getUserData(typeof(LocalInfo)));
+                    generator.emit(Opcode.Monitorexit);
                     break;
                 case Foreach:
-                    var local = ((ForeachStatementNode)node).getUserData(typeof(JvmLocalInfo));
+                    var local = ((ForeachStatementNode)node).getUserData(typeof(LocalInfo));
                     if (local != null) {
                         var dispose = BytecodeHelper.getDisposeMethod(context.AnnotatedTypeSystem, local.Type);
-                        generator.emit(JvmOpcode.Aload, local);
-                        generator.emit(JvmOpcode.Invokevirtual, dispose);
-                        if (dispose.ReturnType != JvmTypeInfo.VOID) {
-                            generator.emit((dispose.ReturnType.IsCategory2) ? JvmOpcode.Pop2 : JvmOpcode.Pop);
+                        generator.emit(Opcode.Aload, local);
+                        generator.emit(Opcode.Invokevirtual, dispose);
+                        if (dispose.ReturnType != context.TypeSystem.VoidType) {
+                            generator.emit((dispose.ReturnType.IsCategory2) ? Opcode.Pop2 : Opcode.Pop);
                         }
                     }
                     break;
@@ -2163,7 +2163,7 @@ package stab.tools.compiler {
             }
         }
 
-        private JvmMethodBuilder getMethodBuilder(JvmMethodBuilder methodBuilder, BlockStatementNode body) {
+        private MethodBuilder getMethodBuilder(MethodBuilder methodBuilder, BlockStatementNode body) {
             if (body == null) {
                 return methodBuilder;
             }
@@ -2176,9 +2176,9 @@ package stab.tools.compiler {
             if (iterableType == null) {
                 return methodBuilder;
             }
-            JvmTypeInfo objectType = context.TypeSystem.getObjectType();
-            JvmTypeInfo elementType = BytecodeHelper.getIterableOrIteratorElementType(methodBuilder.ReturnType);
-            JvmTypeInfo iterableInterface;
+            TypeInfo objectType = context.TypeSystem.getObjectType();
+            TypeInfo elementType = BytecodeHelper.getIterableOrIteratorElementType(methodBuilder.ReturnType);
+            TypeInfo iterableInterface;
             switch (elementType.TypeKind) {
             case Boolean:
                 iterableInterface = context.TypeSystem.getType("stab/lang/BooleanIterable");
@@ -2209,14 +2209,14 @@ package stab.tools.compiler {
                 break;
             }
             iterableType.addInterface(iterableInterface);
-            var iteratorInterface = iterableInterface.getMethod("iterator", Query.empty<JvmTypeInfo>()).ReturnType;
+            var iteratorInterface = iterableInterface.getMethod("iterator", Query.empty<TypeInfo>()).ReturnType;
             
-            JvmFieldBuilder thisField = null;
+            FieldBuilder thisField = null;
             if (!methodBuilder.IsStatic) {
                 thisField = iterableType.defineField("this$0", methodBuilder.DeclaringType);
                 thisField.setPrivate(true);
             }
-            var fields = new ArrayList<JvmFieldBuilder>();
+            var fields = new ArrayList<FieldBuilder>();
             foreach (var p in methodBuilder.Parameters) {
                 var f = iterableType.defineField(p.Name, p.Type);
                 f.setPrivate(true);
@@ -2228,7 +2228,7 @@ package stab.tools.compiler {
             //
             
             var iterableInit = iterableType.defineMethod("<init>");
-            iterableInit.setReturnType(JvmTypeInfo.VOID);
+            iterableInit.setReturnType(context.TypeSystem.VoidType);
             if (!methodBuilder.IsStatic) {
                 var pb = iterableInit.addParameter(methodBuilder.DeclaringType);
                 pb.setName("this$0");
@@ -2237,31 +2237,31 @@ package stab.tools.compiler {
                 var pb = iterableInit.addParameter(p.Type);
                 pb.setName(p.Name);
             }
-            var baseConstructor = objectType.getMethod("<init>", Query.empty<JvmTypeInfo>());
+            var baseConstructor = objectType.getMethod("<init>", Query.empty<TypeInfo>());
             var gen = iterableInit.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Invokespecial, baseConstructor);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Invokespecial, baseConstructor);
             if (!methodBuilder.IsStatic) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this$0"));
-                gen.emit(JvmOpcode.Putfield, thisField);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Aload, gen.getLocal("this$0"));
+                gen.emit(Opcode.Putfield, thisField);
             }
             foreach (var f in fields) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
                 gen.emit(BytecodeHelper.getLoadOpcode(f.Type), gen.getLocal(f.Name));
-                gen.emit(JvmOpcode.Putfield, f);
+                gen.emit(Opcode.Putfield, f);
             }
             
             iterableType.addInterface(iteratorInterface);
-            var moveNextField = iterableType.defineField("moveNext$0", JvmTypeInfo.BOOLEAN);
+            var moveNextField = iterableType.defineField("moveNext$0", context.TypeSystem.BooleanType);
             moveNextField.setPrivate(true);
 
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Iconst_1);
-            gen.emit(JvmOpcode.Putfield, moveNextField);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Iconst_1);
+            gen.emit(Opcode.Putfield, moveNextField);
             
-            gen.emit(JvmOpcode.Return);
+            gen.emit(Opcode.Return);
             gen.endScope();
 
             //
@@ -2276,19 +2276,19 @@ package stab.tools.compiler {
             iteratorMethod.setReturnType(iteratorInterface);
             gen = iteratorMethod.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.New, iterableType);
-            gen.emit(JvmOpcode.Dup);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.New, iterableType);
+            gen.emit(Opcode.Dup);
             if (!methodBuilder.IsStatic) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Getfield, thisField);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Getfield, thisField);
             }
             foreach (var f in fields) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Getfield, f);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Getfield, f);
             }
-            gen.emit(JvmOpcode.Invokespecial, iterableInit);
-            gen.emit(JvmOpcode.Areturn);
+            gen.emit(Opcode.Invokespecial, iterableInit);
+            gen.emit(Opcode.Areturn);
             gen.endScope();
 
             //
@@ -2297,16 +2297,16 @@ package stab.tools.compiler {
             
             gen = methodBuilder.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.New, iterableType);
-            gen.emit(JvmOpcode.Dup);
+            gen.emit(Opcode.New, iterableType);
+            gen.emit(Opcode.Dup);
             if (!methodBuilder.IsStatic) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
             }
             foreach (var p in methodBuilder.Parameters) {
                 gen.emit(BytecodeHelper.getLoadOpcode(p.Type), gen.getLocal(p.Name));
             }
-            gen.emit(JvmOpcode.Invokespecial, iterableInit);
-            gen.emit(JvmOpcode.Areturn);
+            gen.emit(Opcode.Invokespecial, iterableInit);
+            gen.emit(Opcode.Areturn);
             gen.endScope();
 
             //
@@ -2322,9 +2322,9 @@ package stab.tools.compiler {
                 bridgeMethod.setReturnType(iteratorInterface.Interfaces.single());
                 gen = bridgeMethod.CodeGenerator;
                 gen.beginScope();
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Invokevirtual, iteratorMethod);
-                gen.emit(JvmOpcode.Areturn);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Invokevirtual, iteratorMethod);
+                gen.emit(Opcode.Areturn);
                 gen.endScope();
             }
             
@@ -2332,16 +2332,16 @@ package stab.tools.compiler {
             // Iterator implementation ================================================================
             //
 
-            var hasNextField = iterableType.defineField("hasNext$0", JvmTypeInfo.BOOLEAN);
+            var hasNextField = iterableType.defineField("hasNext$0", context.TypeSystem.BooleanType);
             hasNextField.setPrivate(true);
             var currentField = iterableType.defineField("current$0", elementType);
             currentField.setPrivate(true);
-            var stateField = iterableType.defineField("state$0", JvmTypeInfo.INT);
+            var stateField = iterableType.defineField("state$0", context.TypeSystem.IntType);
             stateField.setPrivate(true);
 
-            JvmMethodBuilder moveNextMethod = iterableType.defineMethod("moveNext");
+            MethodBuilder moveNextMethod = iterableType.defineMethod("moveNext");
             moveNextMethod.setPrivate(true);
-            moveNextMethod.setReturnType(JvmTypeInfo.BOOLEAN);
+            moveNextMethod.setReturnType(context.TypeSystem.BooleanType);
 
             //
             //	private void advance() {
@@ -2354,22 +2354,22 @@ package stab.tools.compiler {
             
             var advanceMethod = iterableType.defineMethod("advance");
             advanceMethod.setPrivate(true);
-            advanceMethod.setReturnType(JvmTypeInfo.VOID);
+            advanceMethod.setReturnType(context.TypeSystem.VoidType);
             gen = advanceMethod.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, moveNextField);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Getfield, moveNextField);
             var elseLabel = gen.defineLabel();
-            gen.emit(JvmOpcode.Ifeq, elseLabel);
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Invokevirtual, moveNextMethod);
-            gen.emit(JvmOpcode.Putfield, hasNextField);
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Iconst_0);
-            gen.emit(JvmOpcode.Putfield, moveNextField);
+            gen.emit(Opcode.Ifeq, elseLabel);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Invokevirtual, moveNextMethod);
+            gen.emit(Opcode.Putfield, hasNextField);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Iconst_0);
+            gen.emit(Opcode.Putfield, moveNextField);
             gen.markLabel(elseLabel);
-            gen.emit(JvmOpcode.Return);
+            gen.emit(Opcode.Return);
             gen.endScope();
 
             //
@@ -2381,14 +2381,14 @@ package stab.tools.compiler {
             var removeMethod = iterableType.defineMethod("remove");
             removeMethod.setPublic(true);
             removeMethod.setFinal(true);
-            removeMethod.setReturnType(JvmTypeInfo.VOID);
+            removeMethod.setReturnType(context.TypeSystem.VoidType);
             gen = removeMethod.CodeGenerator;
             gen.beginScope();
             var exceptionType = context.TypeSystem.getType("java/lang/UnsupportedOperationException");
-            gen.emit(JvmOpcode.New, exceptionType);
-            gen.emit(JvmOpcode.Dup);
-            gen.emit(JvmOpcode.Invokespecial, exceptionType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-            gen.emit(JvmOpcode.Athrow);
+            gen.emit(Opcode.New, exceptionType);
+            gen.emit(Opcode.Dup);
+            gen.emit(Opcode.Invokespecial, exceptionType.getMethod("<init>", Query.empty<TypeInfo>()));
+            gen.emit(Opcode.Athrow);
             gen.endScope();
 
             //
@@ -2401,14 +2401,14 @@ package stab.tools.compiler {
             var hasNextMethod = iterableType.defineMethod("hasNext");
             hasNextMethod.setPublic(true);
             hasNextMethod.setFinal(true);
-            hasNextMethod.setReturnType(JvmTypeInfo.BOOLEAN);
+            hasNextMethod.setReturnType(context.TypeSystem.BooleanType);
             gen = hasNextMethod.CodeGenerator;
             gen.beginScope();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Invokevirtual, advanceMethod);
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, hasNextField);
-            gen.emit(JvmOpcode.Ireturn);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Invokevirtual, advanceMethod);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Getfield, hasNextField);
+            gen.emit(Opcode.Ireturn);
             gen.endScope();
             
             //
@@ -2422,7 +2422,7 @@ package stab.tools.compiler {
             //	}
             //
 
-            JvmMethodBuilder nextPrimitiveMethod = null;
+            MethodBuilder nextPrimitiveMethod = null;
             if (elementType.IsPrimitive) {
                 nextPrimitiveMethod = iterableType.defineMethod("next" + elementType.TypeKind);
                 nextPrimitiveMethod.setPublic(true);
@@ -2437,7 +2437,7 @@ package stab.tools.compiler {
             var nextMethod = iterableType.defineMethod("next");
             nextMethod.setPublic(true);
             nextMethod.setFinal(true);
-            JvmMethodInfo boxingMethod = null;
+            MethodInfo boxingMethod = null;
             if (elementType.IsPrimitive) {
                 boxingMethod = context.TypeSystem.getBoxingMethod(elementType);
                 nextMethod.setReturnType(boxingMethod.ReturnType);
@@ -2447,10 +2447,10 @@ package stab.tools.compiler {
             gen = nextMethod.CodeGenerator;
             gen.beginScope();
             if (elementType.IsPrimitive) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Invokevirtual, nextPrimitiveMethod);
-                gen.emit(JvmOpcode.Invokestatic, boxingMethod);
-                gen.emit(JvmOpcode.Areturn);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Invokevirtual, nextPrimitiveMethod);
+                gen.emit(Opcode.Invokestatic, boxingMethod);
+                gen.emit(Opcode.Areturn);
             } else {
                 emitNextBody(gen, advanceMethod, hasNextField, moveNextField, currentField);
             }
@@ -2465,9 +2465,9 @@ package stab.tools.compiler {
                 nextBridgeMethod.setReturnType(objectType);
                 gen = nextBridgeMethod.CodeGenerator;
                 gen.beginScope();
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Invokevirtual, nextMethod);
-                gen.emit(JvmOpcode.Areturn);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Invokevirtual, nextMethod);
+                gen.emit(Opcode.Areturn);
                 gen.endScope();
             }
 
@@ -2483,18 +2483,18 @@ package stab.tools.compiler {
             for (int i = 0; i < info.YieldCount; i++) {
                 context.MethodGenerationContext.YieldLabels.add(gen.defineLabel());
             }
-            var labels = context.MethodGenerationContext.YieldLabels.toArray(new JvmLabelMarker[info.YieldCount]);
+            var labels = context.MethodGenerationContext.YieldLabels.toArray(new LabelMarker[info.YieldCount]);
             var defaultLabel = gen.defineLabel();
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, stateField);
-            gen.emit(JvmOpcode.Tableswitch, 0, info.YieldCount, labels, defaultLabel);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Getfield, stateField);
+            gen.emit(Opcode.Tableswitch, 0, info.YieldCount, labels, defaultLabel);
             gen.markLabel(defaultLabel);
-            gen.emit(JvmOpcode.Iconst_0);
-            gen.emit(JvmOpcode.Ireturn);
+            gen.emit(Opcode.Iconst_0);
+            gen.emit(Opcode.Ireturn);
             gen.markLabel(startLabel);
             foreach (var f in fields) {
-                gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-                gen.emit(JvmOpcode.Getfield, f);
+                gen.emit(Opcode.Aload, gen.getLocal("this"));
+                gen.emit(Opcode.Getfield, f);
                 gen.emit(BytecodeHelper.getStoreOpcode(f.Type), gen.declareLocal(f.Type, f.Name));
             }
             
@@ -2502,34 +2502,34 @@ package stab.tools.compiler {
             return moveNextMethod;
         }
         
-        private void emitNextBody(JvmCodeGenerator gen, JvmMethodInfo advanceMethod, JvmFieldInfo hasNextField,
-                JvmFieldInfo moveNextField, JvmFieldInfo currentField) {
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Invokevirtual, advanceMethod);
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, hasNextField);
+        private void emitNextBody(CodeGenerator gen, MethodInfo advanceMethod, FieldInfo hasNextField,
+                FieldInfo moveNextField, FieldInfo currentField) {
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Invokevirtual, advanceMethod);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Getfield, hasNextField);
             var elseLabel = gen.defineLabel();
-            gen.emit(JvmOpcode.Ifne, elseLabel);
+            gen.emit(Opcode.Ifne, elseLabel);
             var exceptionType = context.TypeSystem.getType("java/util/NoSuchElementException");
-            gen.emit(JvmOpcode.New, exceptionType);
-            gen.emit(JvmOpcode.Dup);
-            gen.emit(JvmOpcode.Invokespecial, exceptionType.getMethod("<init>", Query.empty<JvmTypeInfo>()));
-            gen.emit(JvmOpcode.Athrow);
+            gen.emit(Opcode.New, exceptionType);
+            gen.emit(Opcode.Dup);
+            gen.emit(Opcode.Invokespecial, exceptionType.getMethod("<init>", Query.empty<TypeInfo>()));
+            gen.emit(Opcode.Athrow);
             gen.markLabel(elseLabel);
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Iconst_1);
-            gen.emit(JvmOpcode.Putfield, moveNextField);
-            gen.emit(JvmOpcode.Aload, gen.getLocal("this"));
-            gen.emit(JvmOpcode.Getfield, currentField);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Iconst_1);
+            gen.emit(Opcode.Putfield, moveNextField);
+            gen.emit(Opcode.Aload, gen.getLocal("this"));
+            gen.emit(Opcode.Getfield, currentField);
             gen.emit(BytecodeHelper.getReturnOpcode(currentField.Type));
         }
 
-        private void initializeLambdaScope(JvmMethodInfo method) {
+        private void initializeLambdaScope(MethodInfo method) {
         	var lambdaScope = context.MethodGenerationContext.LambdaScope;
             if (lambdaScope != null && lambdaScope.Fields.any()) {
                 getLambdaScope(context, method);
                 foreach (var p in method.Parameters) {
-                    var pi = (LocalInfo)MemberInfo.getInfo(p, method);
+                    var pi = (LocalMemberInfo)MemberInfo.getInfo(p, method);
                     if (pi.IsUsedFromLambda) {
                         getLambdaScopeField(context, pi);
                     }
@@ -2548,7 +2548,7 @@ package stab.tools.compiler {
             }
         }
         
-        private void initializeFields(JvmCodeGenerator generator, ClassDeclarationNode classDeclaration) {
+        private void initializeFields(CodeGenerator generator, ClassDeclarationNode classDeclaration) {
             context.MethodGenerationContext.Generator = generator;
             foreach (var member in classDeclaration.getMembers()) {
                 if (member.TypeMemberKind == TypeMemberKind.Field) {
@@ -2557,9 +2557,9 @@ package stab.tools.compiler {
                         if (decl.Value == null) {
                             continue;
                         }
-                        var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                        var fieldBuilder = decl.getUserData(typeof(FieldBuilder));
                         if (!fieldBuilder.IsStatic) {
-                            generator.emit(JvmOpcode.Aload, generator.getLocal("this"));
+                            generator.emit(Opcode.Aload, generator.getLocal("this"));
                             if (decl.Value.ExpressionKind == ExpressionKind.ArrayInitializer) {
                                 var init = (ArrayInitializerExpressionNode)decl.Value;
                                 BytecodeHelper.emitIntConstant(generator, init.Values.size());
@@ -2568,14 +2568,14 @@ package stab.tools.compiler {
                                 expressionGenerator.handleExpression(decl.Value, null, true);
                                 emitConversion(context, fieldBuilder.Type, decl.Value);
                             }
-                            generator.emit(JvmOpcode.Putfield, fieldBuilder);
+                            generator.emit(Opcode.Putfield, fieldBuilder);
                         }
                     }
                 }
             }
         }
         
-        private void initializeStaticFields(JvmCodeGenerator generator, ClassDeclarationNode classDeclaration) {
+        private void initializeStaticFields(CodeGenerator generator, ClassDeclarationNode classDeclaration) {
             context.MethodGenerationContext.Generator = generator;
             int nEnumConstant = 0;
             foreach (var member in classDeclaration.Members) {
@@ -2586,7 +2586,7 @@ package stab.tools.compiler {
                         if (decl.Value == null) {
                             continue;
                         }
-                        var fieldBuilder = decl.getUserData(typeof(JvmFieldBuilder));
+                        var fieldBuilder = decl.getUserData(typeof(FieldBuilder));
                         if (fieldBuilder.IsStatic) {
                             var ei = decl.getValue().getUserData(typeof(ExpressionInfo));
                             if (ei != null && (!ei.IsConstant || ei.BoxingKind != BoxingKind.None)) {
@@ -2598,7 +2598,7 @@ package stab.tools.compiler {
                                     expressionGenerator.handleExpression(decl.Value, null, true);
                                     emitConversion(context, fieldBuilder.Type, decl.Value);
                                 }
-                                generator.emit(JvmOpcode.Putstatic, fieldBuilder);
+                                generator.emit(Opcode.Putstatic, fieldBuilder);
                             }
                         }
                     }
@@ -2606,15 +2606,15 @@ package stab.tools.compiler {
                 case EnumConstant: {
                     var enumConstantDeclaration = (EnumConstantDeclarationNode)member;
                     var constructor = enumConstantDeclaration.getUserData(typeof(ExpressionInfo)).Method;
-                    var field = enumConstantDeclaration.getUserData(typeof(JvmFieldBuilder));
-                    generator.emit(JvmOpcode.New, constructor.DeclaringType);
-                    generator.emit(JvmOpcode.Dup);
-                    generator.emit(JvmOpcode.Ldc, field.Name);
+                    var field = enumConstantDeclaration.getUserData(typeof(FieldBuilder));
+                    generator.emit(Opcode.New, constructor.DeclaringType);
+                    generator.emit(Opcode.Dup);
+                    generator.emit(Opcode.Ldc, field.Name);
                     BytecodeHelper.emitIntConstant(generator, nEnumConstant++);
 					expressionGenerator.emitArguments(enumConstantDeclaration.Arguments, constructor.Parameters.skip(2),
 							constructor.Parameters.count() - 2, constructor.IsVarargs);
-                    generator.emit(JvmOpcode.Invokespecial, constructor);
-                    generator.emit(JvmOpcode.Putstatic, field);
+                    generator.emit(Opcode.Invokespecial, constructor);
+                    generator.emit(Opcode.Putstatic, field);
                     break;
                 }
                 case Constructor:
@@ -2626,22 +2626,22 @@ package stab.tools.compiler {
                 }
             }
 
-            var typeInfo = classDeclaration.getUserData(typeof(JvmTypeInfo));
+            var typeInfo = classDeclaration.getUserData(typeof(TypeInfo));
             if (typeInfo.IsEnum) {
                 BytecodeHelper.emitIntConstant(generator, nEnumConstant);
-                generator.emit(JvmOpcode.Anewarray, typeInfo);
+                generator.emit(Opcode.Anewarray, typeInfo);
                 nEnumConstant = 0;
                 foreach (var member in classDeclaration.Members) {
                     if (member.TypeMemberKind == TypeMemberKind.EnumConstant) {
                         var enumConstantDeclaration = (EnumConstantDeclarationNode)member;
-                        var field = enumConstantDeclaration.getUserData(typeof(JvmFieldBuilder));
-                        generator.emit(JvmOpcode.Dup);
+                        var field = enumConstantDeclaration.getUserData(typeof(FieldBuilder));
+                        generator.emit(Opcode.Dup);
                         BytecodeHelper.emitIntConstant(generator, nEnumConstant++);
-                        generator.emit(JvmOpcode.Getstatic, field);
-                        generator.emit(JvmOpcode.Aastore);
+                        generator.emit(Opcode.Getstatic, field);
+                        generator.emit(Opcode.Aastore);
                     }
                 }
-                generator.emit(JvmOpcode.Putstatic, typeInfo.getField("ENUM$VALUES"));
+                generator.emit(Opcode.Putstatic, typeInfo.getField("ENUM$VALUES"));
             }
         }
 

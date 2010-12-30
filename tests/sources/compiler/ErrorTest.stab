@@ -18,13 +18,13 @@ using java.io;
 using java.lang;
 using java.util;
 using org.junit;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.helpers;
 
 package stab.tools.compiler.test {
 
 	public abstract class ErrorTest {
-		private static JvmTypeSystem typeSystem;
+		private static Library typeSystem;
 		protected CompilerParameters parameters;
 		
 		[After]
@@ -47,10 +47,10 @@ package stab.tools.compiler.test {
 				this.parameters = new CompilerParameters();
 			}
 			if (typeSystem == null) {
-				typeSystem = new JvmTypeSystem(new String[] { PathHelper.combine(userDir, "runtime/stabrt.jar") });
+				typeSystem = new Library(new String[] { PathHelper.combine(userDir, "runtime/stabrt.jar") });
 			}
-			this.parameters.TypeSystem = new JvmTypeSystem(new String[0], typeSystem);
-			this.parameters.AnnotatedTypeSystem = new JvmTypeSystem(new String[] { PathHelper.combine(userDir, "annotated/stabal.jar") },
+			this.parameters.TypeSystem = new Library(new String[0], typeSystem);
+			this.parameters.AnnotatedTypeSystem = new Library(new String[] { PathHelper.combine(userDir, "annotated/stabal.jar") },
 					this.parameters.TypeSystem);
 
 			var results = compiler.compileFromFiles(this.parameters, new File[] { new File(path) });

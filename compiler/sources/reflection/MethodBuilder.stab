@@ -18,15 +18,15 @@ using java.lang;
 using java.util;
 using org.objectweb.asm;
 
-package stab.tools.bytecode {
+package stab.reflection {
 
-    public class JvmParameterBuilder : JvmParameterInfo {
-        private JvmMethodBuilder method;
+    public class ParameterBuilder : ParameterInfo {
+        private MethodBuilder method;
         
-        JvmParameterBuilder(JvmMethodBuilder method, int position, JvmTypeInfo type)
+        ParameterBuilder(MethodBuilder method, int position, TypeInfo type)
             : super(position, type) {
             this.method = method;
-            this.annotations = new ArrayList<JvmAnnotationValue>();
+            this.annotations = new ArrayList<AnnotationValue>();
         }
         
         public void setName(String name) {
@@ -34,66 +34,66 @@ package stab.tools.bytecode {
             this.name = name;
         }
         
-        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+        public AnnotationValueBuilder addAnnotation(TypeInfo type, boolean runtimeVisible) {
             method.checkCreated();
-            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            var result = new AnnotationValueBuilder(type, runtimeVisible);
             annotations.add(result);
             return result;
         }
     }
 
-    public class JvmMethodBuilder : JvmMethodInfo {
+    public class MethodBuilder : MethodInfo {
         private int modifiers;
-        private JvmTypeInfo returnType;
-        private ArrayList<JvmParameterInfo> parameters;
-        private ArrayList<JvmTypeInfo> exceptions;
-        private ArrayList<JvmTypeInfo> genericArguments;
+        private TypeInfo returnType;
+        private ArrayList<ParameterInfo> parameters;
+        private ArrayList<TypeInfo> exceptions;
+        private ArrayList<TypeInfo> genericArguments;
         private String descriptor;
-        private ArrayList<JvmAnnotationValue> annotations;
-        private JvmCodeGenerator codeGenerator;
-        private JvmAnnotationValue defaultValue;
+        private ArrayList<AnnotationValue> annotations;
+        private CodeGenerator codeGenerator;
+        private AnnotationValue defaultValue;
         
-        JvmMethodBuilder(JvmTypeInfo declaringType, String name)
+        MethodBuilder(TypeInfo declaringType, String name)
             : super(declaringType, name) {
-            parameters = new ArrayList<JvmParameterInfo>();
-            exceptions = new ArrayList<JvmTypeInfo>();
-            genericArguments = new ArrayList<JvmTypeInfo>();
-            annotations = new ArrayList<JvmAnnotationValue>();
-            codeGenerator = new JvmCodeGenerator(this);
+            parameters = new ArrayList<ParameterInfo>();
+            exceptions = new ArrayList<TypeInfo>();
+            genericArguments = new ArrayList<TypeInfo>();
+            annotations = new ArrayList<AnnotationValue>();
+            codeGenerator = new CodeGenerator(this);
         }
 
-        public JvmCodeGenerator CodeGenerator {
+        public CodeGenerator CodeGenerator {
             get {
                 checkCreated();
                 return codeGenerator;
             }
         }
         
-        public override JvmTypeInfo ReturnType {
+        public override TypeInfo ReturnType {
             get {
                 return returnType;
             }
         }
 
-        public void setReturnType(JvmTypeInfo returnType) {
+        public void setReturnType(TypeInfo returnType) {
             checkCreated();
             this.returnType = returnType;
         }
         
-        public override Iterable<JvmTypeInfo> GenericArguments {
+        public override Iterable<TypeInfo> GenericArguments {
             get {
                 return genericArguments;
             }
         }
         
-        public JvmTypeInfo addGenericArgument(String name) {
+        public TypeInfo addGenericArgument(String name) {
             checkCreated();
-            var type = new GenericParameterType(name, null);
+            var type = new GenericParameterType(this.DeclaringType.Library, name, null);
             genericArguments.add(type);
             return type;
         }
         
-        public void addGenericConstraint(String name, JvmTypeInfo bound) {
+        public void addGenericConstraint(String name, TypeInfo bound) {
             checkCreated();
             foreach (var arg in genericArguments) {
                 if (arg.FullName.equals(name)) {
@@ -104,50 +104,50 @@ package stab.tools.bytecode {
             throw new IllegalStateException("name = " + name);
         }
         
-        public override Iterable<JvmParameterInfo> Parameters {
+        public override Iterable<ParameterInfo> Parameters {
             get {
                 return parameters;
             }
         }
         
-        public JvmParameterBuilder addParameter(JvmTypeInfo type) {
+        public ParameterBuilder addParameter(TypeInfo type) {
             checkCreated();
-            var p = new JvmParameterBuilder(this, parameters.size(), type);
+            var p = new ParameterBuilder(this, parameters.size(), type);
             parameters.add(p);
             return p;
         }
         
-        public override Iterable<JvmTypeInfo> Exceptions {
+        public override Iterable<TypeInfo> Exceptions {
             get {
                 return exceptions;
             }
         }
         
-        public void addException(JvmTypeInfo exception) {
+        public void addException(TypeInfo exception) {
             checkCreated();
             exceptions.add(exception);
         }
         
-        public override Iterable<JvmAnnotationValue> Annotations {
+        public override Iterable<AnnotationValue> Annotations {
             get {
                 return annotations;
             }
         }
         
-        public JvmAnnotationValueBuilder addAnnotation(JvmTypeInfo type, boolean runtimeVisible) {
+        public AnnotationValueBuilder addAnnotation(TypeInfo type, boolean runtimeVisible) {
             checkCreated();
-            var result = new JvmAnnotationValueBuilder(type, runtimeVisible);
+            var result = new AnnotationValueBuilder(type, runtimeVisible);
             annotations.add(result);
             return result;
         }
         
-        public override JvmAnnotationArgument DefaultValue {
+        public override AnnotationArgument DefaultValue {
             get {
                 return defaultValue;
             }
         }
         
-        public void setDefaultValue(JvmAnnotationValue defaultValue) {
+        public void setDefaultValue(AnnotationValue defaultValue) {
             checkCreated();
             this.defaultValue = defaultValue;
         }
@@ -176,7 +176,7 @@ package stab.tools.bytecode {
             get {
                 var result = signature;
                 if (this.IsCreated || signature == null) {
-                    result = BytecodeHelper.getMethodTypeSignature(this);
+                    result = ReflectionHelper.getMethodTypeSignature(this);
                 }
                 if (this.IsCreated && signature == null) {
                     signature = result;
@@ -268,12 +268,12 @@ package stab.tools.bytecode {
         }
         
         void checkCreated() {
-            ((JvmTypeBuilder)this.DeclaringType).checkCreated();
+            ((TypeBuilder)this.DeclaringType).checkCreated();
         }
         
         boolean IsCreated {
             get {
-                return ((JvmTypeBuilder)this.DeclaringType).created;
+                return ((TypeBuilder)this.DeclaringType).created;
             }
         }
     }

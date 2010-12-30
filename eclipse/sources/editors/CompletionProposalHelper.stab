@@ -20,7 +20,7 @@ using org.eclipse.jface.text;
 using org.eclipse.jface.text.contentassist;
 using org.eclipse.swt.graphics;
 using stab.query;
-using stab.tools.bytecode;
+using stab.reflection;
 using stab.tools.compiler;
 
 package stab.tools.eclipse.editors {
@@ -48,15 +48,15 @@ package stab.tools.eclipse.editors {
 			foreach (var member in members) {
 				switch (member.MemberKind) {
 				case Type:
-					var jvmType = member.Type;
-					if (jvmType.Name.startsWith(prefix)) {
-						proposals.add(createType(offset, length, jvmType.Name.substring(prefix.length()), jvmType));
+					var Type = member.Type;
+					if (Type.Name.startsWith(prefix)) {
+						proposals.add(createType(offset, length, Type.Name.substring(prefix.length()), Type));
 					}
 					break;
 				case Field:
-					var jvmField = member.Field;
-					if (jvmField.Name.startsWith(prefix)) {
-						proposals.add(createField(offset, length, jvmField.Name.substring(prefix.length()), jvmField));
+					var Field = member.Field;
+					if (Field.Name.startsWith(prefix)) {
+						proposals.add(createField(offset, length, Field.Name.substring(prefix.length()), Field));
 					}
 					break;
 				case Property:
@@ -65,9 +65,9 @@ package stab.tools.eclipse.editors {
 					}
 					break;
 				case Method:
-					var jvmMethod = member.Method;
-					if (jvmMethod.Name.startsWith(prefix)) {
-						proposals.add(createMethod(offset, length, jvmMethod.Name.substring(prefix.length()), jvmMethod));
+					var Method = member.Method;
+					if (Method.Name.startsWith(prefix)) {
+						proposals.add(createMethod(offset, length, Method.Name.substring(prefix.length()), Method));
 					}
 					break;
 				case Local:
@@ -89,7 +89,7 @@ package stab.tools.eclipse.editors {
 			return proposals.toArray(new ICompletionProposal[proposals.size()]);
 		}
 		
-		private static String getDisplayName(JvmTypeInfo type) {
+		private static String getDisplayName(TypeInfo type) {
 			var plen = type.PackageName.length();
 			if (plen == 0) {
 				return type.Name;
@@ -98,11 +98,11 @@ package stab.tools.eclipse.editors {
 			}
 		}
 
-		private static String getDisplayName(JvmFieldInfo field) {
+		private static String getDisplayName(FieldInfo field) {
 			return field.Name + " - " + getName(field.DeclaringType);
 		}
 
-		private static String getDisplayName(JvmMethodInfo method) {
+		private static String getDisplayName(MethodInfo method) {
 			return method.Name + getParameters(method) + ": " + getName(method.ReturnType) + " - " + getName(method.DeclaringType);
 		}
 		
@@ -114,7 +114,7 @@ package stab.tools.eclipse.editors {
 			return member.Name + ": " + getName(member.Type) + " - " + getName(member.DeclaringType);
 		}
 		
-		private static String getParameters(JvmMethodInfo method) {
+		private static String getParameters(MethodInfo method) {
 			var sb = new StringBuilder();
 			sb.append('(');
 			var first = true;
@@ -130,7 +130,7 @@ package stab.tools.eclipse.editors {
 			return sb.toString();
 		}
 		
-		private static String getName(JvmTypeInfo type) {
+		private static String getName(TypeInfo type) {
 			switch (type.TypeKind) {
 			case Void:
 			case Boolean:
@@ -173,7 +173,7 @@ package stab.tools.eclipse.editors {
 			return new CompletionProposal(text, offset, length, text.length(), Environment.getIcon(Icon.Package), displayName, null, null);
 		}
 		
-		private static ICompletionProposal createType(int offset, int length, String text, JvmTypeInfo type) {
+		private static ICompletionProposal createType(int offset, int length, String text, TypeInfo type) {
 			Image image;
 			if (type.IsEnum) {
 				image = Environment.getIcon(Icon.Enum);
@@ -189,7 +189,7 @@ package stab.tools.eclipse.editors {
 			return new CompletionProposal(text, offset, length, text.length(), Environment.getIcon(Icon.Source), displayName, null, null);
 		}
 		
-		private static ICompletionProposal createField(int offset, int length, String text, JvmFieldInfo field) {
+		private static ICompletionProposal createField(int offset, int length, String text, FieldInfo field) {
 			Image image;
 			if (field.IsPublic) {
 				image = Environment.getIcon(Icon.PublicField);
@@ -217,7 +217,7 @@ package stab.tools.eclipse.editors {
 			return new CompletionProposal(text, offset, length, text.length(), image, getPropertyDisplayName(property), null, null);
 		}
 
-		private static ICompletionProposal createMethod(int offset, int length, String text, JvmMethodInfo method) {
+		private static ICompletionProposal createMethod(int offset, int length, String text, MethodInfo method) {
 			Image image;
 			if (method.IsPublic) {
 				image = Environment.getIcon(Icon.PublicMethod);
